@@ -1,0 +1,2414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trackr - Gestor de Gastos</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-dark: #0a0e12;
+      --bg-card: #151a21;
+      --bg-input: #1a1f28;
+      --accent-primary: #00ff88;
+      --accent-secondary: #00d4ff;
+      --text-primary: #ffffff;
+      --text-secondary: #8b92a8;
+      --border-color: #2a3040;
+      --success: #00ff88;
+      --warning: #ffb800;
+      --danger: #ff4757;
+      --shadow: rgba(0, 255, 136, 0.1);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Background effects */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 20% 50%, rgba(0, 255, 136, 0.05) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 80%, rgba(0, 212, 255, 0.05) 0%, transparent 50%);
+      animation: bgFloat 20s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes bgFloat {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      50% { transform: translate(-30px, -30px) rotate(5deg); }
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .header {
+      margin-bottom: 3rem;
+      animation: slideDown 0.6s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .header h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+      letter-spacing: -1px;
+    }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Dashboard Stats */
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+      animation: fadeIn 0.8s ease-out 0.2s both;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease;
+    }
+
+    .stat-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .stat-card:hover {
+      border-color: var(--accent-primary);
+      transform: translateY(-4px);
+      box-shadow: 0 10px 40px var(--shadow);
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-change {
+      font-size: 0.875rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-change.positive {
+      color: var(--success);
+    }
+
+    .stat-change.negative {
+      color: var(--danger);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      animation: fadeIn 0.8s ease-out 0.4s both;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 1rem 1rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      position: relative;
+      transition: all 0.3s ease;
+      font-family: 'DM Sans', sans-serif;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .tab::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-primary);
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
+    }
+
+    .tab.active {
+      color: var(--accent-primary);
+    }
+
+    .tab.active::after {
+      transform: scaleX(1);
+    }
+
+    /* Tab Content */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Card */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card h3 {
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      color: var(--text-primary);
+    }
+
+    /* Form */
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.875rem 1rem;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    /* File Upload */
+    .file-upload {
+      border: 2px dashed var(--border-color);
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .file-upload:hover {
+      border-color: var(--accent-primary);
+      background: rgba(0, 255, 136, 0.05);
+    }
+
+    .file-upload input {
+      display: none;
+    }
+
+    .file-upload-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    .file-upload-text {
+      color: var(--text-secondary);
+    }
+
+    .file-preview {
+      margin-top: 1rem;
+      border-radius: 8px;
+      max-width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Button */
+    .btn {
+      padding: 0.875rem 2rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'DM Sans', sans-serif;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .btn:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: var(--bg-dark);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px var(--shadow);
+    }
+
+    .btn-secondary {
+      background: var(--bg-input);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Expense List */
+    .expense-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .expense-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 1.5rem;
+      align-items: center;
+      transition: all 0.3s ease;
+      animation: slideIn 0.4s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .expense-item:hover {
+      border-color: var(--accent-primary);
+      transform: translateX(4px);
+    }
+
+    .expense-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 212, 255, 0.1));
+      border: 1px solid var(--border-color);
+    }
+
+    .expense-details h4 {
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+      font-size: 1rem;
+    }
+
+    .expense-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .expense-amount {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Loading */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(0, 255, 136, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--accent-primary);
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .toast.success {
+      border-left: 4px solid var(--success);
+    }
+
+    .toast.error {
+      border-left: 4px solid var(--danger);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+
+      .header h1 {
+        font-size: 2rem;
+      }
+
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+
+      .stat-value {
+        font-size: 2rem;
+      }
+
+      .tabs {
+        gap: 0.25rem;
+        margin-left: -1rem;
+        margin-right: -1rem;
+        padding: 0 1rem;
+        border-bottom: none;
+        position: relative;
+      }
+
+      .tabs::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 1rem;
+        right: 1rem;
+        height: 1px;
+        background: var(--border-color);
+      }
+
+      .tab {
+        padding: 0.875rem 0.75rem;
+        font-size: 0.85rem;
+        white-space: nowrap;
+      }
+
+      .expense-item {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1.25rem;
+      }
+
+      .expense-icon {
+        display: none;
+      }
+
+      .expense-amount {
+        text-align: left;
+        margin-top: 0.5rem;
+      }
+
+      .action-buttons {
+        width: 100%;
+      }
+
+      .btn-small {
+        flex: 1;
+        min-width: calc(50% - 0.25rem);
+        font-size: 0.8rem;
+        padding: 0.625rem 0.5rem;
+        justify-content: center;
+        text-align: center;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Account Pills */
+    .account-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .account-pill {
+      padding: 0.5rem 1rem;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .account-pill:hover {
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+
+    .account-pill.active {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: var(--bg-dark);
+      border-color: transparent;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-secondary);
+    }
+
+    .empty-state-icon {
+      font-size: 4rem;
+      opacity: 0.3;
+      margin-bottom: 1rem;
+    }
+
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .btn-small {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+      border: none;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: var(--bg-dark);
+      border: none;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease-out;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: var(--text-primary);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .modal-close:hover {
+      background: var(--bg-input);
+      color: var(--text-primary);
+    }
+
+    .interest-summary {
+      margin-bottom: 1.5rem;
+    }
+
+    .interest-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+    }
+
+    .interest-item-name {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .interest-item-value {
+      color: var(--success);
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .template-list {
+      margin-top: 1rem;
+    }
+
+    .template-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .template-item:hover {
+      border-color: var(--accent-primary);
+    }
+
+    .template-name {
+      color: var(--text-primary);
+      font-size: 0.95rem;
+    }
+
+    .tna-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .tna-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .tna-item-name {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .tna-input-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .tna-input {
+      flex: 1;
+      padding: 0.5rem;
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .tna-input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Trackr</h1>
+      <p>// Gestor inteligente de gastos con visión artificial</p>
+    </div>
+
+    <div class="dashboard">
+      <div class="stat-card">
+        <div class="stat-label">Balance Total</div>
+        <div class="stat-value" id="totalBalance">$0.00</div>
+        <div class="stat-change positive" id="balanceChange">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Gastos del Mes</div>
+        <div class="stat-value" id="monthExpenses">$0.00</div>
+        <div class="stat-change negative" id="expenseChange">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Gastos Fijos</div>
+        <div class="stat-value" id="fixedExpenses">$0.00</div>
+        <div class="stat-change" id="fixedChange">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Disponible</div>
+        <div class="stat-value" id="availableBalance">$0.00</div>
+        <div class="stat-change positive" id="availableChange">—</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="expenses">Cargar Gasto</button>
+      <button class="tab" data-tab="accounts">Cuentas</button>
+      <button class="tab" data-tab="transfers">Transferencias</button>
+      <button class="tab" data-tab="fixed">Gastos Fijos</button>
+      <button class="tab" data-tab="history">Historial</button>
+      <button class="tab" data-tab="calculator">Calculadora</button>
+      <button class="tab" data-tab="settings">Configuración</button>
+    </div>
+
+    <!-- Cargar Gasto Tab -->
+    <div class="tab-content active" id="expenses">
+      <div class="card">
+        <h3>Nuevo Gasto</h3>
+        <form id="expenseForm">
+          <div class="form-group">
+            <label>Captura del Comprobante</label>
+            <div class="file-upload" id="fileUpload">
+              <input type="file" id="receiptImage" accept="image/*" capture="environment">
+              <div class="file-upload-icon">📸</div>
+              <div class="file-upload-text">
+                Tocá para tomar foto o subir imagen del comprobante
+              </div>
+            </div>
+            <img id="imagePreview" class="file-preview" style="display: none;">
+          </div>
+
+          <div class="form-group">
+            <label>Descripción (Opcional)</label>
+            <textarea id="description" placeholder="Ej: Compra en supermercado..."></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Monto</label>
+              <input type="number" id="amount" step="0.01" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+              <label>Cuenta</label>
+              <select id="account" required>
+                <option value="">Seleccionar...</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Pagado a</label>
+              <input type="text" id="merchant" placeholder="Nombre del comercio">
+            </div>
+            <div class="form-group">
+              <label>Fecha</label>
+              <input type="date" id="date" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            Guardar Gasto
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Cuentas Tab -->
+    <div class="tab-content" id="accounts">
+      <div class="card">
+        <h3>Gestión de Cuentas</h3>
+        <form id="accountForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nombre de la Cuenta</label>
+              <input type="text" id="accountName" placeholder="Ej: Tarjeta Visa" required>
+            </div>
+            <div class="form-group">
+              <label>Saldo Actual</label>
+              <input type="number" id="accountBalance" step="0.01" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+              <label>TNA Actual (%)</label>
+              <input type="number" id="accountTNA" step="0.01" placeholder="0.00" value="0">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Agregar Cuenta</button>
+        </form>
+
+        <div id="accountsList" style="margin-top: 2rem;"></div>
+      </div>
+    </div>
+
+    <!-- Transferencias Tab -->
+    <div class="tab-content" id="transfers">
+      <div class="card">
+        <h3>Transferencia entre Cuentas</h3>
+        <form id="transferForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Cuenta Origen</label>
+              <select id="transferFrom" required>
+                <option value="">Seleccionar...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Cuenta Destino</label>
+              <select id="transferTo" required>
+                <option value="">Seleccionar...</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Monto a Transferir</label>
+              <input type="number" id="transferAmount" step="0.01" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+              <label>Fecha</label>
+              <input type="date" id="transferDate" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Descripción (Opcional)</label>
+            <textarea id="transferDescription" placeholder="Ej: Pago de tarjeta..."></textarea>
+          </div>
+
+          <div id="transferPreview" style="display: none; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+            <div style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.875rem;">Vista Previa:</div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span id="previewFrom"></span>
+              <span style="color: var(--text-secondary);">→</span>
+              <span id="previewTo"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem;">
+              <span id="previewFromBalance" style="color: var(--danger);"></span>
+              <span id="previewToBalance" style="color: var(--success);"></span>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            Realizar Transferencia
+          </button>
+        </form>
+
+        <div style="margin-top: 2rem;">
+          <h3 style="margin-bottom: 1rem;">Historial de Transferencias</h3>
+          <div id="transfersList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gastos Fijos Tab -->
+    <div class="tab-content" id="fixed">
+      <div class="card">
+        <h3>Gastos Fijos Mensuales</h3>
+        <form id="fixedExpenseForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Descripción</label>
+              <div style="display: flex; gap: 0.5rem;">
+                <select id="fixedDescriptionTemplate" style="flex: 1;">
+                  <option value="">Seleccionar plantilla...</option>
+                </select>
+                <button type="button" class="btn btn-small btn-secondary" onclick="manageTemplates()" style="white-space: nowrap;">
+                  ⚙️
+                </button>
+              </div>
+              <input type="text" id="fixedDescription" placeholder="Ej: Alquiler" required style="margin-top: 0.5rem;">
+            </div>
+            <div class="form-group">
+              <label>Monto</label>
+              <input type="number" id="fixedAmount" step="0.01" placeholder="0.00" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Cuenta</label>
+              <select id="fixedAccount" required>
+                <option value="">Seleccionar...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Día de Pago</label>
+              <input type="number" id="fixedDay" min="1" max="31" placeholder="1-31" required>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Agregar Gasto Fijo</button>
+        </form>
+
+        <div id="fixedExpensesList" style="margin-top: 2rem;"></div>
+      </div>
+    </div>
+
+    <!-- Historial Tab -->
+    <div class="tab-content" id="history">
+      <div class="card">
+        <h3>Historial de Gastos</h3>
+        <div class="account-pills" id="filterPills">
+          <div class="account-pill active" data-filter="all">Todos</div>
+        </div>
+        <div class="expense-list" id="expenseList"></div>
+      </div>
+    </div>
+
+    <!-- Calculator Tab -->
+    <div class="tab-content" id="calculator">
+      <div class="card">
+        <h3>🧮 Calculadora de TNA Inversa</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+          Ingresá el saldo actual y la remuneración ganada en un día para calcular el saldo anterior, el porcentaje diario y la TNA.
+        </p>
+
+        <form id="calculatorForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Saldo Actual</label>
+              <input type="number" id="calcCurrentBalance" step="0.01" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+              <label>Remuneración del Día</label>
+              <input type="number" id="calcDailyEarnings" step="0.01" placeholder="0.00" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            Calcular
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="clearCalculator()" style="margin-left: 1rem;">
+            Limpiar
+          </button>
+        </form>
+
+        <div id="calculatorResults" style="display: none; margin-top: 2rem;">
+          <h3 style="margin-bottom: 1rem; color: var(--accent-primary);">📊 Resultados</h3>
+          
+          <div style="display: grid; gap: 1rem;">
+            <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem;">
+              <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace;">
+                Saldo Anterior
+              </div>
+              <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary); font-family: 'JetBrains Mono', monospace;" id="resultPreviousBalance">
+                $0.00
+              </div>
+              <div style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">
+                Saldo antes de aplicar la remuneración
+              </div>
+            </div>
+
+            <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem;">
+              <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace;">
+                Porcentaje Diario
+              </div>
+              <div style="font-size: 2rem; font-weight: 700; color: var(--accent-secondary); font-family: 'JetBrains Mono', monospace;" id="resultDailyRate">
+                0.00%
+              </div>
+              <div style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">
+                Tasa de remuneración aplicada ese día
+              </div>
+            </div>
+
+            <div style="background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 212, 255, 0.1)); border: 1px solid var(--accent-primary); border-radius: 8px; padding: 1.5rem;">
+              <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace;">
+                TNA Correspondiente
+              </div>
+              <div style="font-size: 2.5rem; font-weight: 700; color: var(--accent-primary); font-family: 'JetBrains Mono', monospace;" id="resultTNA">
+                0.00%
+              </div>
+              <div style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">
+                Tasa Nominal Anual equivalente
+              </div>
+            </div>
+          </div>
+
+          <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; margin-top: 1rem;">
+            <h4 style="margin-bottom: 1rem; color: var(--text-primary); font-size: 1rem;">📝 Fórmulas Utilizadas</h4>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; color: var(--text-secondary); line-height: 1.8;">
+              <div>1. <span style="color: var(--text-primary);">Saldo Anterior</span> = Saldo Actual - Remuneración</div>
+              <div>2. <span style="color: var(--text-primary);">% Diario</span> = (Remuneración / Saldo Anterior) × 100</div>
+              <div>3. <span style="color: var(--text-primary);">TNA</span> = % Diario × 365</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(255, 184, 0, 0.1); border: 1px solid var(--warning); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+            <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+              <span style="color: var(--warning); font-size: 1.2rem;">⚠️</span>
+              <div style="color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">
+                <strong style="color: var(--warning);">Nota:</strong> Este cálculo asume que la remuneración se aplicó sobre el saldo anterior durante un día completo. Los resultados son aproximados y sirven para estimar la TNA aplicada.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="settings">
+      <div class="card">
+        <h3>Configuración y Sincronización</h3>
+        
+        <div style="margin-bottom: 2rem;">
+          <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">Exportar/Importar Datos</h4>
+          <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.875rem;">
+            Exportá todos tus datos para compartir entre dispositivos o hacer backup.
+          </p>
+          <button class="btn btn-primary" id="exportBtn">
+            📤 Exportar Datos
+          </button>
+          <button class="btn btn-secondary" id="importBtn" style="margin-left: 1rem;">
+            📥 Importar Datos
+          </button>
+          <input type="file" id="importFile" accept=".json" style="display: none;">
+        </div>
+
+        <div style="border-top: 1px solid var(--border-color); padding-top: 2rem;">
+          <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">Actualización de Saldos</h4>
+          <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.875rem;">
+            Actualizá los saldos de todas las cuentas con remuneración diaria.
+          </p>
+          <button class="btn btn-primary" id="updateBalancesBtn">
+            🔄 Actualizar Saldos
+          </button>
+          <div id="lastUpdateInfo" style="margin-top: 1rem; font-size: 0.875rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace;"></div>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-color); padding-top: 2rem; margin-top: 2rem;">
+          <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">Peligro</h4>
+          <button class="btn" style="background: var(--danger); color: white;" id="clearDataBtn">
+            🗑️ Borrar Todos los Datos
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Summary Modal -->
+  <div class="modal" id="dailySummaryModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💰 Remuneración Diaria</h3>
+        <button class="modal-close" onclick="closeDailySummary()">×</button>
+      </div>
+      <div id="dailySummaryContent"></div>
+      <button class="btn btn-primary" onclick="closeDailySummary()" style="width: 100%; margin-top: 1rem;">
+        Entendido
+      </button>
+    </div>
+  </div>
+
+  <!-- Template Manager Modal -->
+  <div class="modal" id="templateModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>⚙️ Gestionar Plantillas</h3>
+        <button class="modal-close" onclick="closeTemplateModal()">×</button>
+      </div>
+      <div class="form-group">
+        <label>Nueva Plantilla</label>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="newTemplate" placeholder="Ej: Alquiler">
+          <button class="btn btn-primary btn-small" onclick="addTemplate()">Agregar</button>
+        </div>
+      </div>
+      <div class="template-list" id="templateList"></div>
+    </div>
+  </div>
+
+  <!-- Monthly TNA Check Modal -->
+  <div class="modal" id="monthlyTNAModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📅 Nuevo Mes - Actualización de TNA</h3>
+        <button class="modal-close" onclick="closeMonthlyTNAModal()">×</button>
+      </div>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+        Comenzó un nuevo mes. Por favor, verificá y actualizá las TNA de tus cuentas si es necesario:
+      </p>
+      <div id="monthlyTNAList"></div>
+      <button class="btn btn-primary" onclick="saveMonthlyTNA()" style="width: 100%; margin-top: 1rem;">
+        Guardar Cambios
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Storage Manager
+    const Storage = {
+      get(key) {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : null;
+      },
+      set(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+      },
+      append(key, value) {
+        const existing = this.get(key) || [];
+        existing.push(value);
+        this.set(key, existing);
+      }
+    };
+
+    // State
+    let accounts = Storage.get('accounts') || [];
+    let expenses = Storage.get('expenses') || [];
+    let fixedExpenses = Storage.get('fixedExpenses') || [];
+    let transfers = Storage.get('transfers') || [];
+    let expenseTemplates = Storage.get('expenseTemplates') || ['Alquiler', 'Servicios', 'Internet', 'Teléfono', 'Luz', 'Gas', 'Agua'];
+    let lastUpdate = Storage.get('lastUpdate') || new Date().toISOString();
+    let lastDailyCheck = Storage.get('lastDailyCheck') || null;
+    let lastMonth = Storage.get('lastMonth') || null;
+    let currentFilter = 'all';
+
+    // Initialize
+    function init() {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('date').value = today;
+      document.getElementById('transferDate').value = today;
+      
+      renderAccounts();
+      renderFixedExpenses();
+      renderExpenses();
+      renderTransfers();
+      updateDashboard();
+      populateAccountSelects();
+      populateTransferSelects();
+      populateTemplates();
+      initializeTabs();
+      initializeFileUpload();
+      initializeSettings();
+      initializeTemplateSelector();
+      initializeTransferForm();
+      initializeCalculator();
+      displayLastUpdate();
+      
+      // Check for month change first
+      checkMonthChange();
+      
+      // Then check for daily summary
+      checkDailySummary();
+    }
+
+    // Tabs
+    function initializeTabs() {
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          
+          tab.classList.add('active');
+          document.getElementById(tab.dataset.tab).classList.add('active');
+        });
+      });
+    }
+
+    // File Upload
+    function initializeFileUpload() {
+      const fileUpload = document.getElementById('fileUpload');
+      const fileInput = document.getElementById('receiptImage');
+      const preview = document.getElementById('imagePreview');
+
+      fileUpload.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
+    // Account Management
+    document.getElementById('accountForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('accountName').value;
+      const balance = parseFloat(document.getElementById('accountBalance').value);
+      const tna = parseFloat(document.getElementById('accountTNA').value) || 0;
+
+      const account = {
+        id: Date.now(),
+        name,
+        balance: parseFloat(balance.toFixed(2)),
+        initialBalance: parseFloat(balance.toFixed(2)),
+        tna,
+        lastInterestUpdate: new Date().toISOString()
+      };
+
+      accounts.push(account);
+      Storage.set('accounts', accounts);
+      
+      renderAccounts();
+      populateAccountSelects();
+      updateDashboard();
+      e.target.reset();
+      showToast('Cuenta agregada exitosamente', 'success');
+    });
+
+    function renderAccounts() {
+      const list = document.getElementById('accountsList');
+      if (accounts.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💳</div><p>No hay cuentas registradas</p></div>';
+        return;
+      }
+
+      list.innerHTML = accounts.map(acc => `
+        <div class="expense-item">
+          <div class="expense-icon">💳</div>
+          <div class="expense-details">
+            <h4>${acc.name}</h4>
+            <div class="expense-meta">
+              <span>Saldo inicial: $${acc.initialBalance.toFixed(2)}</span>
+              ${acc.tna > 0 ? `<span>TNA: ${acc.tna}%</span>` : ''}
+            </div>
+            <div class="action-buttons">
+              <button class="btn btn-small btn-success" onclick="depositToAccount(${acc.id})">
+                💵 Ingresar
+              </button>
+              <button class="btn btn-small btn-success" onclick="updateAccountBalance(${acc.id})">
+                🔄 Actualizar
+              </button>
+              <button class="btn btn-small btn-secondary" onclick="editAccountBalance(${acc.id})">
+                ✏️ Editar
+              </button>
+              ${acc.tna > 0 ? `
+                <button class="btn btn-small btn-secondary" onclick="modifyTNA(${acc.id})">
+                  📊 TNA
+                </button>
+              ` : ''}
+              <button class="btn btn-small btn-danger" onclick="deleteAccount(${acc.id})">
+                🗑️
+              </button>
+            </div>
+          </div>
+          <div class="expense-amount">$${acc.balance.toFixed(2)}</div>
+        </div>
+      `).join('');
+
+      // Update filter pills
+      const filterPills = document.getElementById('filterPills');
+      const accountPills = accounts.map(acc => `
+        <div class="account-pill" data-filter="${acc.id}">${acc.name}</div>
+      `).join('');
+      filterPills.innerHTML = '<div class="account-pill active" data-filter="all">Todos</div>' + accountPills;
+
+      document.querySelectorAll('.account-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          document.querySelectorAll('.account-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          currentFilter = pill.dataset.filter;
+          renderExpenses();
+        });
+      });
+    }
+
+    function populateAccountSelects() {
+      const selects = ['account', 'fixedAccount'];
+      selects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '<option value="">Seleccionar...</option>' +
+          accounts.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
+      });
+      
+      // Also update transfer selects if they exist
+      populateTransferSelects();
+    }
+
+    function populateTransferSelects() {
+      const transferFromSelect = document.getElementById('transferFrom');
+      const transferToSelect = document.getElementById('transferTo');
+      
+      if (transferFromSelect && transferToSelect) {
+        const options = '<option value="">Seleccionar...</option>' +
+          accounts.map(acc => `<option value="${acc.id}">${acc.name} ($${acc.balance.toFixed(2)})</option>`).join('');
+        
+        transferFromSelect.innerHTML = options;
+        transferToSelect.innerHTML = options;
+      }
+    }
+
+    // Fixed Expenses
+    document.getElementById('fixedExpenseForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const description = document.getElementById('fixedDescription').value;
+      const amount = parseFloat(document.getElementById('fixedAmount').value);
+      const accountId = parseInt(document.getElementById('fixedAccount').value);
+      const day = parseInt(document.getElementById('fixedDay').value);
+
+      const fixedExpense = {
+        id: Date.now(),
+        description,
+        amount,
+        accountId,
+        day
+      };
+
+      fixedExpenses.push(fixedExpense);
+      Storage.set('fixedExpenses', fixedExpenses);
+      
+      renderFixedExpenses();
+      updateDashboard();
+      e.target.reset();
+      showToast('Gasto fijo agregado', 'success');
+    });
+
+    function renderFixedExpenses() {
+      const list = document.getElementById('fixedExpensesList');
+      if (fixedExpenses.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No hay gastos fijos configurados</p></div>';
+        return;
+      }
+
+      list.innerHTML = fixedExpenses.map(exp => {
+        const account = accounts.find(a => a.id === exp.accountId);
+        const isPaid = exp.paidThisMonth && new Date(exp.paidThisMonth).getMonth() === new Date().getMonth();
+        
+        return `
+          <div class="expense-item">
+            <div class="expense-icon">📅</div>
+            <div class="expense-details">
+              <h4>${exp.description}</h4>
+              <div class="expense-meta">
+                <span>${account?.name || 'Cuenta eliminada'}</span>
+                <span>Día ${exp.day}</span>
+                ${isPaid ? '<span style="color: var(--success)">✓ Pagado este mes</span>' : ''}
+              </div>
+              <div class="action-buttons">
+                ${!isPaid ? `
+                  <button class="btn btn-small btn-success" onclick="payFixedExpense(${exp.id})">
+                    💰 Pagar
+                  </button>
+                ` : ''}
+                <button class="btn btn-small btn-danger" onclick="deleteFixedExpense(${exp.id})">
+                  🗑️ Eliminar
+                </button>
+              </div>
+            </div>
+            <div class="expense-amount">$${exp.amount.toFixed(2)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Expense Management
+    document.getElementById('expenseForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('amount').value);
+      const accountId = parseInt(document.getElementById('account').value);
+      const merchant = document.getElementById('merchant').value;
+      const date = document.getElementById('date').value;
+      const description = document.getElementById('description').value;
+      const imagePreview = document.getElementById('imagePreview');
+
+      const expense = {
+        id: Date.now(),
+        amount,
+        accountId,
+        merchant,
+        date,
+        description,
+        image: imagePreview.style.display !== 'none' ? imagePreview.src : null,
+        timestamp: new Date().toISOString()
+      };
+
+      expenses.push(expense);
+      Storage.set('expenses', expenses);
+
+      // Update account balance with rounding to 2 decimals
+      const account = accounts.find(a => a.id === accountId);
+      if (account) {
+        account.balance = parseFloat((account.balance - amount).toFixed(2));
+        Storage.set('accounts', accounts);
+      }
+
+      renderExpenses();
+      renderAccounts();
+      updateDashboard();
+      e.target.reset();
+      document.getElementById('imagePreview').style.display = 'none';
+      document.getElementById('date').value = new Date().toISOString().split('T')[0];
+      showToast('Gasto registrado exitosamente', 'success');
+    });
+
+    function renderExpenses() {
+      const list = document.getElementById('expenseList');
+      let filtered = expenses;
+
+      if (currentFilter !== 'all') {
+        filtered = expenses.filter(e => e.accountId === parseInt(currentFilter));
+      }
+
+      if (filtered.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><p>No hay gastos registrados</p></div>';
+        return;
+      }
+
+      // Sort by date descending
+      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      list.innerHTML = filtered.map(exp => {
+        const account = accounts.find(a => a.id === exp.accountId);
+        return `
+          <div class="expense-item">
+            <div class="expense-icon">💸</div>
+            <div class="expense-details">
+              <h4>${exp.merchant || 'Sin especificar'}</h4>
+              <div class="expense-meta">
+                <span>${account?.name || 'Cuenta eliminada'}</span>
+                <span>${new Date(exp.date).toLocaleDateString('es-AR')}</span>
+                ${exp.description ? `<span>${exp.description}</span>` : ''}
+              </div>
+            </div>
+            <div class="expense-amount">-$${exp.amount.toFixed(2)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Dashboard
+    function updateDashboard() {
+      const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+      const totalFixed = fixedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+      
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      const monthExpenses = expenses
+        .filter(e => {
+          const expDate = new Date(e.date);
+          return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
+        })
+        .reduce((sum, exp) => sum + exp.amount, 0);
+
+      document.getElementById('totalBalance').textContent = `$${totalBalance.toFixed(2)}`;
+      document.getElementById('monthExpenses').textContent = `$${monthExpenses.toFixed(2)}`;
+      document.getElementById('fixedExpenses').textContent = `$${totalFixed.toFixed(2)}`;
+      document.getElementById('availableBalance').textContent = `$${(totalBalance - totalFixed).toFixed(2)}`;
+
+      // Update change indicators
+      const totalInitial = accounts.reduce((sum, acc) => sum + acc.initialBalance, 0);
+      const balanceChange = totalBalance - totalInitial;
+      const balanceChangeEl = document.getElementById('balanceChange');
+      balanceChangeEl.textContent = `${balanceChange >= 0 ? '+' : ''}$${balanceChange.toFixed(2)} desde inicio`;
+      balanceChangeEl.className = `stat-change ${balanceChange >= 0 ? 'positive' : 'negative'}`;
+    }
+
+    // Toast Notification
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = 'slideUp 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Balance Updates with Daily Interest
+    function calculateDaysElapsed(lastUpdate) {
+      const last = new Date(lastUpdate);
+      const now = new Date();
+      
+      // Reset time to midnight for calendar day comparison
+      const lastDate = new Date(last.getFullYear(), last.getMonth(), last.getDate());
+      const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      const diffTime = nowDate - lastDate;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      return diffDays;
+    }
+
+    function updateAccountBalance(accountId) {
+      const account = accounts.find(a => a.id === accountId);
+      if (!account) return;
+
+      const daysElapsed = calculateDaysElapsed(account.lastInterestUpdate || lastUpdate);
+      
+      if (daysElapsed > 0 && account.tna > 0) {
+        // TNA formula: Daily Interest = (Balance * (TNA / 100)) / 365
+        const dailyRate = (account.tna / 100) / 365;
+        const newBalance = account.balance * Math.pow(1 + dailyRate, daysElapsed);
+        const earned = newBalance - account.balance;
+        
+        // Round to 2 decimals
+        account.balance = parseFloat(newBalance.toFixed(2));
+        account.lastInterestUpdate = new Date().toISOString();
+        Storage.set('accounts', accounts);
+        
+        renderAccounts();
+        updateDashboard();
+        showToast(`Saldo actualizado: +$${earned.toFixed(2)} por ${daysElapsed} día(s)`, 'success');
+      } else {
+        showToast('No hay días pendientes de actualización o no tiene TNA configurada', 'error');
+      }
+    }
+
+    function autoUpdateBalances() {
+      let updated = false;
+      accounts.forEach(account => {
+        if (account.dailyInterest > 0) {
+          const daysElapsed = calculateDaysElapsed(account.lastInterestUpdate || lastUpdate);
+          if (daysElapsed > 0) {
+            const interestRate = account.dailyInterest / 100;
+            account.balance = account.balance * Math.pow(1 + interestRate, daysElapsed);
+            account.lastInterestUpdate = new Date().toISOString();
+            updated = true;
+          }
+        }
+      });
+      
+      if (updated) {
+        Storage.set('accounts', accounts);
+        lastUpdate = new Date().toISOString();
+        Storage.set('lastUpdate', lastUpdate);
+        renderAccounts();
+        updateDashboard();
+      }
+    }
+
+    function editAccountBalance(accountId) {
+      const account = accounts.find(a => a.id === accountId);
+      if (!account) return;
+
+      const newBalance = prompt(`Ingresá el nuevo saldo para ${account.name}:`, account.balance);
+      if (newBalance !== null && !isNaN(newBalance)) {
+        // Round to 2 decimals
+        account.balance = parseFloat(parseFloat(newBalance).toFixed(2));
+        account.lastInterestUpdate = new Date().toISOString();
+        Storage.set('accounts', accounts);
+        renderAccounts();
+        updateDashboard();
+        showToast('Saldo actualizado manualmente', 'success');
+      }
+    }
+
+    function depositToAccount(accountId) {
+      const account = accounts.find(a => a.id === accountId);
+      if (!account) return;
+
+      const amount = prompt(`Ingresá el monto a depositar en ${account.name}:`);
+      if (amount !== null && !isNaN(amount) && parseFloat(amount) > 0) {
+        // Round to 2 decimals
+        account.balance = parseFloat((account.balance + parseFloat(amount)).toFixed(2));
+        Storage.set('accounts', accounts);
+        renderAccounts();
+        updateDashboard();
+        showToast(`Depositado: +$${parseFloat(amount).toFixed(2)}`, 'success');
+      } else if (amount !== null) {
+        showToast('Monto inválido', 'error');
+      }
+    }
+
+    function deleteAccount(accountId) {
+      const account = accounts.find(a => a.id === accountId);
+      if (!account) return;
+
+      if (!confirm(`¿Estás seguro de eliminar la cuenta "${account.name}"?\n\nEsto también eliminará todos los gastos y transferencias asociados a esta cuenta.`)) {
+        return;
+      }
+
+      // Remove account
+      accounts = accounts.filter(a => a.id !== accountId);
+      Storage.set('accounts', accounts);
+
+      // Remove expenses associated with this account
+      expenses = expenses.filter(e => e.accountId !== accountId);
+      Storage.set('expenses', expenses);
+
+      // Remove fixed expenses associated with this account
+      fixedExpenses = fixedExpenses.filter(e => e.accountId !== accountId);
+      Storage.set('fixedExpenses', fixedExpenses);
+
+      // Remove transfers associated with this account
+      transfers = transfers.filter(t => t.fromAccountId !== accountId && t.toAccountId !== accountId);
+      Storage.set('transfers', transfers);
+
+      // Reset filter if it was for this account
+      if (currentFilter === accountId.toString()) {
+        currentFilter = 'all';
+      }
+
+      renderAccounts();
+      renderExpenses();
+      renderFixedExpenses();
+      renderTransfers();
+      updateDashboard();
+      populateAccountSelects();
+      showToast('Cuenta eliminada exitosamente', 'success');
+    }
+
+    // Fixed Expense Management
+    function payFixedExpense(expenseId) {
+      const fixedExp = fixedExpenses.find(e => e.id === expenseId);
+      if (!fixedExp) return;
+
+      const account = accounts.find(a => a.id === fixedExp.accountId);
+      if (!account) {
+        showToast('La cuenta asociada no existe', 'error');
+        return;
+      }
+
+      if (account.balance < fixedExp.amount) {
+        if (!confirm(`El saldo de ${account.name} es insuficiente ($${account.balance.toFixed(2)}). ¿Continuar igual?`)) {
+          return;
+        }
+      }
+
+      // Create expense record
+      const expense = {
+        id: Date.now(),
+        amount: fixedExp.amount,
+        accountId: fixedExp.accountId,
+        merchant: 'Gasto Fijo',
+        date: new Date().toISOString().split('T')[0],
+        description: fixedExp.description,
+        image: null,
+        timestamp: new Date().toISOString(),
+        isFixed: true
+      };
+
+      expenses.push(expense);
+      Storage.set('expenses', expenses);
+
+      // Update account balance with rounding to 2 decimals
+      account.balance = parseFloat((account.balance - fixedExp.amount).toFixed(2));
+      Storage.set('accounts', accounts);
+
+      // Mark as paid this month
+      fixedExp.paidThisMonth = new Date().toISOString();
+      Storage.set('fixedExpenses', fixedExpenses);
+
+      renderFixedExpenses();
+      renderExpenses();
+      renderAccounts();
+      updateDashboard();
+      showToast('Gasto fijo pagado exitosamente', 'success');
+    }
+
+    function deleteFixedExpense(expenseId) {
+      if (!confirm('¿Estás seguro de eliminar este gasto fijo?')) return;
+
+      fixedExpenses = fixedExpenses.filter(e => e.id !== expenseId);
+      Storage.set('fixedExpenses', fixedExpenses);
+      renderFixedExpenses();
+      updateDashboard();
+      showToast('Gasto fijo eliminado', 'success');
+    }
+
+    // Export/Import Functions
+    function initializeSettings() {
+      document.getElementById('exportBtn').addEventListener('click', exportData);
+      document.getElementById('importBtn').addEventListener('click', () => {
+        document.getElementById('importFile').click();
+      });
+      document.getElementById('importFile').addEventListener('change', importData);
+      document.getElementById('updateBalancesBtn').addEventListener('click', manualUpdateBalances);
+      document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
+    }
+
+    function exportData() {
+      const data = {
+        accounts,
+        expenses,
+        fixedExpenses,
+        transfers,
+        lastUpdate,
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+      };
+
+      const dataStr = JSON.stringify(data, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `trackr-backup-${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+      
+      URL.revokeObjectURL(url);
+      showToast('Datos exportados correctamente', 'success');
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          
+          if (!confirm('¿Importar estos datos? Esto REEMPLAZARÁ todos los datos actuales.')) {
+            return;
+          }
+
+          accounts = data.accounts || [];
+          expenses = data.expenses || [];
+          fixedExpenses = data.fixedExpenses || [];
+          transfers = data.transfers || [];
+          lastUpdate = data.lastUpdate || new Date().toISOString();
+
+          Storage.set('accounts', accounts);
+          Storage.set('expenses', expenses);
+          Storage.set('fixedExpenses', fixedExpenses);
+          Storage.set('transfers', transfers);
+          Storage.set('lastUpdate', lastUpdate);
+
+          renderAccounts();
+          renderFixedExpenses();
+          renderExpenses();
+          renderTransfers();
+          updateDashboard();
+          populateAccountSelects();
+          displayLastUpdate();
+
+          showToast('Datos importados correctamente', 'success');
+        } catch (error) {
+          showToast('Error al importar datos: archivo inválido', 'error');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+
+    function manualUpdateBalances() {
+      const btn = document.getElementById('updateBalancesBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading"></span> Actualizando...';
+
+      setTimeout(() => {
+        autoUpdateBalances();
+        displayLastUpdate();
+        btn.disabled = false;
+        btn.innerHTML = '🔄 Actualizar Saldos';
+        showToast('Saldos actualizados correctamente', 'success');
+      }, 500);
+    }
+
+    function displayLastUpdate() {
+      const info = document.getElementById('lastUpdateInfo');
+      const date = new Date(lastUpdate);
+      info.textContent = `Última actualización: ${date.toLocaleDateString('es-AR')} ${date.toLocaleTimeString('es-AR')}`;
+    }
+
+    function clearAllData() {
+      if (!confirm('⚠️ ¿ESTÁS SEGURO? Esto eliminará TODOS los datos de forma PERMANENTE.')) return;
+      if (!confirm('Esta acción no se puede deshacer. ¿Continuar?')) return;
+
+      localStorage.clear();
+      location.reload();
+    }
+
+    // Daily Summary Check
+    function checkDailySummary() {
+      const today = new Date().toISOString().split('T')[0];
+      
+      if (lastDailyCheck !== today) {
+        // Calculate interest updates for ALL accounts
+        let updates = [];
+        let totalEarned = 0;
+        
+        // Process each account independently
+        accounts.forEach(account => {
+          if (account.tna > 0) {
+            const daysElapsed = calculateDaysElapsed(account.lastInterestUpdate || lastUpdate);
+            if (daysElapsed > 0) {
+              // TNA formula: Daily Interest = (Balance * (TNA / 100)) / 365
+              const dailyRate = (account.tna / 100) / 365;
+              const oldBalance = account.balance;
+              const newBalance = account.balance * Math.pow(1 + dailyRate, daysElapsed);
+              const earned = newBalance - oldBalance;
+              
+              // Round to 2 decimals
+              account.balance = parseFloat(newBalance.toFixed(2));
+              account.lastInterestUpdate = new Date().toISOString();
+              
+              updates.push({
+                name: account.name,
+                earned: parseFloat(earned.toFixed(2)),
+                days: daysElapsed,
+                newBalance: parseFloat(newBalance.toFixed(2))
+              });
+              
+              totalEarned += earned;
+            }
+          }
+        });
+        
+        // Save all account updates
+        if (updates.length > 0) {
+          Storage.set('accounts', accounts);
+          lastUpdate = new Date().toISOString();
+          Storage.set('lastUpdate', lastUpdate);
+          
+          // Show modal with all updates
+          showDailySummary(updates, parseFloat(totalEarned.toFixed(2)));
+          
+          // Update UI
+          renderAccounts();
+          updateDashboard();
+        }
+        
+        // Mark day as checked (always, even if no updates)
+        lastDailyCheck = today;
+        Storage.set('lastDailyCheck', lastDailyCheck);
+      }
+    }
+
+    function showDailySummary(updates, totalEarned) {
+      const content = document.getElementById('dailySummaryContent');
+      
+      let html = `
+        <div class="interest-summary">
+          <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+            ¡Buenos días! Estos son tus nuevos saldos actualizados:
+          </p>
+      `;
+      
+      updates.forEach(update => {
+        html += `
+          <div class="interest-item">
+            <div>
+              <div class="interest-item-name">${update.name}</div>
+              <div style="font-size: 0.875rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace;">
+                ${update.days} día(s)
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div class="interest-item-value">+$${update.earned.toFixed(2)}</div>
+              <div style="font-size: 0.875rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace;">
+                $${update.newBalance.toFixed(2)}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += `
+        </div>
+        <div style="padding: 1rem; background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 212, 255, 0.1)); border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
+          <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total ganado</div>
+          <div style="font-size: 2rem; font-weight: 700; color: var(--success); font-family: 'JetBrains Mono', monospace;">
+            +$${totalEarned.toFixed(2)}
+          </div>
+        </div>
+      `;
+      
+      content.innerHTML = html;
+      document.getElementById('dailySummaryModal').classList.add('active');
+    }
+
+    function closeDailySummary() {
+      document.getElementById('dailySummaryModal').classList.remove('active');
+    }
+
+    // Template Management
+    function populateTemplates() {
+      const select = document.getElementById('fixedDescriptionTemplate');
+      select.innerHTML = '<option value="">Seleccionar plantilla...</option>' +
+        expenseTemplates.map(t => `<option value="${t}">${t}</option>`).join('');
+    }
+
+    function initializeTemplateSelector() {
+      document.getElementById('fixedDescriptionTemplate').addEventListener('change', (e) => {
+        if (e.target.value) {
+          document.getElementById('fixedDescription').value = e.target.value;
+        }
+      });
+    }
+
+    function manageTemplates() {
+      renderTemplateList();
+      document.getElementById('templateModal').classList.add('active');
+    }
+
+    function closeTemplateModal() {
+      document.getElementById('templateModal').classList.remove('active');
+      document.getElementById('newTemplate').value = '';
+    }
+
+    function renderTemplateList() {
+      const list = document.getElementById('templateList');
+      
+      if (expenseTemplates.length === 0) {
+        list.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No hay plantillas</p>';
+        return;
+      }
+      
+      list.innerHTML = expenseTemplates.map((template, index) => `
+        <div class="template-item">
+          <span class="template-name">${template}</span>
+          <button class="btn btn-small btn-danger" onclick="deleteTemplate(${index})">
+            🗑️
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function addTemplate() {
+      const input = document.getElementById('newTemplate');
+      const value = input.value.trim();
+      
+      if (!value) {
+        showToast('Ingresá un nombre para la plantilla', 'error');
+        return;
+      }
+      
+      if (expenseTemplates.includes(value)) {
+        showToast('Esta plantilla ya existe', 'error');
+        return;
+      }
+      
+      expenseTemplates.push(value);
+      Storage.set('expenseTemplates', expenseTemplates);
+      populateTemplates();
+      renderTemplateList();
+      input.value = '';
+      showToast('Plantilla agregada', 'success');
+    }
+
+    function deleteTemplate(index) {
+      expenseTemplates.splice(index, 1);
+      Storage.set('expenseTemplates', expenseTemplates);
+      populateTemplates();
+      renderTemplateList();
+      showToast('Plantilla eliminada', 'success');
+    }
+
+    // Month Change Detection and TNA Management
+    function checkMonthChange() {
+      const now = new Date();
+      const currentMonth = now.toLocaleString('es-AR', { month: 'long', year: 'numeric' });
+      
+      if (lastMonth && lastMonth !== currentMonth) {
+        // New month detected
+        const remuneratedAccounts = accounts.filter(acc => acc.tna > 0);
+        
+        if (remuneratedAccounts.length > 0) {
+          showMonthlyTNAModal(remuneratedAccounts);
+        }
+      }
+      
+      // Update last month
+      if (!lastMonth) {
+        lastMonth = currentMonth;
+        Storage.set('lastMonth', lastMonth);
+      }
+    }
+
+    function showMonthlyTNAModal(remuneratedAccounts) {
+      const list = document.getElementById('monthlyTNAList');
+      
+      list.innerHTML = remuneratedAccounts.map(acc => `
+        <div class="tna-item">
+          <div class="tna-item-header">
+            <span class="tna-item-name">${acc.name}</span>
+          </div>
+          <div class="tna-input-group">
+            <label style="color: var(--text-secondary); font-size: 0.875rem; white-space: nowrap;">TNA actual:</label>
+            <input type="number" 
+                   class="tna-input" 
+                   id="tna-${acc.id}" 
+                   value="${acc.tna}" 
+                   step="0.01" 
+                   placeholder="0.00">
+            <span style="color: var(--text-secondary); font-size: 0.875rem;">%</span>
+          </div>
+        </div>
+      `).join('');
+      
+      document.getElementById('monthlyTNAModal').classList.add('active');
+    }
+
+    function saveMonthlyTNA() {
+      accounts.forEach(acc => {
+        if (acc.tna > 0) {
+          const input = document.getElementById(`tna-${acc.id}`);
+          if (input) {
+            const newTNA = parseFloat(input.value);
+            if (!isNaN(newTNA) && newTNA >= 0) {
+              acc.tna = newTNA;
+            }
+          }
+        }
+      });
+      
+      Storage.set('accounts', accounts);
+      
+      // Update lastMonth to current month
+      const now = new Date();
+      lastMonth = now.toLocaleString('es-AR', { month: 'long', year: 'numeric' });
+      Storage.set('lastMonth', lastMonth);
+      
+      closeMonthlyTNAModal();
+      renderAccounts();
+      showToast('TNA actualizada para el nuevo mes', 'success');
+    }
+
+    function closeMonthlyTNAModal() {
+      document.getElementById('monthlyTNAModal').classList.remove('active');
+    }
+
+    function modifyTNA(accountId) {
+      const account = accounts.find(a => a.id === accountId);
+      if (!account) return;
+
+      const newTNA = prompt(`Ingresá la nueva TNA para ${account.name} (%)`, account.tna);
+      if (newTNA !== null && !isNaN(newTNA)) {
+        account.tna = parseFloat(newTNA);
+        Storage.set('accounts', accounts);
+        renderAccounts();
+        showToast('TNA actualizada', 'success');
+      }
+    }
+
+    // Transfer Management
+    function initializeTransferForm() {
+      const transferForm = document.getElementById('transferForm');
+      const transferFrom = document.getElementById('transferFrom');
+      const transferTo = document.getElementById('transferTo');
+      const transferAmount = document.getElementById('transferAmount');
+
+      // Listen for changes to show preview
+      [transferFrom, transferTo, transferAmount].forEach(input => {
+        input.addEventListener('change', updateTransferPreview);
+        input.addEventListener('input', updateTransferPreview);
+      });
+
+      // Handle form submission
+      transferForm.addEventListener('submit', handleTransferSubmit);
+    }
+
+    function updateTransferPreview() {
+      const fromId = parseInt(document.getElementById('transferFrom').value);
+      const toId = parseInt(document.getElementById('transferTo').value);
+      const amount = parseFloat(document.getElementById('transferAmount').value);
+
+      const preview = document.getElementById('transferPreview');
+
+      if (!fromId || !toId || !amount || amount <= 0) {
+        preview.style.display = 'none';
+        return;
+      }
+
+      if (fromId === toId) {
+        preview.style.display = 'none';
+        return;
+      }
+
+      const fromAccount = accounts.find(a => a.id === fromId);
+      const toAccount = accounts.find(a => a.id === toId);
+
+      if (!fromAccount || !toAccount) {
+        preview.style.display = 'none';
+        return;
+      }
+
+      const newFromBalance = fromAccount.balance - amount;
+      const newToBalance = toAccount.balance + amount;
+
+      document.getElementById('previewFrom').textContent = fromAccount.name;
+      document.getElementById('previewTo').textContent = toAccount.name;
+      document.getElementById('previewFromBalance').textContent = 
+        `$${fromAccount.balance.toFixed(2)} → $${newFromBalance.toFixed(2)}`;
+      document.getElementById('previewToBalance').textContent = 
+        `$${toAccount.balance.toFixed(2)} → $${newToBalance.toFixed(2)}`;
+
+      preview.style.display = 'block';
+    }
+
+    function handleTransferSubmit(e) {
+      e.preventDefault();
+
+      const fromId = parseInt(document.getElementById('transferFrom').value);
+      const toId = parseInt(document.getElementById('transferTo').value);
+      const amount = parseFloat(document.getElementById('transferAmount').value);
+      const date = document.getElementById('transferDate').value;
+      const description = document.getElementById('transferDescription').value;
+
+      // Validations
+      if (!fromId || !toId) {
+        showToast('Seleccioná ambas cuentas', 'error');
+        return;
+      }
+
+      if (fromId === toId) {
+        showToast('No podés transferir a la misma cuenta', 'error');
+        return;
+      }
+
+      if (!amount || amount <= 0) {
+        showToast('Ingresá un monto válido', 'error');
+        return;
+      }
+
+      const fromAccount = accounts.find(a => a.id === fromId);
+      const toAccount = accounts.find(a => a.id === toId);
+
+      if (!fromAccount || !toAccount) {
+        showToast('Una de las cuentas no existe', 'error');
+        return;
+      }
+
+      if (fromAccount.balance < amount) {
+        if (!confirm(`El saldo de ${fromAccount.name} es insuficiente ($${fromAccount.balance.toFixed(2)}). ¿Continuar igual?`)) {
+          return;
+        }
+      }
+
+      // Perform transfer with proper rounding
+      const oldFromBalance = fromAccount.balance;
+      const oldToBalance = toAccount.balance;
+
+      fromAccount.balance = parseFloat((fromAccount.balance - amount).toFixed(2));
+      toAccount.balance = parseFloat((toAccount.balance + amount).toFixed(2));
+
+      // Create transfer record
+      const transfer = {
+        id: Date.now(),
+        fromAccountId: fromId,
+        toAccountId: toId,
+        fromAccountName: fromAccount.name,
+        toAccountName: toAccount.name,
+        amount: parseFloat(amount.toFixed(2)),
+        date,
+        description,
+        timestamp: new Date().toISOString(),
+        oldFromBalance: parseFloat(oldFromBalance.toFixed(2)),
+        oldToBalance: parseFloat(oldToBalance.toFixed(2)),
+        newFromBalance: fromAccount.balance,
+        newToBalance: toAccount.balance
+      };
+
+      transfers.push(transfer);
+      
+      // Save everything
+      Storage.set('accounts', accounts);
+      Storage.set('transfers', transfers);
+
+      // Update UI
+      renderAccounts();
+      renderTransfers();
+      updateDashboard();
+      populateTransferSelects();
+
+      // Reset form
+      e.target.reset();
+      document.getElementById('transferDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('transferPreview').style.display = 'none';
+
+      showToast(`Transferencia realizada: $${amount.toFixed(2)}`, 'success');
+    }
+
+    function renderTransfers() {
+      const list = document.getElementById('transfersList');
+      
+      if (transfers.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💱</div><p>No hay transferencias registradas</p></div>';
+        return;
+      }
+
+      // Sort by date descending
+      const sortedTransfers = [...transfers].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      list.innerHTML = sortedTransfers.map(transfer => `
+        <div class="expense-item">
+          <div class="expense-icon">💱</div>
+          <div class="expense-details">
+            <h4>${transfer.fromAccountName} → ${transfer.toAccountName}</h4>
+            <div class="expense-meta">
+              <span>${new Date(transfer.date).toLocaleDateString('es-AR')}</span>
+              ${transfer.description ? `<span>${transfer.description}</span>` : ''}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem; font-family: 'JetBrains Mono', monospace;">
+              ${transfer.fromAccountName}: $${transfer.oldFromBalance.toFixed(2)} → $${transfer.newFromBalance.toFixed(2)}
+              <br>
+              ${transfer.toAccountName}: $${transfer.oldToBalance.toFixed(2)} → $${transfer.newToBalance.toFixed(2)}
+            </div>
+          </div>
+          <div class="expense-amount">$${transfer.amount.toFixed(2)}</div>
+        </div>
+      `).join('');
+    }
+
+    // TNA Calculator (Inverse Calculation)
+    function initializeCalculator() {
+      const calculatorForm = document.getElementById('calculatorForm');
+      calculatorForm.addEventListener('submit', handleCalculatorSubmit);
+    }
+
+    function handleCalculatorSubmit(e) {
+      e.preventDefault();
+
+      const currentBalance = parseFloat(document.getElementById('calcCurrentBalance').value);
+      const dailyEarnings = parseFloat(document.getElementById('calcDailyEarnings').value);
+
+      // Validations
+      if (!currentBalance || currentBalance <= 0) {
+        showToast('Ingresá un saldo actual válido', 'error');
+        return;
+      }
+
+      if (!dailyEarnings || dailyEarnings <= 0) {
+        showToast('Ingresá una remuneración válida', 'error');
+        return;
+      }
+
+      if (dailyEarnings >= currentBalance) {
+        showToast('La remuneración no puede ser mayor o igual al saldo actual', 'error');
+        return;
+      }
+
+      // Calculations
+      // 1. Previous Balance = Current Balance - Daily Earnings
+      const previousBalance = currentBalance - dailyEarnings;
+
+      // 2. Daily Rate = (Daily Earnings / Previous Balance) × 100
+      const dailyRate = (dailyEarnings / previousBalance) * 100;
+
+      // 3. TNA = Daily Rate × 365
+      const tna = dailyRate * 365;
+
+      // Display results
+      document.getElementById('resultPreviousBalance').textContent = `$${previousBalance.toFixed(2)}`;
+      document.getElementById('resultDailyRate').textContent = `${dailyRate.toFixed(4)}%`;
+      document.getElementById('resultTNA').textContent = `${tna.toFixed(2)}%`;
+
+      document.getElementById('calculatorResults').style.display = 'block';
+
+      // Smooth scroll to results
+      document.getElementById('calculatorResults').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function clearCalculator() {
+      document.getElementById('calculatorForm').reset();
+      document.getElementById('calculatorResults').style.display = 'none';
+    }
+
+    // Initialize app
+    init();
+  </script>
+</body>
+</html>
