@@ -88,13 +88,61 @@
     /* Colores del navbar por app */
     .hub-nav.app-agenda {
       border-bottom-color: var(--agenda-color);
+      background: linear-gradient(135deg, #1a4d2e 0%, #2d6a4f 100%);
+    }
+    
+    .hub-nav.app-agenda .hub-logo,
+    .hub-nav.app-agenda .hub-tab {
+      color: white;
+    }
+    
+    .hub-nav.app-agenda .hub-tab:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+    
+    .hub-nav.app-agenda .hub-tab.active {
+      color: white;
+      border-bottom-color: white;
     }
     
     .hub-nav.app-gastos {
       border-bottom-color: var(--gastos-color);
+      background: linear-gradient(135deg, #0a0e12 0%, #151a21 100%);
+    }
+    
+    .hub-nav.app-gastos .hub-logo,
+    .hub-nav.app-gastos .hub-tab {
+      color: var(--gastos-color);
+    }
+    
+    .hub-nav.app-gastos .hub-tab:hover {
+      background: rgba(0, 255, 136, 0.1);
+      color: var(--gastos-color);
+    }
+    
+    .hub-nav.app-gastos .hub-tab.active {
+      color: var(--gastos-color);
+      border-bottom-color: var(--gastos-color);
     }
     
     .hub-nav.app-ayuno {
+      border-bottom-color: var(--ayuno-color);
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }
+    
+    .hub-nav.app-ayuno .hub-logo,
+    .hub-nav.app-ayuno .hub-tab {
+      color: var(--ayuno-color);
+    }
+    
+    .hub-nav.app-ayuno .hub-tab:hover {
+      background: rgba(6, 182, 212, 0.1);
+      color: var(--ayuno-color);
+    }
+    
+    .hub-nav.app-ayuno .hub-tab.active {
+      color: var(--ayuno-color);
       border-bottom-color: var(--ayuno-color);
     }
     
@@ -351,7 +399,7 @@
   <!-- Navegación del Hub -->
   <nav class="hub-nav">
     <div class="hub-nav-content">
-      <div class="hub-logo">📚 Mi Productividad</div>
+      <div class="hub-logo">📚 Inicio</div>
       <div class="hub-tabs">
         <button class="hub-tab" data-app="agenda">📅 Agenda</button>
         <button class="hub-tab" data-app="gastos">💰 Gastos</button>
@@ -378,7 +426,7 @@
 
   <!-- Bienvenida inicial -->
   <div id="hub-welcome" class="hub-welcome">
-    <h2>Bienvenido a tu Hub de Productividad</h2>
+    <h2>Bienvenido</h2>
     <p>Gestiona tu vida académica, tus finanzas y tu salud en un solo lugar.</p>
     
     <div class="app-cards">
@@ -397,7 +445,7 @@
       <div class="app-card" data-app="ayuno">
         <div class="app-card-icon">⏱️</div>
         <div class="app-card-title">Ayuno Intermitente</div>
-        <div class="app-card-desc">Seguimiento de tus períodos de ayuno</div>
+        <div class="app-card-desc">Seguimiento de ayuno</div>
       </div>
     </div>
   </div>
