@@ -31,11 +31,39 @@
     
     :root {
       --hub-primary: #1a4d2e;
-      --hub-bg: #fafafa;
+      --hub-bg: #f5f5f0;
       --hub-surface: #ffffff;
       --hub-text: #2c2c2c;
       --hub-border: #e0e0e0;
       --hub-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      
+      /* Colores por app */
+      --agenda-color: #1a4d2e;
+      --gastos-color: #00ff88;
+      --ayuno-color: #06b6d4;
+    }
+    
+    /* Modo oscuro para bienvenida */
+    body.dark-mode {
+      --hub-bg: #1a1f28;
+      --hub-surface: #0a0e12;
+      --hub-text: #ffffff;
+      --hub-border: #2a3040;
+      --hub-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    body.dark-mode .hub-nav {
+      background: #151a21;
+    }
+    
+    body.dark-mode .app-card {
+      background: #1a1f28;
+      border-color: #2a3040;
+    }
+    
+    body.dark-mode .app-card:hover {
+      background: #222831;
+      border-color: var(--hub-primary);
     }
     
     body {
@@ -54,6 +82,20 @@
       position: sticky;
       top: 0;
       z-index: 1000;
+      transition: border-color 0.3s ease, background-color 0.3s ease;
+    }
+    
+    /* Colores del navbar por app */
+    .hub-nav.app-agenda {
+      border-bottom-color: var(--agenda-color);
+    }
+    
+    .hub-nav.app-gastos {
+      border-bottom-color: var(--gastos-color);
+    }
+    
+    .hub-nav.app-ayuno {
+      border-bottom-color: var(--ayuno-color);
     }
     
     .hub-nav-content {
@@ -85,6 +127,39 @@
     
     .hub-logo:active {
       transform: scale(0.98);
+    }
+    
+    /* Toggle dark/light mode */
+    .theme-toggle {
+      background: none;
+      border: 2px solid var(--hub-border);
+      color: var(--hub-text);
+      font-size: 1.3rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      margin-left: 1rem;
+    }
+    
+    .theme-toggle:hover {
+      background: var(--hub-primary);
+      color: white;
+      border-color: var(--hub-primary);
+      transform: rotate(20deg) scale(1.1);
+    }
+    
+    .theme-toggle:active {
+      transform: rotate(20deg) scale(0.95);
+    }
+    
+    /* Ocultar toggle cuando hay app activa */
+    body:not(.home) .theme-toggle {
+      display: none;
     }
     
     .hub-tabs {
@@ -166,6 +241,7 @@
         gap: 0.25rem;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        flex: 1;
       }
       
       .hub-tab {
@@ -174,11 +250,25 @@
         flex-shrink: 0;
       }
       
+      .theme-toggle {
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
+        margin-left: 0.5rem;
+        flex-shrink: 0;
+      }
+      
       .hub-nav-content {
         height: auto;
-        flex-direction: column;
+        flex-direction: row;
         gap: 0.5rem;
         padding: 0.75rem 1rem;
+        flex-wrap: wrap;
+      }
+      
+      .hub-logo {
+        width: 100%;
+        text-align: center;
       }
       
       .app-container {
@@ -261,11 +351,14 @@
   <!-- Navegación del Hub -->
   <nav class="hub-nav">
     <div class="hub-nav-content">
-      <div class="hub-logo">📚 Inicio</div>
+      <div class="hub-logo">📚 Mi Productividad</div>
       <div class="hub-tabs">
         <button class="hub-tab" data-app="agenda">📅 Agenda</button>
         <button class="hub-tab" data-app="gastos">💰 Gastos</button>
         <button class="hub-tab" data-app="ayuno">⏱️ Ayuno</button>
+        <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
+          <span class="theme-icon">🌙</span>
+        </button>
       </div>
     </div>
   </nav>
@@ -285,7 +378,7 @@
 
   <!-- Bienvenida inicial -->
   <div id="hub-welcome" class="hub-welcome">
-    <h2>Bienvenido</h2>
+    <h2>Bienvenido a tu Hub de Productividad</h2>
     <p>Gestiona tu vida académica, tus finanzas y tu salud en un solo lugar.</p>
     
     <div class="app-cards">
@@ -316,15 +409,32 @@
     const appContainers = document.querySelectorAll('.app-container');
     const welcome = document.getElementById('hub-welcome');
     const logo = document.querySelector('.hub-logo');
+    const navbar = document.querySelector('.hub-nav');
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = document.querySelector('.theme-icon');
     
-    // Recordar última app abierta
+    // Recordar última app abierta y tema
     const lastApp = localStorage.getItem('hub_lastApp');
+    const savedTheme = localStorage.getItem('hub_theme') || 'light';
+    
+    // Aplicar tema guardado
+    if (savedTheme === 'dark') {
+      document.body.classList.add('dark-mode');
+      themeIcon.textContent = '☀️';
+    }
     
     function showApp(appName) {
       // Ocultar todo
       appContainers.forEach(container => container.classList.remove('active'));
       tabs.forEach(tab => tab.classList.remove('active'));
       welcome.style.display = 'none';
+      
+      // Quitar clase home del body
+      document.body.classList.remove('home');
+      
+      // Cambiar color del navbar según la app
+      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno');
+      navbar.classList.add(`app-${appName}`);
       
       // Mostrar app seleccionada
       const container = document.getElementById(`app-${appName}`);
@@ -342,6 +452,12 @@
       appContainers.forEach(container => container.classList.remove('active'));
       tabs.forEach(tab => tab.classList.remove('active'));
       
+      // Restaurar color original del navbar
+      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno');
+      
+      // Agregar clase home al body
+      document.body.classList.add('home');
+      
       // Mostrar bienvenida
       welcome.style.display = 'block';
       
@@ -349,8 +465,22 @@
       localStorage.removeItem('hub_lastApp');
     }
     
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      
+      // Cambiar icono
+      themeIcon.textContent = isDark ? '☀️' : '🌙';
+      
+      // Guardar preferencia
+      localStorage.setItem('hub_theme', isDark ? 'dark' : 'light');
+    }
+    
     // Event listener para el logo (volver al inicio)
     logo.addEventListener('click', showHome);
+    
+    // Event listener para toggle de tema
+    themeToggle.addEventListener('click', toggleTheme);
     
     // Event listeners para tabs
     tabs.forEach(tab => {
@@ -372,6 +502,7 @@
     if (lastApp) {
       showApp(lastApp);
     } else {
+      document.body.classList.add('home');
       welcome.style.display = 'block';
     }
   </script>
