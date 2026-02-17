@@ -1065,6 +1065,12 @@
       background: #1e2a20;
       color: #6fcf97;
     }
+    
+    /* Forzar formato 24hs en todos los inputs de tiempo */
+    input[type="time"]::-webkit-datetime-edit-ampm-field {
+      display: none;
+    }
+    
     .theme-toggle-btn {
       background: none;
       border: 2px solid var(--border);
@@ -2972,7 +2978,7 @@
                     <div className="form-group">
                       <label className="form-label">Hora inicio *</label>
                       <input
-                        type="time"
+                        type="time" step="60"
                         className="form-input"
                         value={activity.startTime}
                         onChange={(e) => {
@@ -2985,7 +2991,7 @@
                     <div className="form-group">
                       <label className="form-label">Hora fin *</label>
                       <input
-                        type="time"
+                        type="time" step="60"
                         className="form-input"
                         value={activity.endTime}
                         onChange={(e) => {
@@ -3062,23 +3068,6 @@
                   {activity.kind === 'tenis' && (
                     <div>
                       <div className="form-group">
-                        <label className="form-label">Intensidad (opcional)</label>
-                        <select
-                          className="form-select"
-                          value={activity.metadata.intensity || ''}
-                          onChange={(e) => setActivity({
-                            ...activity,
-                            metadata: { ...activity.metadata, intensity: e.target.value }
-                          })}
-                        >
-                          <option value="">Seleccionar...</option>
-                          <option value="Baja">Baja</option>
-                          <option value="Media">Media</option>
-                          <option value="Alta">Alta</option>
-                        </select>
-                      </div>
-                      
-                      <div className="form-group">
                         <label className="form-label">Notas (opcional)</label>
                         <textarea
                           className="form-textarea"
@@ -3106,11 +3095,11 @@
                           })}
                         >
                           <option value="">Seleccionar...</option>
-                          <option value="Inicial">Inicial</option>
-                          <option value="Intermedio">Intermedio</option>
-                          <option value="Avanzado">Avanzado</option>
+                          <option value="Inicial Adultos">Inicial Adultos</option>
+                          <option value="Intermedio Adultos">Intermedio Adultos</option>
+                          <option value="Precompetición">Precompetición</option>
                           <option value="Competición">Competición</option>
-                          <option value="Mixto">Mixto</option>
+                          <option value="Otro">Otro</option>
                         </select>
                       </div>
                       
@@ -3449,7 +3438,7 @@
                   <div className="form-group">
                     <label className="form-label">Hora inicio</label>
                     <input
-                      type="time"
+                      type="time" step="60"
                       className="form-input"
                       value={session.startTime}
                       onChange={(e) => handleChange(index, 'startTime', e.target.value)}
@@ -3459,7 +3448,7 @@
                   <div className="form-group">
                     <label className="form-label">Hora fin</label>
                     <input
-                      type="time"
+                      type="time" step="60"
                       className="form-input"
                       value={session.endTime}
                       onChange={(e) => handleChange(index, 'endTime', e.target.value)}
