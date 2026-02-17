@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mi agenda Universitaria</title>
+  <script>
+    // Aplicar tema antes de que React cargue para evitar flash
+    if (localStorage.getItem('agendaTheme') === 'dark') {
+      document.body.classList.add('dark-mode');
+    }
+  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
     
@@ -829,7 +835,245 @@
       border-left: 4px solid var(--primary);
     }
     
+    /* ========== MODO OSCURO ========== */
+    body.dark-mode {
+      --background: #12171f;
+      --surface: #1a2030;
+      --text: #e8e4dc;
+      --text-muted: #8a8a9a;
+      --border: #2a3245;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    
+    body.dark-mode .app-header {
+      background: #1a2030;
+      border-bottom-color: #2d6a4f;
+    }
+    
+    body.dark-mode .tab {
+      color: var(--text-muted);
+    }
+    
+    body.dark-mode .tab.active {
+      color: #6fcf97;
+      border-bottom-color: #6fcf97;
+    }
+    
+    body.dark-mode .tab:hover {
+      color: #6fcf97;
+    }
+    
+    body.dark-mode .week-grid,
+    body.dark-mode .week-time-column,
+    body.dark-mode .day-column-bg,
+    body.dark-mode .hour-line {
+      border-color: #2a3245;
+    }
+    
+    body.dark-mode .time-slot {
+      color: var(--text-muted);
+      border-color: #2a3245;
+    }
+    
+    body.dark-mode .day-column {
+      border-color: #2a3245;
+    }
+
+    body.dark-mode .month-day {
+      background: #1a2030;
+      border-color: #2a3245;
+    }
+    
+    body.dark-mode .month-day.today {
+      background: linear-gradient(135deg, #2a2010 0%, #3a3015 100%);
+      border-color: var(--accent);
+    }
+    
+    body.dark-mode .month-day.other-month {
+      background: #141920;
+    }
+    
+    body.dark-mode .month-day-header {
+      background: #12171f;
+      color: var(--text-muted);
+      border-color: #2a3245;
+    }
+    
+    body.dark-mode .month-event {
+      background: #2a3245;
+      color: #e8e4dc;
+    }
+    
+    body.dark-mode .list-item {
+      background: #1a2030;
+      border-color: #2a3245;
+    }
+    
+    body.dark-mode .list-item:hover {
+      background: #1e2840;
+      border-color: #2d6a4f;
+    }
+    
+    body.dark-mode .stat-card {
+      background: #1a2030;
+      border-color: #2a3245;
+    }
+    
+    body.dark-mode .modal {
+      background: #1a2030;
+      border-color: #2a3245;
+    }
+    
+    body.dark-mode .modal-header {
+      background: #12171f;
+      border-bottom-color: #2a3245;
+    }
+    
+    body.dark-mode .modal-footer {
+      background: #12171f;
+      border-top-color: #2a3245;
+    }
+    
+    body.dark-mode .form-input,
+    body.dark-mode .form-select,
+    body.dark-mode .form-textarea {
+      background: #12171f;
+      border-color: #2a3245;
+      color: var(--text);
+    }
+    
+    body.dark-mode .form-input:focus,
+    body.dark-mode .form-select:focus,
+    body.dark-mode .form-textarea:focus {
+      border-color: #2d6a4f;
+    }
+    
+    body.dark-mode .stepper {
+      background: #12171f;
+      border-color: #2a3245;
+    }
+    
+    body.dark-mode .step-item.active .step-label {
+      color: #6fcf97;
+    }
+    
+    body.dark-mode .step-item.completed .step-circle {
+      background: #2d6a4f;
+    }
+    
+    body.dark-mode .step-item.active .step-circle {
+      background: #2d6a4f;
+      border-color: #6fcf97;
+    }
+
+    body.dark-mode .item-entry {
+      background: #12171f;
+      border-color: #2a3245;
+    }
+    
+    body.dark-mode .conflict-alert {
+      background: #2a1515;
+      border-color: #7f1d1d;
+    }
+    
+    body.dark-mode .alert-error {
+      background: #2a1515;
+      color: #fca5a5;
+    }
+    
+    body.dark-mode .alert-info {
+      background: #0f2235;
+      color: #93c5fd;
+    }
+    
+    body.dark-mode .side-panel {
+      background: #1a2030;
+      border-color: #2a3245;
+    }
+    
+    body.dark-mode .side-panel-header {
+      background: #12171f;
+      border-bottom-color: #2a3245;
+    }
+    
+    body.dark-mode .side-panel-section {
+      border-bottom-color: #2a3245;
+    }
+    
+    body.dark-mode .side-panel-section-title {
+      color: #6fcf97;
+    }
+    
+    body.dark-mode .search-input {
+      background: #1a2030;
+      border-color: #2a3245;
+      color: var(--text);
+    }
+    
+    body.dark-mode .search-input:focus {
+      border-color: #2d6a4f;
+    }
+    
+    body.dark-mode .btn-secondary {
+      background: #1a2030;
+      border-color: #2a3245;
+      color: var(--text);
+    }
+    
+    body.dark-mode .btn-secondary:hover {
+      background: #2a3245;
+    }
+    
+    body.dark-mode .multi-select-item {
+      background: #12171f;
+      border-color: #2a3245;
+      color: var(--text);
+    }
+    
+    body.dark-mode .activity-type-card {
+      background: #12171f;
+      border-color: #2a3245;
+      color: var(--text);
+    }
+    
+    body.dark-mode .activity-type-card.selected {
+      background: #2d6a4f;
+    }
+    
+    /* Botón toggle dark mode */
+    .theme-toggle-btn {
+      background: none;
+      border: 2px solid var(--border);
+      color: var(--text);
+      font-size: 1.2rem;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+    
+    .theme-toggle-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      transform: rotate(20deg) scale(1.1);
+    }
+
     /* Responsive */
+    @media (max-width: 768px) {
+      .theme-toggle-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+      }
+    }
     @media (max-width: 768px) {
       .app-title {
         font-size: 1.5rem;
@@ -1667,6 +1911,19 @@
       const [showModal, setShowModal] = useState(false);
       const [showActivityModal, setShowActivityModal] = useState(false);
       const [editingActivity, setEditingActivity] = useState(null);
+      const [isDarkMode, setIsDarkMode] = useState(() => {
+        return localStorage.getItem('agendaTheme') === 'dark';
+      });
+      
+      // Aplicar clase dark-mode al body cuando cambia el estado
+      useEffect(() => {
+        if (isDarkMode) {
+          document.body.classList.add('dark-mode');
+        } else {
+          document.body.classList.remove('dark-mode');
+        }
+        localStorage.setItem('agendaTheme', isDarkMode ? 'dark' : 'light');
+      }, [isDarkMode]);
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedItem, setSelectedItem] = useState(null);
       const [showSidePanel, setShowSidePanel] = useState(false);
@@ -1781,6 +2038,13 @@
                   </button>
                   <button className="btn btn-primary" onClick={() => setShowActivityModal(true)}>
                     + Actividad
+                  </button>
+                  <button 
+                    className="theme-toggle-btn"
+                    onClick={() => setIsDarkMode(!isDarkMode)}
+                    title="Cambiar tema"
+                  >
+                    {isDarkMode ? '☀️' : '🌙'}
                   </button>
                 </div>
               </div>
