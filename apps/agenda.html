@@ -88,6 +88,7 @@
       display: flex;
       gap: 0.75rem;
       flex-wrap: wrap;
+      align-items: center;
     }
     
     /* Búsqueda global */
@@ -2036,16 +2037,18 @@
                   <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                     Agregar / Editar datos
                   </button>
-                  <button className="btn btn-primary" onClick={() => setShowActivityModal(true)}>
-                    + Actividad
-                  </button>
-                  <button 
-                    className="theme-toggle-btn"
-                    onClick={() => setIsDarkMode(!isDarkMode)}
-                    title="Cambiar tema"
-                  >
-                    {isDarkMode ? '☀️' : '🌙'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <button className="btn btn-primary" onClick={() => setShowActivityModal(true)}>
+                      + Actividad
+                    </button>
+                    <button 
+                      className="theme-toggle-btn"
+                      onClick={() => setIsDarkMode(!isDarkMode)}
+                      title="Cambiar tema"
+                    >
+                      {isDarkMode ? '☀️' : '🌙'}
+                    </button>
+                  </div>
                 </div>
               </div>
               
