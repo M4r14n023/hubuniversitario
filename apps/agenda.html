@@ -1065,12 +1065,6 @@
       background: #1e2a20;
       color: #6fcf97;
     }
-    
-    /* Forzar formato 24hs en todos los inputs de tiempo */
-    input[type="time"]::-webkit-datetime-edit-ampm-field {
-      display: none;
-    }
-    
     .theme-toggle-btn {
       background: none;
       border: 2px solid var(--border);
@@ -2978,7 +2972,7 @@
                     <div className="form-group">
                       <label className="form-label">Hora inicio *</label>
                       <input
-                        type="time" step="60"
+                        type="time"
                         className="form-input"
                         value={activity.startTime}
                         onChange={(e) => {
@@ -2991,7 +2985,7 @@
                     <div className="form-group">
                       <label className="form-label">Hora fin *</label>
                       <input
-                        type="time" step="60"
+                        type="time"
                         className="form-input"
                         value={activity.endTime}
                         onChange={(e) => {
@@ -3095,11 +3089,10 @@
                           })}
                         >
                           <option value="">Seleccionar...</option>
-                          <option value="Inicial Adultos">Inicial Adultos</option>
-                          <option value="Intermedio Adultos">Intermedio Adultos</option>
+                          <option value="Adulto Inicial">Adulto Inicial</option>
+                          <option value="Adulto Intermedio">Adulto Intermedio</option>
                           <option value="Precompetición">Precompetición</option>
                           <option value="Competición">Competición</option>
-                          <option value="Otro">Otro</option>
                         </select>
                       </div>
                       
@@ -3438,7 +3431,7 @@
                   <div className="form-group">
                     <label className="form-label">Hora inicio</label>
                     <input
-                      type="time" step="60"
+                      type="time"
                       className="form-input"
                       value={session.startTime}
                       onChange={(e) => handleChange(index, 'startTime', e.target.value)}
@@ -3448,7 +3441,7 @@
                   <div className="form-group">
                     <label className="form-label">Hora fin</label>
                     <input
-                      type="time" step="60"
+                      type="time"
                       className="form-input"
                       value={session.endTime}
                       onChange={(e) => handleChange(index, 'endTime', e.target.value)}
