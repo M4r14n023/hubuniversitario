@@ -2973,6 +2973,7 @@
                       <label className="form-label">Hora inicio *</label>
                       <input
                         type="time"
+                        step="60"
                         className="form-input"
                         value={activity.startTime}
                         onChange={(e) => {
@@ -2986,6 +2987,7 @@
                       <label className="form-label">Hora fin *</label>
                       <input
                         type="time"
+                        step="60"
                         className="form-input"
                         value={activity.endTime}
                         onChange={(e) => {
@@ -3432,6 +3434,7 @@
                     <label className="form-label">Hora inicio</label>
                     <input
                       type="time"
+                      step="60"
                       className="form-input"
                       value={session.startTime}
                       onChange={(e) => handleChange(index, 'startTime', e.target.value)}
@@ -3442,6 +3445,7 @@
                     <label className="form-label">Hora fin</label>
                     <input
                       type="time"
+                      step="60"
                       className="form-input"
                       value={session.endTime}
                       onChange={(e) => handleChange(index, 'endTime', e.target.value)}
