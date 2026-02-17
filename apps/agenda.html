@@ -47,6 +47,7 @@
       color: var(--text);
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
+      transition: background 0.3s ease, color 0.3s ease;
     }
     
     h1, h2, h3, h4 {
@@ -838,6 +839,9 @@
     
     /* ========== MODO OSCURO ========== */
     body.dark-mode {
+      --primary: #6fcf97;
+      --primary-light: #4db87a;
+      --accent: #f0a843;
       --background: #12171f;
       --surface: #1a2030;
       --text: #e8e4dc;
@@ -848,22 +852,27 @@
       --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
     }
     
+    /* Elementos con fondo primario: usar verde más oscuro pero visible en dark mode */
     body.dark-mode .app-header {
       background: #1a2030;
-      border-bottom-color: #2d6a4f;
+      border-bottom-color: #4db87a;
     }
     
-    body.dark-mode .tab {
-      color: var(--text-muted);
-    }
-    
-    body.dark-mode .tab.active {
+    body.dark-mode .month-day-header {
+      background: #1e2a20;
       color: #6fcf97;
-      border-bottom-color: #6fcf97;
+      border-color: #2a3245;
     }
     
-    body.dark-mode .tab:hover {
-      color: #6fcf97;
+    /* Encabezados de columna en semana */
+    body.dark-mode [style*="background: var(--primary)"],
+    body.dark-mode [style*="background:var(--primary)"] {
+      background: #1e2a20 !important;
+      color: #6fcf97 !important;
+    }
+    
+    body.dark-mode .stat-card-header {
+      background: #1e2a20;
     }
     
     body.dark-mode .week-grid,
@@ -1043,7 +1052,19 @@
       background: #2d6a4f;
     }
     
-    /* Botón toggle dark mode */
+    .week-day-header {
+      background: var(--primary);
+      color: white;
+      padding: 1rem 0.5rem;
+      text-align: center;
+      font-weight: 600;
+      transition: background 0.3s;
+    }
+    
+    body.dark-mode .week-day-header {
+      background: #1e2a20;
+      color: #6fcf97;
+    }
     .theme-toggle-btn {
       background: none;
       border: 2px solid var(--border);
@@ -1125,6 +1146,7 @@
         text-overflow: ellipsis;
         display: -webkit-box;
         -webkit-line-clamp: 2;
+        line-clamp: 2;
         -webkit-box-orient: vertical;
       }
       
@@ -2254,7 +2276,7 @@
               Hora
             </div>
             {DAYS.map((day, idx) => (
-              <div key={day} style={{ flex: 1, background: 'var(--primary)', color: 'white', padding: '1rem 0.5rem', textAlign: 'center', fontWeight: 600, border: '1px solid var(--border)', borderLeft: idx === 0 ? '1px solid var(--border)' : 'none' }}>
+              <div key={day} className="week-day-header" style={{ flex: 1, border: '1px solid var(--border)', borderLeft: idx === 0 ? '1px solid var(--border)' : 'none' }}>
                 {day}
               </div>
             ))}
