@@ -248,6 +248,7 @@
     .modal-body {
       padding: 1.5rem;
       overflow-y: auto;
+      overflow-x: hidden;
       flex: 1;
     }
     
@@ -1066,11 +1067,11 @@
       color: #6fcf97;
     }
     
-    /* Forzar formato 24hs en todos los inputs de tiempo 
+    /* Forzar formato 24hs en todos los inputs de tiempo
     input[type="time"]::-webkit-datetime-edit-ampm-field {
       display: none;
     }
-    */
+     */
     .theme-toggle-btn {
       background: none;
       border: 2px solid var(--border);
@@ -1094,6 +1095,120 @@
       transform: rotate(20deg) scale(1.1);
     }
 
+    .print-mobile {
+      display: none;
+    }
+    
+    @media (max-width: 768px) {
+      .print-desktop {
+        display: none;
+      }
+      
+      .print-mobile {
+        display: inline;
+      }
+    }
+    
+    /* ========== ESTILOS DE IMPRESIÓN ========== */
+    @media print {
+      /* Ocultar todo excepto la vista semanal */
+      .app-header,
+      .search-bar,
+      .tabs,
+      .modal-overlay,
+      .modal,
+      .side-panel,
+      .theme-toggle-btn {
+        display: none !important;
+      }
+      
+      body {
+        background: white;
+        color: black;
+      }
+      
+      .app-container {
+        max-width: 100%;
+        padding: 0;
+      }
+      
+      /* Forzar vista semanal visible */
+      #week-view-print {
+        display: block !important;
+      }
+      
+      /* Ajustar calendario para impresión */
+      .week-view {
+        page-break-inside: avoid;
+      }
+      
+      .week-grid {
+        border: 1px solid #000;
+      }
+      
+      .session-block {
+        border: 1px solid #333;
+        page-break-inside: avoid;
+        font-size: 9pt;
+        padding: 4px;
+        background: white !important;
+        color: black !important;
+      }
+      
+      /* Bordes diferentes por tipo de actividad */
+      .session-block.gym {
+        border-left: 4px solid #666;
+      }
+      
+      .session-block.tenis {
+        border-left: 4px solid #666;
+      }
+      
+      .session-block.clase_tenis {
+        border-left: 4px solid #666;
+      }
+      
+      .session-block.otra {
+        border-left: 4px solid #666;
+      }
+      
+      .session-name {
+        font-weight: bold;
+        font-size: 10pt;
+      }
+      
+      .session-detail {
+        font-size: 8pt;
+        margin-top: 2px;
+        line-height: 1.3;
+        display: block !important;
+      }
+      
+      /* Ocultar info móvil en print */
+      .session-time span {
+        display: none !important;
+      }
+      
+      /* Header de impresión */
+      .print-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+      }
+      
+      .print-header h1 {
+        font-size: 18pt;
+        margin-bottom: 5px;
+      }
+      
+      .print-header p {
+        font-size: 10pt;
+        color: #333;
+      }
+    }
+    
     /* Responsive */
     @media (max-width: 768px) {
       .theme-toggle-btn {
@@ -1266,6 +1381,7 @@
         border-radius: 0;
         max-height: 100vh;
         max-width: 100%;
+        overflow-x: hidden;
       }
       
       .modal-body {
@@ -2062,6 +2178,14 @@
                   <button className="btn btn-secondary" onClick={() => handleExport('normalized')}>
                     Exportar
                   </button>
+                  <button 
+                    className="btn btn-secondary btn-print" 
+                    onClick={() => window.print()}
+                    title="Imprimir agenda semanal"
+                  >
+                    <span className="print-desktop">🖨️ Imprimir</span>
+                    <span className="print-mobile">PDF</span>
+                  </button>
                   <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                     Agregar / Editar datos
                   </button>
@@ -2277,6 +2401,12 @@
 
       return (
         <div className="week-view">
+          {/* Header solo visible en impresión */}
+          <div className="print-header" style={{ display: 'none' }}>
+            <h1>Mi Agenda Universitaria - Semana</h1>
+            <p>Generado el {new Date().toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          </div>
+          
           <div style={{ display: 'flex', marginBottom: '1rem', gap: '0' }}>
             <div style={{ width: isMobile ? '60px' : '80px', background: 'var(--surface)', padding: '1rem 0.5rem', textAlign: 'center', fontWeight: 600, border: '1px solid var(--border)', borderRight: 'none' }}>
               Hora
@@ -2340,6 +2470,14 @@
                           )}
                         </div>
                         {!isMobile && session.aula && <div className="session-time">{session.aula}</div>}
+                        
+                        {/* Información adicional solo visible en impresión */}
+                        <div className="session-detail" style={{ display: 'none' }}>
+                          <div><strong>Modalidad:</strong> {session.modalidad === 'teoria' ? 'Teoría' : 'Práctica'}</div>
+                          {session.aula && <div><strong>Aula:</strong> {session.aula}</div>}
+                          {session.numeroComision && <div><strong>Comisión:</strong> {session.numeroComision}</div>}
+                          {session.docente && <div><strong>Docente:</strong> {session.docente}</div>}
+                        </div>
                       </div>
                     );
                   })}
