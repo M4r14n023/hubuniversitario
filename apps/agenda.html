@@ -2319,6 +2319,10 @@
                       >
                         <div className="session-name" title={course?.nombre}>
                           {isMobile ? shortenCourseName(course?.nombre, 20) : course?.nombre}
+                          {' '}
+                          <span style={{ opacity: 0.85, fontWeight: 700, fontSize: '0.85em' }}>
+                            ({session.modalidad === 'teoria' ? 'T' : 'P'})
+                          </span>
                         </div>
                         <div className="session-time">
                           {formatTime(session.startTime)} - {formatTime(session.endTime)}
