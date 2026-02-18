@@ -329,6 +329,8 @@
     /* Form */
     .form-group {
       margin-bottom: 1.5rem;
+      width: 100%;
+      max-width: 100%;
     }
     
     .form-label {
@@ -1067,11 +1069,11 @@
       color: #6fcf97;
     }
     
-    /* Forzar formato 24hs en todos los inputs de tiempo
+    /* Forzar formato 24hs en todos los inputs de tiempo */
     input[type="time"]::-webkit-datetime-edit-ampm-field {
       display: none;
     }
-     */
+    
     .theme-toggle-btn {
       background: none;
       border: 2px solid var(--border);
@@ -1388,8 +1390,50 @@
         padding: 1rem;
       }
       
+      /* Asegurar que los form elements no se desborden */
+      .form-group {
+        width: 100%;
+        margin-bottom: 1rem;
+      }
+      
+      .form-input,
+      .form-select, 
+      .form-textarea {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0;
+        box-sizing: border-box;
+      }
+      
+      /* Fix específico para date/time inputs */
+      input[type="date"],
+      input[type="time"],
+      input[type="datetime-local"] {
+        padding: 0.65rem 0.5rem;
+        font-size: 15px;
+      }
+      
       .form-row {
         grid-template-columns: 1fr;
+      }
+      
+      .form-input,
+      .form-select,
+      .form-textarea {
+        width: 100%;
+        max-width: 100%;
+        font-size: 16px;
+        padding: 0.75rem;
+        box-sizing: border-box;
+      }
+      
+      /* Ajustar inputs de fecha y hora en móvil */
+      input[type="date"],
+      input[type="time"] {
+        width: 100%;
+        max-width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
       }
       
       .side-panel {
