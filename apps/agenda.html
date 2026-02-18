@@ -1127,11 +1127,14 @@
       body {
         background: white;
         color: black;
+        margin: 0;
+        padding: 0;
       }
       
       .app-container {
         max-width: 100%;
         padding: 0;
+        margin: 0;
       }
       
       /* Forzar vista semanal visible */
@@ -1146,15 +1149,24 @@
       
       .week-grid {
         border: 1px solid #000;
+        font-size: 8pt;
+      }
+      
+      .time-slot,
+      .week-header {
+        font-size: 8pt;
+        padding: 4px;
       }
       
       .session-block {
         border: 1px solid #333;
         page-break-inside: avoid;
-        font-size: 9pt;
-        padding: 4px;
+        font-size: 7.5pt !important;
+        padding: 3px 4px !important;
+        line-height: 1.2 !important;
         background: white !important;
         color: black !important;
+        overflow: hidden;
       }
       
       /* Bordes diferentes por tipo de actividad */
@@ -1176,14 +1188,39 @@
       
       .session-name {
         font-weight: bold;
-        font-size: 10pt;
+        font-size: 8pt !important;
+        margin-bottom: 2px;
+        line-height: 1.1 !important;
+      }
+      
+      /* Ocultar el indicador (T)/(P) del título en print */
+      .session-name span {
+        display: none !important;
+      }
+      
+      .session-time {
+        font-size: 7pt !important;
+        line-height: 1.1 !important;
+        margin: 1px 0;
       }
       
       .session-detail {
-        font-size: 8pt;
+        font-size: 6.5pt !important;
         margin-top: 2px;
-        line-height: 1.3;
+        line-height: 1.2 !important;
         display: block !important;
+      }
+      
+      .session-detail div {
+        margin: 1px 0;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        hyphens: auto;
+      }
+      
+      .session-detail strong {
+        font-weight: 600;
       }
       
       /* Ocultar info móvil en print */
@@ -1195,19 +1232,25 @@
       .print-header {
         display: block !important;
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
         border-bottom: 2px solid #000;
-        padding-bottom: 10px;
+        padding-bottom: 8px;
       }
       
       .print-header h1 {
-        font-size: 18pt;
-        margin-bottom: 5px;
+        font-size: 16pt;
+        margin-bottom: 3px;
       }
       
       .print-header p {
-        font-size: 10pt;
+        font-size: 9pt;
         color: #333;
+      }
+      
+      /* Asegurar que el grid use todo el espacio */
+      .week-days-grid,
+      .week-time-column {
+        page-break-inside: avoid;
       }
     }
     
