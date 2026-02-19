@@ -2183,11 +2183,17 @@
         const { setDoc, doc } = window.firebaseDbFunctions;
         const db = window.firebaseDb;
         
+        // Obtener datos desde localStorage
+        const accountsData = JSON.parse(localStorage.getItem('accounts') || '[]');
+        const transactionsData = JSON.parse(localStorage.getItem('transactions') || '[]');
+        const fixedExpensesData = JSON.parse(localStorage.getItem('fixedExpenses') || '[]');
+        const lastUpdateData = localStorage.getItem('lastUpdate') || new Date().toISOString();
+        
         const data = {
-          accounts,
-          transactions,
-          fixedExpenses,
-          lastUpdate,
+          accounts: accountsData,
+          transactions: transactionsData,
+          fixedExpenses: fixedExpensesData,
+          lastUpdate: lastUpdateData,
           lastSync: new Date().toISOString()
         };
         
@@ -2234,26 +2240,17 @@
         if (docSnap.exists()) {
           const cloudData = docSnap.data();
           
-          // Actualizar variables globales
-          accounts = cloudData.accounts || [];
-          transactions = cloudData.transactions || [];
-          fixedExpenses = cloudData.fixedExpenses || [];
-          lastUpdate = cloudData.lastUpdate || new Date().toISOString();
-          
           // Guardar en localStorage
-          saveData();
-          
-          // Actualizar UI
-          populateAccountSelects();
-          displayLastUpdate();
-          updateDashboard();
+          localStorage.setItem('accounts', JSON.stringify(cloudData.accounts || []));
+          localStorage.setItem('transactions', JSON.stringify(cloudData.transactions || []));
+          localStorage.setItem('fixedExpenses', JSON.stringify(cloudData.fixedExpenses || []));
+          localStorage.setItem('lastUpdate', cloudData.lastUpdate || new Date().toISOString());
           
           localStorage.setItem('gastosSyncPin', pin);
-          messageDiv.innerHTML = '<div style="color: var(--success); padding: 0.75rem; background: rgba(0, 255, 136, 0.1); border-radius: 8px;">✅ Datos descargados correctamente</div>';
+          messageDiv.innerHTML = '<div style="color: var(--success); padding: 0.75rem; background: rgba(0, 255, 136, 0.1); border-radius: 8px;">✅ Datos descargados correctamente. Recargando página...</div>';
           
           setTimeout(() => {
-            document.getElementById('syncModal').remove();
-            showToast('Datos sincronizados correctamente', 'success');
+            window.location.reload();
           }, 1500);
         } else {
           messageDiv.innerHTML = '<div style="color: var(--danger); padding: 0.75rem; background: rgba(255, 71, 87, 0.1); border-radius: 8px;">❌ No se encontraron datos con ese PIN</div>';
