@@ -4,6 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trackr - Gestor de Gastos</title>
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyCF7n8W4aKKEeK7T_mUhO5MJLuTeP-YQT8",
+      authDomain: "hub-universitario.firebaseapp.com",
+      projectId: "hub-universitario",
+      storageBucket: "hub-universitario.firebasestorage.app",
+      messagingSenderId: "734572060791",
+      appId: "1:734572060791:web:75bf6280970a60a9906672"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    window.firebaseDb = getFirestore(app);
+    window.firebaseDbFunctions = { doc, setDoc, getDoc };
+  </script>
+  
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap');
 
@@ -1166,6 +1186,9 @@
           <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.875rem;">
             Exportá todos tus datos para compartir entre dispositivos o hacer backup.
           </p>
+          <button class="btn btn-secondary" id="syncBtn" style="margin-bottom: 1rem; width: 100%;">
+            ☁️ Sincronizar con la Nube
+          </button>
           <button class="btn btn-primary" id="exportBtn">
             📤 Exportar Datos
           </button>
@@ -1818,6 +1841,7 @@
 
     // Export/Import Functions
     function initializeSettings() {
+      document.getElementById('syncBtn').addEventListener('click', openSyncModal);
       document.getElementById('exportBtn').addEventListener('click', exportData);
       document.getElementById('importBtn').addEventListener('click', () => {
         document.getElementById('importFile').click();
@@ -1911,6 +1935,337 @@
       const info = document.getElementById('lastUpdateInfo');
       const date = new Date(lastUpdate);
       info.textContent = `Última actualización: ${date.toLocaleDateString('es-AR')} ${date.toLocaleTimeString('es-AR')}`;
+    }
+
+    // ============ SINCRONIZACIÓN CON FIREBASE ============
+    
+    function openSyncModal() {
+      const modal = document.createElement('div');
+      modal.id = 'syncModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 1rem;
+      `;
+      
+      const savedPin = localStorage.getItem('gastosSyncPin') || '';
+      
+      modal.innerHTML = `
+        <div style="
+          background: var(--bg-card);
+          border-radius: 16px;
+          max-width: 500px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        ">
+          <div style="
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          ">
+            <h2 style="font-size: 1.5rem; color: var(--accent-primary);">☁️ Sincronización</h2>
+            <button id="closeSyncModal" style="
+              background: none;
+              border: none;
+              font-size: 1.5rem;
+              cursor: pointer;
+              color: var(--text-secondary);
+            ">✕</button>
+          </div>
+          
+          <div id="syncContent" style="padding: 1.5rem;">
+            <div id="syncMenu">
+              <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                Sincroniza tus datos entre dispositivos usando un PIN de seguridad.
+              </p>
+              
+              ${savedPin ? `
+                <div style="
+                  background: var(--bg-input);
+                  padding: 1rem;
+                  border-radius: 8px;
+                  margin-bottom: 1.5rem;
+                  border: 1px solid var(--border-color);
+                ">
+                  <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    PIN guardado:
+                  </div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: 600; color: var(--accent-primary);">
+                    ${savedPin}
+                  </div>
+                </div>
+              ` : ''}
+              
+              <button class="btn btn-primary" id="uploadBtn" style="width: 100%; margin-bottom: 1rem;">
+                ⬆️ Subir datos a la nube
+              </button>
+              <button class="btn btn-secondary" id="downloadBtn" style="width: 100%; margin-bottom: 1.5rem;">
+                ⬇️ Descargar desde la nube
+              </button>
+              
+              <div style="
+                padding: 1rem;
+                background: rgba(0, 212, 255, 0.1);
+                border-radius: 8px;
+                font-size: 0.85rem;
+                color: var(--accent-secondary);
+                border: 1px solid rgba(0, 212, 255, 0.3);
+              ">
+                <strong>💡 Cómo funciona:</strong><br/>
+                1. Crea un PIN (4-6 dígitos)<br/>
+                2. Sube tus datos desde un dispositivo<br/>
+                3. Descarga con el mismo PIN en otro dispositivo
+              </div>
+            </div>
+            
+            <div id="syncUpload" style="display: none;">
+              <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+                Ingresa un PIN de 4-6 dígitos para proteger tus datos:
+              </p>
+              
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">
+                  PIN de sincronización *
+                </label>
+                <input
+                  type="text"
+                  id="uploadPinInput"
+                  placeholder="${savedPin || 'Ej: 1234'}"
+                  maxlength="6"
+                  style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: var(--bg-input);
+                    border: 1px solid var(--border-color);
+                    border-radius: 8px;
+                    color: var(--text-primary);
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 1.2rem;
+                    letter-spacing: 0.3em;
+                  "
+                />
+                <small style="color: var(--text-secondary); font-size: 0.85rem;">
+                  ${savedPin ? 'Deja vacío para usar tu PIN guardado' : 'Guarda este PIN, lo necesitarás para descargar'}
+                </small>
+              </div>
+              
+              <div id="uploadMessage" style="margin-bottom: 1rem;"></div>
+              
+              <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-secondary" id="cancelUploadBtn" style="flex: 1;">Cancelar</button>
+                <button class="btn btn-primary" id="confirmUploadBtn" style="flex: 1;">⬆️ Subir</button>
+              </div>
+            </div>
+            
+            <div id="syncDownload" style="display: none;">
+              <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+                Ingresa el PIN que usaste para subir los datos:
+              </p>
+              
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">
+                  PIN de sincronización *
+                </label>
+                <input
+                  type="text"
+                  id="downloadPinInput"
+                  placeholder="${savedPin || 'Ej: 1234'}"
+                  maxlength="6"
+                  style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: var(--bg-input);
+                    border: 1px solid var(--border-color);
+                    border-radius: 8px;
+                    color: var(--text-primary);
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 1.2rem;
+                    letter-spacing: 0.3em;
+                  "
+                />
+              </div>
+              
+              <div style="
+                padding: 0.75rem;
+                background: rgba(255, 184, 0, 0.1);
+                border-radius: 8px;
+                font-size: 0.85rem;
+                color: var(--warning);
+                border: 1px solid rgba(255, 184, 0, 0.3);
+                margin-bottom: 1rem;
+              ">
+                ⚠️ <strong>Advertencia:</strong> Esto reemplazará todos tus datos actuales con los de la nube.
+              </div>
+              
+              <div id="downloadMessage" style="margin-bottom: 1rem;"></div>
+              
+              <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-secondary" id="cancelDownloadBtn" style="flex: 1;">Cancelar</button>
+                <button class="btn btn-primary" id="confirmDownloadBtn" style="flex: 1;">⬇️ Descargar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      // Event listeners
+      document.getElementById('closeSyncModal').addEventListener('click', () => modal.remove());
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+      
+      document.getElementById('uploadBtn').addEventListener('click', () => {
+        document.getElementById('syncMenu').style.display = 'none';
+        document.getElementById('syncUpload').style.display = 'block';
+      });
+      
+      document.getElementById('downloadBtn').addEventListener('click', () => {
+        document.getElementById('syncMenu').style.display = 'none';
+        document.getElementById('syncDownload').style.display = 'block';
+      });
+      
+      document.getElementById('cancelUploadBtn').addEventListener('click', () => {
+        document.getElementById('syncUpload').style.display = 'none';
+        document.getElementById('syncMenu').style.display = 'block';
+        document.getElementById('uploadPinInput').value = '';
+        document.getElementById('uploadMessage').innerHTML = '';
+      });
+      
+      document.getElementById('cancelDownloadBtn').addEventListener('click', () => {
+        document.getElementById('syncDownload').style.display = 'none';
+        document.getElementById('syncMenu').style.display = 'block';
+        document.getElementById('downloadPinInput').value = '';
+        document.getElementById('downloadMessage').innerHTML = '';
+      });
+      
+      document.getElementById('confirmUploadBtn').addEventListener('click', handleUploadToFirebase);
+      document.getElementById('confirmDownloadBtn').addEventListener('click', handleDownloadFromFirebase);
+      
+      // Solo números en los inputs
+      document.getElementById('uploadPinInput').addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '');
+      });
+      document.getElementById('downloadPinInput').addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '');
+      });
+    }
+    
+    async function handleUploadToFirebase() {
+      const pinInput = document.getElementById('uploadPinInput').value;
+      const savedPin = localStorage.getItem('gastosSyncPin') || '';
+      const pin = pinInput || savedPin;
+      const btn = document.getElementById('confirmUploadBtn');
+      const messageDiv = document.getElementById('uploadMessage');
+      
+      if (!pin || pin.length < 4) {
+        messageDiv.innerHTML = '<div style="color: var(--danger); padding: 0.75rem; background: rgba(255, 71, 87, 0.1); border-radius: 8px;">El PIN debe tener al menos 4 caracteres</div>';
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Subiendo...';
+      
+      try {
+        const { setDoc, doc } = window.firebaseDbFunctions;
+        const db = window.firebaseDb;
+        
+        const data = {
+          accounts,
+          transactions,
+          fixedExpenses,
+          lastUpdate,
+          lastSync: new Date().toISOString()
+        };
+        
+        const docRef = doc(db, 'sync-gastos', pin);
+        await setDoc(docRef, data);
+        
+        localStorage.setItem('gastosSyncPin', pin);
+        messageDiv.innerHTML = '<div style="color: var(--success); padding: 0.75rem; background: rgba(0, 255, 136, 0.1); border-radius: 8px;">✅ Datos subidos a la nube correctamente</div>';
+        
+        setTimeout(() => {
+          document.getElementById('syncModal').remove();
+          showToast('Datos sincronizados correctamente', 'success');
+        }, 1500);
+      } catch (error) {
+        console.error('Error subiendo:', error);
+        messageDiv.innerHTML = `<div style="color: var(--danger); padding: 0.75rem; background: rgba(255, 71, 87, 0.1); border-radius: 8px;">❌ Error al subir: ${error.message}</div>`;
+        btn.disabled = false;
+        btn.innerHTML = '⬆️ Subir';
+      }
+    }
+    
+    async function handleDownloadFromFirebase() {
+      const pinInput = document.getElementById('downloadPinInput').value;
+      const savedPin = localStorage.getItem('gastosSyncPin') || '';
+      const pin = pinInput || savedPin;
+      const btn = document.getElementById('confirmDownloadBtn');
+      const messageDiv = document.getElementById('downloadMessage');
+      
+      if (!pin || pin.length < 4) {
+        messageDiv.innerHTML = '<div style="color: var(--danger); padding: 0.75rem; background: rgba(255, 71, 87, 0.1); border-radius: 8px;">Ingresa tu PIN de sincronización</div>';
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Descargando...';
+      
+      try {
+        const { getDoc, doc } = window.firebaseDbFunctions;
+        const db = window.firebaseDb;
+        
+        const docRef = doc(db, 'sync-gastos', pin);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const cloudData = docSnap.data();
+          
+          // Actualizar variables globales
+          accounts = cloudData.accounts || [];
+          transactions = cloudData.transactions || [];
+          fixedExpenses = cloudData.fixedExpenses || [];
+          lastUpdate = cloudData.lastUpdate || new Date().toISOString();
+          
+          // Guardar en localStorage
+          saveData();
+          
+          // Actualizar UI
+          populateAccountSelects();
+          displayLastUpdate();
+          updateDashboard();
+          
+          localStorage.setItem('gastosSyncPin', pin);
+          messageDiv.innerHTML = '<div style="color: var(--success); padding: 0.75rem; background: rgba(0, 255, 136, 0.1); border-radius: 8px;">✅ Datos descargados correctamente</div>';
+          
+          setTimeout(() => {
+            document.getElementById('syncModal').remove();
+            showToast('Datos sincronizados correctamente', 'success');
+          }, 1500);
+        } else {
+          messageDiv.innerHTML = '<div style="color: var(--danger); padding: 0.75rem; background: rgba(255, 71, 87, 0.1); border-radius: 8px;">❌ No se encontraron datos con ese PIN</div>';
+          btn.disabled = false;
+          btn.innerHTML = '⬇️ Descargar';
+        }
+      } catch (error) {
+        console.error('Error descargando:', error);
+        messageDiv.innerHTML = `<div style="color: var(--danger); padding: 0.75rem; background: rgba(255, 71, 87, 0.1); border-radius: 8px;">❌ Error al descargar: ${error.message}</div>`;
+        btn.disabled = false;
+        btn.innerHTML = '⬇️ Descargar';
+      }
     }
 
     function clearAllData() {
