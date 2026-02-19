@@ -10,6 +10,29 @@
       document.body.classList.add('dark-mode');
     }
   </script>
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyCF7n8W4aKKEeK7T_mUhO5MJLuTeP-YQT8",
+      authDomain: "hub-universitario.firebaseapp.com",
+      projectId: "hub-universitario",
+      storageBucket: "hub-universitario.firebasestorage.app",
+      messagingSenderId: "734572060791",
+      appId: "1:734572060791:web:75bf6280970a60a9906672"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    window.firebaseAuth = getAuth(app);
+    window.firebaseDb = getFirestore(app);
+    window.firebaseAuthFunctions = { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged };
+    window.firebaseDbFunctions = { doc, setDoc, getDoc, onSnapshot };
+  </script>
+  
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
     
@@ -1072,6 +1095,145 @@
     /* Forzar formato 24hs en todos los inputs de tiempo */
     input[type="time"]::-webkit-datetime-edit-ampm-field {
       display: none;
+    }
+    
+    /* ========== PANTALLA DE AUTENTICACIÓN ========== */
+    .auth-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a4d2e 0%, #2d6a4f 100%);
+      padding: 2rem;
+    }
+    
+    .auth-box {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 3rem 2.5rem;
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 420px;
+      animation: slideUp 0.4s ease-out;
+    }
+    
+    .auth-logo {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    .auth-logo h1 {
+      font-family: var(--serif);
+      font-size: 2rem;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+    
+    .auth-logo p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    
+    .auth-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid var(--border);
+    }
+    
+    .auth-tab {
+      flex: 1;
+      padding: 0.75rem;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      font-family: var(--sans);
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: -2px;
+    }
+    
+    .auth-tab:hover {
+      color: var(--primary);
+    }
+    
+    .auth-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    
+    .auth-form {
+      display: none;
+    }
+    
+    .auth-form.active {
+      display: block;
+    }
+    
+    .auth-error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      border-left: 4px solid var(--error);
+    }
+    
+    .auth-success {
+      background: #d1fae5;
+      color: #065f46;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      border-left: 4px solid var(--success);
+    }
+    
+    .auth-btn {
+      width: 100%;
+      padding: 0.875rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--sans);
+    }
+    
+    .auth-btn:hover {
+      background: var(--primary-light);
+      transform: translateY(-1px);
+    }
+    
+    .auth-btn:active {
+      transform: translateY(0);
+    }
+    
+    .auth-btn:disabled {
+      background: var(--border);
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    body.dark-mode .auth-box {
+      background: #1a2030;
+    }
+    
+    body.dark-mode .auth-error {
+      background: #2a1515;
+      color: #fca5a5;
+    }
+    
+    body.dark-mode .auth-success {
+      background: #0f2921;
+      color: #6fcf97;
     }
     
     .theme-toggle-btn {
@@ -2143,6 +2305,7 @@
       const [showModal, setShowModal] = useState(false);
       const [showActivityModal, setShowActivityModal] = useState(false);
       const [editingActivity, setEditingActivity] = useState(null);
+      const [showSyncModal, setShowSyncModal] = useState(false);
       const [isDarkMode, setIsDarkMode] = useState(() => {
         return localStorage.getItem('agendaTheme') === 'dark';
       });
@@ -2264,6 +2427,9 @@
                   </button>
                   <button className="btn btn-secondary" onClick={() => handleExport('normalized')}>
                     Exportar
+                  </button>
+                  <button className="btn btn-secondary" onClick={() => setShowSyncModal(true)}>
+                    ☁️ Sincronizar
                   </button>
                   <button 
                     className="btn btn-secondary btn-print" 
@@ -2415,6 +2581,17 @@
               onClose={() => {
                 setShowActivityModal(false);
                 setEditingActivity(null);
+              }}
+            />
+          )}
+
+          {showSyncModal && (
+            <SyncModal
+              data={data}
+              onClose={() => setShowSyncModal(false)}
+              onDataLoaded={(newData) => {
+                setData(newData);
+                setShowSyncModal(false);
               }}
             />
           )}
@@ -3861,6 +4038,281 @@
           <button className="btn btn-secondary" onClick={handleAdd} style={{ marginTop: '1rem' }}>
             + Agregar examen/entrega
           </button>
+        </div>
+      );
+    }
+
+    // ============ PANEL LATERAL ============
+    
+    // ============ MODAL DE SINCRONIZACIÓN ============
+    
+    function SyncModal({ data, onClose, onDataLoaded }) {
+      const [pin, setPin] = useState('');
+      const [mode, setMode] = useState('menu'); // menu, upload, download, success, error
+      const [message, setMessage] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [savedPin, setSavedPin] = useState(() => localStorage.getItem('agendaSyncPin') || '');
+      
+      const { setDoc, getDoc, doc } = window.firebaseDbFunctions;
+      const db = window.firebaseDb;
+      
+      const handleUpload = async () => {
+        if (!pin || pin.length < 4) {
+          setMessage('El PIN debe tener al menos 4 caracteres');
+          setMode('error');
+          return;
+        }
+        
+        setLoading(true);
+        try {
+          const docRef = doc(db, 'sync-agenda', pin);
+          await setDoc(docRef, {
+            ...data,
+            lastSync: new Date().toISOString()
+          });
+          
+          localStorage.setItem('agendaSyncPin', pin);
+          setSavedPin(pin);
+          setMessage('✅ Datos subidos a la nube correctamente');
+          setMode('success');
+        } catch (error) {
+          console.error('Error subiendo:', error);
+          setMessage('❌ Error al subir datos: ' + error.message);
+          setMode('error');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      const handleDownload = async () => {
+        if (!pin || pin.length < 4) {
+          setMessage('Ingresa tu PIN de sincronización');
+          setMode('error');
+          return;
+        }
+        
+        setLoading(true);
+        try {
+          const docRef = doc(db, 'sync-agenda', pin);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const cloudData = docSnap.data();
+            delete cloudData.lastSync; // No guardar este campo
+            
+            localStorage.setItem('agendaSyncPin', pin);
+            setSavedPin(pin);
+            onDataLoaded(cloudData);
+            setMessage('✅ Datos descargados correctamente');
+            setMode('success');
+          } else {
+            setMessage('❌ No se encontraron datos con ese PIN');
+            setMode('error');
+          }
+        } catch (error) {
+          console.error('Error descargando:', error);
+          setMessage('❌ Error al descargar: ' + error.message);
+          setMode('error');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">☁️ Sincronización en la Nube</h2>
+              <button className="modal-close" onClick={onClose}>✕</button>
+            </div>
+            
+            <div className="modal-body">
+              {mode === 'menu' && (
+                <div>
+                  <p style={{ marginBottom: '1.5rem', color: 'var(--text-muted)' }}>
+                    Sincroniza tus datos entre dispositivos usando un PIN de seguridad.
+                  </p>
+                  
+                  {savedPin && (
+                    <div style={{ 
+                      background: 'var(--background)', 
+                      padding: '1rem', 
+                      borderRadius: '8px',
+                      marginBottom: '1.5rem',
+                      border: '1px solid var(--border)'
+                    }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                        PIN guardado:
+                      </div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '1.2rem', fontWeight: 600 }}>
+                        {savedPin}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <button 
+                      className="btn btn-primary" 
+                      onClick={() => setMode('upload')}
+                      style={{ width: '100%', padding: '1rem' }}
+                    >
+                      ⬆️ Subir datos a la nube
+                    </button>
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={() => setMode('download')}
+                      style={{ width: '100%', padding: '1rem' }}
+                    >
+                      ⬇️ Descargar desde la nube
+                    </button>
+                  </div>
+                  
+                  <div style={{ 
+                    marginTop: '1.5rem', 
+                    padding: '1rem', 
+                    background: '#dbeafe',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    color: '#1e40af',
+                    border: '1px solid #93c5fd'
+                  }}>
+                    <strong>💡 Cómo funciona:</strong><br/>
+                    1. Crea un PIN (4-6 dígitos)<br/>
+                    2. Sube tus datos desde un dispositivo<br/>
+                    3. Descarga con el mismo PIN en otro dispositivo
+                  </div>
+                </div>
+              )}
+              
+              {mode === 'upload' && (
+                <div>
+                  <p style={{ marginBottom: '1.5rem' }}>
+                    Ingresa un PIN de 4-6 dígitos para proteger tus datos:
+                  </p>
+                  
+                  <div className="form-group">
+                    <label className="form-label">PIN de sincronización *</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={pin}
+                      onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="Ej: 1234"
+                      maxLength={6}
+                      style={{ fontFamily: 'monospace', fontSize: '1.2rem', letterSpacing: '0.3em' }}
+                    />
+                    <small style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                      {savedPin ? 'Deja vacío para usar tu PIN guardado' : 'Guarda este PIN, lo necesitarás para descargar'}
+                    </small>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={() => { setMode('menu'); setPin(''); setMessage(''); }}
+                      disabled={loading}
+                      style={{ flex: 1 }}
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      className="btn btn-primary" 
+                      onClick={handleUpload}
+                      disabled={loading || (!pin && !savedPin)}
+                      style={{ flex: 1 }}
+                    >
+                      {loading ? '⏳ Subiendo...' : '⬆️ Subir'}
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {mode === 'download' && (
+                <div>
+                  <p style={{ marginBottom: '1.5rem' }}>
+                    Ingresa el PIN que usaste para subir los datos:
+                  </p>
+                  
+                  <div className="form-group">
+                    <label className="form-label">PIN de sincronización *</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={pin}
+                      onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder={savedPin || "Ej: 1234"}
+                      maxLength={6}
+                      style={{ fontFamily: 'monospace', fontSize: '1.2rem', letterSpacing: '0.3em' }}
+                    />
+                  </div>
+                  
+                  <div style={{ 
+                    marginTop: '1rem',
+                    padding: '0.75rem',
+                    background: '#fef3c7',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    color: '#92400e',
+                    border: '1px solid #fbbf24'
+                  }}>
+                    ⚠️ <strong>Advertencia:</strong> Esto reemplazará todos tus datos actuales con los de la nube.
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={() => { setMode('menu'); setPin(''); setMessage(''); }}
+                      disabled={loading}
+                      style={{ flex: 1 }}
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      className="btn btn-primary" 
+                      onClick={handleDownload}
+                      disabled={loading || (!pin && !savedPin)}
+                      style={{ flex: 1 }}
+                    >
+                      {loading ? '⏳ Descargando...' : '⬇️ Descargar'}
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {(mode === 'success' || mode === 'error') && (
+                <div>
+                  <div style={{
+                    padding: '1.5rem',
+                    borderRadius: '8px',
+                    background: mode === 'success' ? '#d1fae5' : '#fee2e2',
+                    color: mode === 'success' ? '#065f46' : '#991b1b',
+                    border: mode === 'success' ? '1px solid #6fcf97' : '1px solid #dc2626',
+                    marginBottom: '1.5rem',
+                    fontSize: '1rem',
+                    textAlign: 'center'
+                  }}>
+                    {message}
+                  </div>
+                  
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={() => {
+                      if (mode === 'success') {
+                        onClose();
+                      } else {
+                        setMode('menu');
+                        setMessage('');
+                        setPin('');
+                      }
+                    }}
+                    style={{ width: '100%' }}
+                  >
+                    {mode === 'success' ? 'Cerrar' : 'Volver'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       );
     }
