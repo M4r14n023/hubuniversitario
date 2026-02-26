@@ -2050,16 +2050,22 @@
                 session2: { ...s2, courseName: course2?.nombre }
               });
             }
-            // Clases pegadas (gap = 0)
+            // Clases pegadas (gap = 0) - solo alertar si tienen aulas diferentes
             else if (end1 === start2 || end2 === start1) {
               const course1 = courses.find(c => c.id === s1.courseId);
               const course2 = courses.find(c => c.id === s2.courseId);
               
-              conflicts.push({
-                type: 'no-gap',
-                session1: { ...s1, courseName: course1?.nombre },
-                session2: { ...s2, courseName: course2?.nombre }
-              });
+              // Solo es conflicto si las aulas son diferentes (necesitas trasladarte)
+              const sameAula = s1.aula && s2.aula && s1.aula === s2.aula;
+              
+              if (!sameAula) {
+                conflicts.push({
+                  type: 'no-gap',
+                  session1: { ...s1, courseName: course1?.nombre },
+                  session2: { ...s2, courseName: course2?.nombre },
+                  needsTravel: true
+                });
+              }
             }
           }
         }
@@ -2478,7 +2484,7 @@
                   <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
                     {conflicts.slice(0, 3).map((c, i) => (
                       <li key={i}>
-                        {c.type === 'overlap' ? 'Superposición' : 'Clases pegadas'}: 
+                        {c.type === 'overlap' ? 'Superposición' : 'Clases pegadas (cambio de aula)'}: 
                         {' '}{c.session1.courseName} y {c.session2.courseName} el {getDayName(c.session1.dayOfWeek)}
                       </li>
                     ))}
