@@ -2056,7 +2056,10 @@
               const course2 = courses.find(c => c.id === s2.courseId);
               
               // Solo es conflicto si las aulas son diferentes (necesitas trasladarte)
-              const sameAula = s1.aula && s2.aula && s1.aula === s2.aula;
+              // Normalizar aulas: trim y lowercase para comparar correctamente
+              const aula1 = s1.aula ? s1.aula.trim().toLowerCase() : null;
+              const aula2 = s2.aula ? s2.aula.trim().toLowerCase() : null;
+              const sameAula = aula1 && aula2 && aula1 === aula2;
               
               if (!sameAula) {
                 conflicts.push({
@@ -4499,15 +4502,19 @@
                       </div>
                       <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
                         {getDayName(session.dayOfWeek)} • {formatTime(session.startTime)} - {formatTime(session.endTime)}
-                        {session.aula && ` • ${session.aula}`}
+                        {session.aula && (
+                          <div style={{ marginTop: '0.25rem' }}>
+                            📍 Aula: {session.aula}
+                          </div>
+                        )}
                         {session.docente && (
                           <div style={{ marginTop: '0.25rem' }}>
-                            Docente: {session.docente}
+                            👤 Docente: {session.docente}
                           </div>
                         )}
                         {session.numeroComision && (
                           <div style={{ marginTop: '0.25rem' }}>
-                            {session.numeroComision}
+                            📋 Comisión: {session.numeroComision}
                           </div>
                         )}
                       </div>
