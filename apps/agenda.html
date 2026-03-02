@@ -3828,15 +3828,23 @@
           <div className="item-list">
             {courses.map((course, index) => (
               <div key={course.id} className="item-entry">
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <input
                     type="text"
                     className="form-input"
                     placeholder="Nombre de la materia"
-                    value={course.nombre}
+                    value={course.nombre || ''}
                     onChange={(e) => handleChange(index, 'nombre', e.target.value)}
                   />
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  {/* Restauramos el campo de Email que se había perdido */}
+                  <input
+                    type="email"
+                    className="form-input"
+                    placeholder="Email o contacto de la cátedra"
+                    value={course.email || ''}
+                    onChange={(e) => handleChange(index, 'email', e.target.value)}
+                  />
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Semana inicio Teóricos</label>
                       <input
@@ -3866,9 +3874,13 @@
             ))}
           </div>
           
-          <button className="btn btn-secondary" onClick={handleAdd} style={{ marginTop: '1rem' }}>
-            + Agregar materia
-          </button>
+          <button 
+        className="btn btn-secondary" 
+        onClick={() => onChange([...courses, createEmptyCourse()])}
+        style={{ width: '100%', marginTop: '1rem' }}
+      >
+        + Agregar Materia
+      </button>
         </div>
       );
     }
