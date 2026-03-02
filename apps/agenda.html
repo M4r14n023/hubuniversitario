@@ -1814,9 +1814,10 @@
       email: '',
       reunionDia: null,
       reunionHora: null,
-      notas: ''
+      notas: '',
+      startDate: '',
+      endDate: ''
     });
-
     const createEmptyWeeklySession = () => ({
       id: `session-${Date.now()}`,
       termId: 'term-1',
@@ -2432,6 +2433,21 @@
                     input.onchange = handleImport;
                     input.click();
                   }}>
+                  {/* Dropdown de Enlaces Importantes */}
+                  <select 
+                    className="form-select" 
+                    style={{ width: 'auto', padding: '0.6rem 2rem 0.6rem 1rem', cursor: 'pointer', fontWeight: 600, background: 'var(--surface)', color: 'var(--primary)', borderColor: 'var(--primary)' }}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        window.open(e.target.value, '_blank');
+                        e.target.value = ""; // Resetear el select después de hacer clic
+                      }
+                    }}
+                  >
+                    <option value="">🔗 Enlaces Importantes</option>
+                    <option value="https://aulas.psicologia.mdp.edu.ar/index.php">Aulas Virtuales Psico</option>
+                    {/* Puedes agregar más opciones aquí abajo duplicando la línea anterior */}
+                  </select>
                     Importar JSON
                   </button>
                   <button className="btn btn-secondary" onClick={() => handleExport('normalized')}>
@@ -2824,6 +2840,14 @@
           return isSameDay(eventDate, date);
         });
       };
+      const getCourseStartsForDate = (date) => {
+        return courses.filter(c => {
+          if (!c.startDate) return false;
+          // Se agrega T00:00:00 para evitar desfases de zona horaria
+          const start = new Date(c.startDate + 'T00:00:00'); 
+          return isSameDay(start, date);
+        });
+      };
 
       const days = [];
       
@@ -2886,6 +2910,18 @@
                   className={`month-day ${!dayInfo.isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}`}
                 >
                   <div className="month-day-number">{dayInfo.day}</div>
+                  {/* Novedad: Renderizar inicio de cursada */}
+                  {getCourseStartsForDate(dayInfo.date).map(course => (
+                    <div
+                      key={`start-${course.id}`}
+                      className="month-event"
+                      style={{ background: getCourseColor(course.id).border, borderLeft: '3px solid white' }}
+                      onClick={() => onOpenItem(course, 'course')}
+                      title={`Inicio de cursada: ${course.nombre}`}
+                    >
+                      🚀 Inicio: {course.nombre.length > 10 ? course.nombre.substring(0, 10) + '...' : course.nombre}
+                    </div>
+                  ))}
                   
                   {daySessions.length > 0 && (
                     <div>
@@ -3767,6 +3803,26 @@
                     value={course.nombre}
                     onChange={(e) => handleChange(index, 'nombre', e.target.value)}
                   />
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Inicio de cursada</label>
+                      <input
+                        type="date"
+                        className="form-input"
+                        value={course.startDate || ''}
+                        onChange={(e) => handleChange(index, 'startDate', e.target.value)}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fin de cursada (opcional)</label>
+                      <input
+                        type="date"
+                        className="form-input"
+                        value={course.endDate || ''}
+                        onChange={(e) => handleChange(index, 'endDate', e.target.value)}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div className="item-entry-actions">
                   <button className="btn btn-danger btn-sm" onClick={() => handleRemove(index)}>
@@ -4478,6 +4534,26 @@
             </div>
             
             <div className="side-panel-body">
+              {/* Nueva sección: Fechas de cursada */}
+              {(course?.startDate || course?.endDate) && (
+                <div className="side-panel-section">
+                  <div className="side-panel-section-title">Período de Cursada</div>
+                  <div style={{ display: 'flex', gap: '1rem', fontSize: '0.95rem' }}>
+                    {course.startDate && (
+                      <div>
+                        <strong style={{ color: 'var(--text-muted)' }}>Inicio:</strong><br/>
+                        {new Date(course.startDate + 'T00:00:00').toLocaleDateString('es-AR')}
+                      </div>
+                    )}
+                    {course.endDate && (
+                      <div>
+                        <strong style={{ color: 'var(--text-muted)' }}>Fin:</strong><br/>
+                        {new Date(course.endDate + 'T00:00:00').toLocaleDateString('es-AR')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {course?.email && (
                 <div className="side-panel-section">
                   <div className="side-panel-section-title">Contacto</div>
