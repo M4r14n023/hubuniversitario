@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Productividad">
-  <meta name="description" content="Hub de productividad: Agenda Universitaria, Gastos y Ayuno Intermitente">
+  <meta name="description" content="Hub de productividad: Agenda Universitaria, Gastos, Ayuno Intermitente y Conytaseñas">
   
   <!-- Fuentes -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -396,7 +396,6 @@
   </style>
 </head>
 <body>
-  <!-- Navegación del Hub -->
   <nav class="hub-nav">
     <div class="hub-nav-content">
       <div class="hub-logo">📚 Inicio</div>
@@ -404,6 +403,7 @@
         <button class="hub-tab" data-app="agenda">📅 Agenda</button>
         <button class="hub-tab" data-app="gastos">💰 Gastos</button>
         <button class="hub-tab" data-app="ayuno">⏱️ Ayuno</button>
+        <button class="hub-tab" data-app="mispass">🛡️ Bóveda</button>
         <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
           <span class="theme-icon">🌙</span>
         </button>
@@ -411,7 +411,6 @@
     </div>
   </nav>
 
-  <!-- Contenedores de Apps -->
   <div id="app-agenda" class="app-container">
     <iframe class="app-frame" src="apps/agenda.html"></iframe>
   </div>
@@ -424,7 +423,10 @@
     <iframe class="app-frame" src="apps/ayuno.html"></iframe>
   </div>
 
-  <!-- Bienvenida inicial -->
+  <div id="app-mispass" class="app-container">
+    <iframe class="app-frame" src="apps/mispass.html"></iframe>
+  </div>
+
   <div id="hub-welcome" class="hub-welcome">
     <h2>Bienvenido</h2>
     <p>Gestiona tu vida académica, tus finanzas y tu salud en un solo lugar.</p>
@@ -446,6 +448,12 @@
         <div class="app-card-icon">⏱️</div>
         <div class="app-card-title">Ayuno Intermitente</div>
         <div class="app-card-desc">Seguimiento de ayuno</div>
+      </div>
+
+      <div class="app-card" data-app="mispass">
+        <div class="app-card-icon">🛡️</div>
+        <div class="app-card-title">VAULT_SECURE</div>
+        <div class="app-card-desc">Gestor de contraseñas y seguridad</div>
       </div>
     </div>
   </div>
