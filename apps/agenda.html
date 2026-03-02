@@ -2924,21 +2924,6 @@
                   className={`month-day ${!dayInfo.isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}`}
                 >
                   <div className="month-day-number">{dayInfo.day}</div>
-                  {getSessionStartsForDate(dayInfo.date).map(session => {
-                    const course = courses.find(c => c.id === session.courseId);
-                    const shortName = course?.nombre.length > 10 ? course?.nombre.substring(0, 10) + '...' : course?.nombre;
-                    return (
-                      <div
-                        key={`start-${session.id}`}
-                        className="month-event"
-                        style={{ background: getCourseColor(course.id).border, borderLeft: '3px solid white' }}
-                        onClick={() => onOpenItem(course, 'course')}
-                        title={`Inicio ${session.modalidad}: ${course?.nombre}`}
-                      >
-                        🚀 {session.modalidad === 'teoria' ? 'Teo' : 'Prac'}: {shortName}
-                      </div>
-                    );
-                  })}
                   {/* Novedad: Renderizar inicio de cursada */}
                   {getSessionStartsForDate(dayInfo.date).map(session => {
                     const course = courses.find(c => c.id === session.courseId);
