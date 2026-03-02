@@ -918,7 +918,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Monto</label>
-              <input type="number" id="amount" step="0.01" placeholder="0.00" required>
+              <input type="number" id="amount" step="0.01" inputMode="decimal" placeholder="0.00" required>
             </div>
             <div class="form-group">
               <label>Cuenta</label>
@@ -2042,6 +2042,8 @@
                 <input
                   type="text"
                   id="uploadPinInput"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="${savedPin || 'Ej: 1234'}"
                   maxlength="6"
                   style="
@@ -2081,6 +2083,8 @@
                 <input
                   type="text"
                   id="downloadPinInput"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="${savedPin || 'Ej: 1234'}"
                   maxlength="6"
                   style="
