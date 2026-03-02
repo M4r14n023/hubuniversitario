@@ -2940,17 +2940,21 @@
                     );
                   })}
                   {/* Novedad: Renderizar inicio de cursada */}
-                  {getCourseStartsForDate(dayInfo.date).map(course => (
-                    <div
-                      key={`start-${course.id}`}
-                      className="month-event"
-                      style={{ background: getCourseColor(course.id).border, borderLeft: '3px solid white' }}
-                      onClick={() => onOpenItem(course, 'course')}
-                      title={`Inicio de cursada: ${course.nombre}`}
-                    >
-                      🚀 Inicio: {course.nombre.length > 10 ? course.nombre.substring(0, 10) + '...' : course.nombre}
-                    </div>
-                  ))}
+                  {getSessionStartsForDate(dayInfo.date).map(session => {
+                    const course = courses.find(c => c.id === session.courseId);
+                    const shortName = course?.nombre.length > 10 ? course?.nombre.substring(0, 10) + '...' : course?.nombre;
+                    return (
+                      <div
+                        key={`start-${session.id}`}
+                        className="month-event"
+                        style={{ background: getCourseColor(course?.id).border, borderLeft: '3px solid white' }}
+                        onClick={() => onOpenItem(course, 'course')}
+                        title={`Inicio ${session.modalidad}: ${course?.nombre}`}
+                      >
+                        🚀 {session.modalidad === 'teoria' ? 'Teo' : 'Prac'}: {shortName}
+                      </div>
+                    );
+                  })}
                   
                   {daySessions.length > 0 && (
                     <div>
