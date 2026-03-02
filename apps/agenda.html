@@ -1815,8 +1815,8 @@
       reunionDia: null,
       reunionHora: null,
       notas: '',
-      startDate: '',
-      endDate: ''
+      inicioTeoricos: '',
+      inicioPracticos: ''
     });
     const createEmptyWeeklySession = () => ({
       id: `session-${Date.now()}`,
@@ -2003,6 +2003,16 @@
       return date1.getFullYear() === date2.getFullYear() &&
              date1.getMonth() === date2.getMonth() &&
              date1.getDate() === date2.getDate();
+    }
+    function getExactStartDate(baseDateStr, targetDayOfWeek) {
+      if (!baseDateStr) return null;
+      const base = new Date(baseDateStr + 'T00:00:00'); 
+      const baseDay = base.getDay() === 0 ? 7 : base.getDay(); // Domingo es 7
+      const diff = targetDayOfWeek - baseDay;
+      // Si la diferencia es negativa, significa que la clase cae en la semana siguiente
+      const daysToAdd = diff >= 0 ? diff : diff + 7;
+      base.setDate(base.getDate() + daysToAdd);
+      return base;
     }
 
     // Generar ocurrencias de una sesión semanal
@@ -2426,6 +2436,21 @@
               <div className="header-content">
                 <h1 className="app-title">Mi agenda Universitaria</h1>
                 <div className="header-actions">
+                  <select 
+                    className="form-select" 
+                    style={{ width: 'auto', padding: '0.6rem 2.5rem 0.6rem 1rem', cursor: 'pointer', fontWeight: 600, background: 'var(--surface)', color: 'var(--primary)', borderColor: 'var(--primary)', appearance: 'auto' }}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        window.open(e.target.value, '_blank');
+                        e.target.value = ""; 
+                      }
+                    }}
+                  >
+                    <option value="">🔗 Enlaces Importantes</option>
+                    <option value="https://aulas.psicologia.mdp.edu.ar/index.php">Aulas Virtuales Psico</option>
+                    <option value="https://siu.psicologia.mdp.edu.ar/">SIU Guaraní</option>
+                  </select>
+
                   <button className="btn btn-secondary" onClick={() => {
                     const input = document.createElement('input');
                     input.type = 'file';
@@ -2433,21 +2458,6 @@
                     input.onchange = handleImport;
                     input.click();
                   }}>
-                  {/* Dropdown de Enlaces Importantes */}
-                  <select 
-                    className="form-select" 
-                    style={{ width: 'auto', padding: '0.6rem 2rem 0.6rem 1rem', cursor: 'pointer', fontWeight: 600, background: 'var(--surface)', color: 'var(--primary)', borderColor: 'var(--primary)' }}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        window.open(e.target.value, '_blank');
-                        e.target.value = ""; // Resetear el select después de hacer clic
-                      }
-                    }}
-                  >
-                    <option value="">🔗 Enlaces Importantes</option>
-                    <option value="https://aulas.psicologia.mdp.edu.ar/index.php">Aulas Virtuales Psico</option>
-                    {/* Puedes agregar más opciones aquí abajo duplicando la línea anterior */}
-                  </select>
                     Importar JSON
                   </button>
                   <button className="btn btn-secondary" onClick={() => handleExport('normalized')}>
@@ -2840,12 +2850,16 @@
           return isSameDay(eventDate, date);
         });
       };
-      const getCourseStartsForDate = (date) => {
-        return courses.filter(c => {
-          if (!c.startDate) return false;
-          // Se agrega T00:00:00 para evitar desfases de zona horaria
-          const start = new Date(c.startDate + 'T00:00:00'); 
-          return isSameDay(start, date);
+      const getSessionStartsForDate = (date) => {
+        return sessions.filter(s => {
+          const course = courses.find(c => c.id === s.courseId);
+          if (!course) return false;
+          
+          const baseDate = s.modalidad === 'teoria' ? course.inicioTeoricos : course.inicioPracticos;
+          if (!baseDate) return false;
+          
+          const exactDate = getExactStartDate(baseDate, s.dayOfWeek);
+          return isSameDay(exactDate, date);
         });
       };
 
@@ -2910,6 +2924,21 @@
                   className={`month-day ${!dayInfo.isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}`}
                 >
                   <div className="month-day-number">{dayInfo.day}</div>
+                  {getSessionStartsForDate(dayInfo.date).map(session => {
+                    const course = courses.find(c => c.id === session.courseId);
+                    const shortName = course?.nombre.length > 10 ? course?.nombre.substring(0, 10) + '...' : course?.nombre;
+                    return (
+                      <div
+                        key={`start-${session.id}`}
+                        className="month-event"
+                        style={{ background: getCourseColor(course.id).border, borderLeft: '3px solid white' }}
+                        onClick={() => onOpenItem(course, 'course')}
+                        title={`Inicio ${session.modalidad}: ${course?.nombre}`}
+                      >
+                        🚀 {session.modalidad === 'teoria' ? 'Teo' : 'Prac'}: {shortName}
+                      </div>
+                    );
+                  })}
                   {/* Novedad: Renderizar inicio de cursada */}
                   {getCourseStartsForDate(dayInfo.date).map(course => (
                     <div
@@ -3805,21 +3834,21 @@
                   />
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Inicio de cursada</label>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Semana inicio Teóricos</label>
                       <input
                         type="date"
                         className="form-input"
-                        value={course.startDate || ''}
-                        onChange={(e) => handleChange(index, 'startDate', e.target.value)}
+                        value={course.inicioTeoricos || ''}
+                        onChange={(e) => handleChange(index, 'inicioTeoricos', e.target.value)}
                       />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fin de cursada (opcional)</label>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Semana inicio Prácticos</label>
                       <input
                         type="date"
                         className="form-input"
-                        value={course.endDate || ''}
-                        onChange={(e) => handleChange(index, 'endDate', e.target.value)}
+                        value={course.inicioPracticos || ''}
+                        onChange={(e) => handleChange(index, 'inicioPracticos', e.target.value)}
                       />
                     </div>
                   </div>
@@ -4593,8 +4622,26 @@
                             📋 Comisión: {session.numeroComision}
                           </div>
                         )}
-                      </div>
-                    </div>
+
+                        {/* ======================================================= */}
+                        {/* NUEVO CÓDIGO AQUÍ: Calculador de fecha de inicio        */}
+                        {/* ======================================================= */}
+                        {(() => {
+                          const baseDate = session.modalidad === 'teoria' ? course?.inicioTeoricos : course?.inicioPracticos;
+                          if (baseDate) {
+                            const exactDate = getExactStartDate(baseDate, session.dayOfWeek);
+                            return (
+                              <div style={{ marginTop: '0.5rem', padding: '0.25rem 0.5rem', background: 'var(--surface)', borderRadius: '4px', fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600, borderLeft: '3px solid var(--primary)' }}>
+                                🚀 Inicia: {exactDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                        {/* ======================================================= */}
+
+                      </div> 
+                    </div> 
                   ))}
                 </div>
               )}
