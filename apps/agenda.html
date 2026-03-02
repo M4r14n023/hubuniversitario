@@ -4287,7 +4287,17 @@
                   
                   <div className="form-group">
                     <label className="form-label">PIN de sincronización *</label>
-                    className="form-input"
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className="form-input"
+                      value={pin}
+                      onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="Ej: 1234"
+                      maxLength={6}
+                      style={{ fontFamily: 'monospace', fontSize: '1.2rem', letterSpacing: '0.3em' }}
+                    />
                     <small style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                       {savedPin ? 'Deja vacío para usar tu PIN guardado' : 'Guarda este PIN, lo necesitarás para descargar'}
                     </small>
