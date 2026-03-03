@@ -331,46 +331,6 @@
       gap: 1rem;
     }
 
-    /* File Upload */
-    .file-upload {
-      border: 2px dashed var(--border-color);
-      border-radius: 12px;
-      padding: 2rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .file-upload:hover {
-      border-color: var(--accent-primary);
-      background: rgba(0, 255, 136, 0.05);
-    }
-
-    .file-upload input {
-      display: none;
-    }
-
-    .file-upload-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      opacity: 0.5;
-    }
-
-    .file-upload-text {
-      color: var(--text-secondary);
-    }
-
-    .file-preview {
-      margin-top: 1rem;
-      border-radius: 8px;
-      max-width: 100%;
-      max-height: 300px;
-      object-fit: contain;
-      border: 1px solid var(--border-color);
-    }
-
     /* Button */
     .btn {
       padding: 0.875rem 2rem;
@@ -899,18 +859,6 @@
         <h3>Nuevo Gasto</h3>
         <form id="expenseForm">
           <div class="form-group">
-            <label>Captura del Comprobante</label>
-            <div class="file-upload" id="fileUpload">
-              <input type="file" id="receiptImage" accept="image/*" capture="environment">
-              <div class="file-upload-icon">📸</div>
-              <div class="file-upload-text">
-                Tocá para tomar foto o subir imagen del comprobante
-              </div>
-            </div>
-            <img id="imagePreview" class="file-preview" style="display: none;">
-          </div>
-
-          <div class="form-group">
             <label>Descripción (Opcional)</label>
             <textarea id="description" placeholder="Ej: Compra en supermercado..."></textarea>
           </div>
@@ -1210,7 +1158,23 @@
         </div>
 
         <div style="border-top: 1px solid var(--border-color); padding-top: 2rem; margin-top: 2rem;">
+          <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">Cierre de Mes</h4>
+          <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.875rem;">
+            Guardá un resumen completo del mes para análisis y comparación histórica.
+          </p>
+          <button class="btn btn-primary" id="closeMonthBtn">
+            📊 Cerrar Mes Actual
+          </button>
+          <button class="btn btn-secondary" id="viewClosuresBtn" style="margin-left: 1rem;">
+            📜 Ver Cierres Anteriores
+          </button>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-color); padding-top: 2rem; margin-top: 2rem;">
           <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">Peligro</h4>
+          <button class="btn" style="background: #ff8800; color: white; margin-bottom: 1rem;" id="clearHistoryBtn">
+            🧹 Borrar Historial de Gastos
+          </button>
           <button class="btn" style="background: var(--danger); color: white;" id="clearDataBtn">
             🗑️ Borrar Todos los Datos
           </button>
@@ -1311,7 +1275,6 @@
       populateTransferSelects();
       populateTemplates();
       initializeTabs();
-      initializeFileUpload();
       initializeSettings();
       initializeTemplateSelector();
       initializeTransferForm();
@@ -1339,26 +1302,6 @@
     }
 
     // File Upload
-    function initializeFileUpload() {
-      const fileUpload = document.getElementById('fileUpload');
-      const fileInput = document.getElementById('receiptImage');
-      const preview = document.getElementById('imagePreview');
-
-      fileUpload.addEventListener('click', () => fileInput.click());
-
-      fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-          };
-          reader.readAsDataURL(file);
-        }
-      });
-    }
-
     // Account Management
     document.getElementById('accountForm').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -1538,7 +1481,6 @@
       const merchant = document.getElementById('merchant').value;
       const date = document.getElementById('date').value;
       const description = document.getElementById('description').value;
-      const imagePreview = document.getElementById('imagePreview');
 
       const expense = {
         id: Date.now(),
@@ -1547,7 +1489,6 @@
         merchant,
         date,
         description,
-        image: imagePreview.style.display !== 'none' ? imagePreview.src : null,
         timestamp: new Date().toISOString()
       };
 
@@ -1565,7 +1506,6 @@
       renderAccounts();
       updateDashboard();
       e.target.reset();
-      document.getElementById('imagePreview').style.display = 'none';
       document.getElementById('date').value = new Date().toISOString().split('T')[0];
       showToast('Gasto registrado exitosamente', 'success');
     });
@@ -1806,7 +1746,6 @@
         merchant: 'Gasto Fijo',
         date: new Date().toISOString().split('T')[0],
         description: fixedExp.description,
-        image: null,
         timestamp: new Date().toISOString(),
         isFixed: true
       };
@@ -1848,6 +1787,9 @@
       });
       document.getElementById('importFile').addEventListener('change', importData);
       document.getElementById('updateBalancesBtn').addEventListener('click', manualUpdateBalances);
+      document.getElementById('closeMonthBtn').addEventListener('click', closeCurrentMonth);
+      document.getElementById('viewClosuresBtn').addEventListener('click', viewMonthClosures);
+      document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
       document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
     }
 
@@ -2189,14 +2131,16 @@
         
         // Obtener datos desde localStorage
         const accountsData = JSON.parse(localStorage.getItem('accounts') || '[]');
-        const transactionsData = JSON.parse(localStorage.getItem('transactions') || '[]');
+        const expensesData = JSON.parse(localStorage.getItem('expenses') || '[]');
         const fixedExpensesData = JSON.parse(localStorage.getItem('fixedExpenses') || '[]');
+        const monthClosuresData = JSON.parse(localStorage.getItem('monthClosures') || '[]');
         const lastUpdateData = localStorage.getItem('lastUpdate') || new Date().toISOString();
         
         const data = {
           accounts: accountsData,
-          transactions: transactionsData,
+          expenses: expensesData,
           fixedExpenses: fixedExpensesData,
+          monthClosures: monthClosuresData,
           lastUpdate: lastUpdateData,
           lastSync: new Date().toISOString()
         };
@@ -2246,8 +2190,9 @@
           
           // Guardar en localStorage
           localStorage.setItem('accounts', JSON.stringify(cloudData.accounts || []));
-          localStorage.setItem('transactions', JSON.stringify(cloudData.transactions || []));
+          localStorage.setItem('expenses', JSON.stringify(cloudData.expenses || []));
           localStorage.setItem('fixedExpenses', JSON.stringify(cloudData.fixedExpenses || []));
+          localStorage.setItem('monthClosures', JSON.stringify(cloudData.monthClosures || []));
           localStorage.setItem('lastUpdate', cloudData.lastUpdate || new Date().toISOString());
           
           localStorage.setItem('gastosSyncPin', pin);
@@ -2268,6 +2213,242 @@
         btn.innerHTML = '⬇️ Descargar';
       }
     }
+
+    function clearHistory() {
+      if (confirm('⚠️ ¿Estás seguro de borrar todo el historial de gastos? Esta acción no se puede deshacer.')) {
+        expenses = [];
+        Storage.set('expenses', expenses);
+        renderExpenses();
+        updateDashboard();
+        showToast('Historial borrado', 'success');
+      }
+    }
+
+    // ============ CIERRE DE MES ============
+    
+    function closeCurrentMonth() {
+      const now = new Date();
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      
+      // Obtener gastos del mes actual
+      const monthExpenses = expenses.filter(e => {
+        const expenseDate = new Date(e.date);
+        return expenseDate.getFullYear() === now.getFullYear() && 
+               expenseDate.getMonth() === now.getMonth();
+      });
+      
+      if (monthExpenses.length === 0) {
+        showToast('No hay gastos en este mes para cerrar', 'error');
+        return;
+      }
+      
+      // Calcular totales
+      const totalAmount = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
+      
+      // Agrupar por cuenta
+      const byAccount = {};
+      accounts.forEach(acc => {
+        const accExpenses = monthExpenses.filter(e => e.accountId === acc.id);
+        if (accExpenses.length > 0) {
+          byAccount[acc.name] = {
+            total: accExpenses.reduce((sum, e) => sum + e.amount, 0),
+            count: accExpenses.length
+          };
+        }
+      });
+      
+      // Separar gastos fijos de otros
+      const fixedExpensesInMonth = monthExpenses.filter(e => e.isFixed);
+      const regularExpenses = monthExpenses.filter(e => !e.isFixed);
+      
+      const fixedTotal = fixedExpensesInMonth.reduce((sum, e) => sum + e.amount, 0);
+      const regularTotal = regularExpenses.reduce((sum, e) => sum + e.amount, 0);
+      
+      // Crear el closure
+      const closure = {
+        month: monthKey,
+        closedAt: new Date().toISOString(),
+        summary: {
+          totalExpenses: monthExpenses.length,
+          totalAmount: parseFloat(totalAmount.toFixed(2)),
+          fixedExpensesCount: fixedExpensesInMonth.length,
+          fixedExpensesTotal: parseFloat(fixedTotal.toFixed(2)),
+          regularExpensesCount: regularExpenses.length,
+          regularExpensesTotal: parseFloat(regularTotal.toFixed(2)),
+          byAccount
+        },
+        expenses: monthExpenses.map(e => ({
+          ...e,
+          accountName: accounts.find(a => a.id === e.accountId)?.name || 'Desconocida'
+        }))
+      };
+      
+      // Guardar closure
+      const closures = Storage.get('monthClosures') || [];
+      
+      // Verificar si ya existe un cierre para este mes
+      const existingIndex = closures.findIndex(c => c.month === monthKey);
+      if (existingIndex >= 0) {
+        if (!confirm('Ya existe un cierre para este mes. ¿Deseas sobrescribirlo?')) {
+          return;
+        }
+        closures[existingIndex] = closure;
+      } else {
+        closures.push(closure);
+      }
+      
+      // Ordenar por mes descendente
+      closures.sort((a, b) => b.month.localeCompare(a.month));
+      
+      Storage.set('monthClosures', closures);
+      showToast(`Mes ${monthKey} cerrado exitosamente`, 'success');
+    }
+    
+    function viewMonthClosures() {
+      const closures = Storage.get('monthClosures') || [];
+      
+      if (closures.length === 0) {
+        showToast('No hay cierres de mes guardados', 'error');
+        return;
+      }
+      
+      // Crear modal
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 1rem;';
+      
+      let closuresHTML = closures.map((closure, index) => {
+        const prevClosure = closures[index + 1];
+        let comparisonHTML = '';
+        
+        if (prevClosure) {
+          const totalChange = closure.summary.totalAmount - prevClosure.summary.totalAmount;
+          const totalChangePercent = ((totalChange / prevClosure.summary.totalAmount) * 100).toFixed(1);
+          const fixedChange = closure.summary.fixedExpensesTotal - prevClosure.summary.fixedExpensesTotal;
+          const regularChange = closure.summary.regularExpensesTotal - prevClosure.summary.regularExpensesTotal;
+          
+          comparisonHTML = `
+            <div style="margin-top: 1rem; padding: 1rem; background: rgba(0, 212, 255, 0.1); border-radius: 8px; border: 1px solid rgba(0, 212, 255, 0.3);">
+              <strong style="color: var(--accent-secondary);">📊 Comparación con ${prevClosure.month}:</strong>
+              <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+                <div>Total: ${totalChange >= 0 ? '↑' : '↓'} $${Math.abs(totalChange).toFixed(2)} (${totalChangePercent}%)</div>
+                <div>Gastos fijos: ${fixedChange >= 0 ? '↑' : '↓'} $${Math.abs(fixedChange).toFixed(2)}</div>
+                <div>Gastos variables: ${regularChange >= 0 ? '↑' : '↓'} $${Math.abs(regularChange).toFixed(2)}</div>
+              </div>
+            </div>
+          `;
+        }
+        
+        return `
+          <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; background: var(--bg-card);">
+            <h3 style="color: var(--accent-primary); margin-bottom: 1rem;">📅 ${closure.month}</h3>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+              Cerrado el ${new Date(closure.closedAt).toLocaleString('es-AR')}
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+              <div style="padding: 1rem; background: var(--bg-input); border-radius: 8px;">
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">Total Gastado</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--danger);">$${closure.summary.totalAmount.toFixed(2)}</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">${closure.summary.totalExpenses} transacciones</div>
+              </div>
+              
+              <div style="padding: 1rem; background: var(--bg-input); border-radius: 8px;">
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">Gastos Fijos</div>
+                <div style="font-size: 1.5rem; font-weight: 700;">$${closure.summary.fixedExpensesTotal.toFixed(2)}</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">${closure.summary.fixedExpensesCount} pagos</div>
+              </div>
+              
+              <div style="padding: 1rem; background: var(--bg-input); border-radius: 8px;">
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">Gastos Variables</div>
+                <div style="font-size: 1.5rem; font-weight: 700;">$${closure.summary.regularExpensesTotal.toFixed(2)}</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">${closure.summary.regularExpensesCount} transacciones</div>
+              </div>
+            </div>
+            
+            <div style="margin-top: 1rem;">
+              <strong style="display: block; margin-bottom: 0.5rem;">Por cuenta:</strong>
+              ${Object.entries(closure.summary.byAccount).map(([name, data]) => `
+                <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--bg-input); border-radius: 6px; margin-bottom: 0.5rem;">
+                  <span>${name}</span>
+                  <span style="font-weight: 600;">$${data.total.toFixed(2)} <span style="color: var(--text-secondary);">(${data.count})</span></span>
+                </div>
+              `).join('')}
+            </div>
+            
+            ${comparisonHTML}
+            
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 1rem;" onclick="viewClosureDetails('${closure.month}')">
+              Ver Detalle de Transacciones
+            </button>
+          </div>
+        `;
+      }).join('');
+      
+      modal.innerHTML = `
+        <div style="background: var(--bg-card); border-radius: 16px; max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;">
+          <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--bg-card); z-index: 10;">
+            <h2 style="color: var(--accent-primary);">📜 Cierres de Mes</h2>
+            <button style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);" onclick="this.closest('.modal-overlay').remove()">✕</button>
+          </div>
+          <div style="padding: 1.5rem;">
+            ${closuresHTML}
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+    }
+    
+    // Función global para ver detalle de un closure
+    window.viewClosureDetails = function(monthKey) {
+      const closures = Storage.get('monthClosures') || [];
+      const closure = closures.find(c => c.month === monthKey);
+      
+      if (!closure) return;
+      
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10001; padding: 1rem;';
+      
+      const expensesHTML = closure.expenses
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .map(e => `
+          <div style="padding: 1rem; background: var(--bg-input); border-radius: 8px; margin-bottom: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+              <div style="flex: 1;">
+                <div style="font-weight: 600;">${e.merchant}${e.isFixed ? ' 🔁' : ''}</div>
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">${e.accountName}</div>
+              </div>
+              <div style="font-size: 1.25rem; font-weight: 700; color: var(--danger);">$${e.amount.toFixed(2)}</div>
+            </div>
+            <div style="font-size: 0.875rem; color: var(--text-secondary);">
+              📅 ${new Date(e.date).toLocaleDateString('es-AR')}
+              ${e.description ? `<br/>📝 ${e.description}` : ''}
+            </div>
+          </div>
+        `).join('');
+      
+      modal.innerHTML = `
+        <div style="background: var(--bg-card); border-radius: 16px; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto;">
+          <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--bg-card); z-index: 10;">
+            <h2 style="color: var(--accent-primary);">📋 Detalle ${monthKey}</h2>
+            <button style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);" onclick="this.closest('.modal-overlay').remove()">✕</button>
+          </div>
+          <div style="padding: 1.5rem;">
+            ${expensesHTML}
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+    };
 
     function clearAllData() {
       if (!confirm('⚠️ ¿ESTÁS SEGURO? Esto eliminará TODOS los datos de forma PERMANENTE.')) return;
