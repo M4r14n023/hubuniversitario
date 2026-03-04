@@ -4537,17 +4537,34 @@
           const current = dayActivities[i];
           const next = dayActivities[i + 1];
           
-          const gap = next.start - current.end;
+          const gapMinutes = next.start - current.end;
           
           // Solo mostrar si hay hueco (gap > 0)
-          if (gap > 0) {
+          if (gapMinutes > 0) {
             // Verificar si hay cambio de aula
             const aula1 = current.aula ? current.aula.trim().toLowerCase() : null;
             const aula2 = next.aula ? next.aula.trim().toLowerCase() : null;
             const needsTravel = aula1 && aula2 && aula1 !== aula2;
             
+            let gapType = 'gap';
+            let gapMessage = '';
+            
+            if (gapMinutes <= 60) {
+              // 1 hora o menos - Solo para traslado
+              gapType = 'travel-only';
+              gapMessage = `${minutesToTime(current.end)} - ${minutesToTime(next.start)} (solo para traslado)`;
+            } else if (gapMinutes <= 120) {
+              // Entre 1 y 2 horas - Tiempo para comer, café, etc
+              gapType = 'short-break';
+              gapMessage = `${minutesToTime(current.end)} - ${minutesToTime(next.start)} (tiempo para comer, café, etc.)`;
+            } else {
+              // Más de 2 horas - Disponible libre
+              gapType = 'gap';
+              gapMessage = `Libre de ${minutesToTime(current.end)} a ${minutesToTime(next.start)}`;
+            }
+            
             availability.push({
-              type: 'gap',
+              type: gapType,
               start: current.end,
               end: next.start,
               prevActivity: current.name,
@@ -4557,7 +4574,9 @@
               nextAula: next.aula,
               nextStart: next.start,
               needsTravel: needsTravel,
-              message: `Libre de ${minutesToTime(current.end)} a ${minutesToTime(next.start)} (termina: ${current.name} → inicia: ${next.name})`
+              gapMinutes: gapMinutes,
+              message: gapMessage,
+              context: `Termina: ${current.name} → Inicia: ${next.name}`
             });
           }
         }
@@ -4566,14 +4585,14 @@
         const lastActivity = dayActivities[dayActivities.length - 1];
         if (lastActivity.end < dayEnd) {
           availability.push({
-            type: 'after',
+            type: 'end-of-day',
             start: lastActivity.end,
             end: dayEnd,
             prevActivity: lastActivity.name,
             prevAula: lastActivity.aula,
             prevEnd: lastActivity.end,
-            needsTravel: !!lastActivity.aula, // Solo alerta si tiene aula (saldrás de algún lugar)
-            message: `Libre desde ${minutesToTime(lastActivity.end)} (termina: ${lastActivity.name})`
+            needsTravel: false, // No alerta de traslado al final del día
+            message: `Fin de actividades programadas`
           });
         }
         
@@ -4647,8 +4666,10 @@
                             marginBottom: idx < availability.length - 1 ? '0.5rem' : 0,
                             borderLeft: `4px solid ${
                               slot.type === 'free' ? '#4ade80' : 
-                              slot.type === 'after' ? '#60a5fa' : 
-                              '#fbbf24'
+                              slot.type === 'end-of-day' ? '#94a3b8' : 
+                              slot.type === 'travel-only' ? '#f59e0b' : 
+                              slot.type === 'short-break' ? '#60a5fa' : 
+                              '#8b5cf6'
                             }`
                           }}
                         >
@@ -4660,7 +4681,9 @@
                           }}>
                             <span style={{ fontSize: '1.2rem' }}>
                               {slot.type === 'free' ? '✅' : 
-                               slot.type === 'after' ? '🏁' : 
+                               slot.type === 'end-of-day' ? '🏁' : 
+                               slot.type === 'travel-only' ? '🚶' :
+                               slot.type === 'short-break' ? '☕' :
                                '⏰'}
                             </span>
                             <span style={{ fontWeight: 600 }}>
@@ -4683,8 +4706,31 @@
                             {slot.message}
                           </div>
                           
+                          {/* Contexto de actividades (para gaps) */}
+                          {slot.context && (
+                            <div style={{
+                              fontSize: '0.85rem',
+                              color: 'var(--text-muted)',
+                              marginTop: '0.25rem',
+                              fontStyle: 'italic'
+                            }}>
+                              {slot.context}
+                            </div>
+                          )}
+                          
+                          {/* Info de actividad anterior para fin del día */}
+                          {slot.type === 'end-of-day' && slot.prevActivity && (
+                            <div style={{
+                              fontSize: '0.85rem',
+                              color: 'var(--text-muted)',
+                              marginTop: '0.25rem'
+                            }}>
+                              Última actividad: {slot.prevActivity} ({minutesToTime(slot.prevEnd)})
+                            </div>
+                          )}
+                          
                           {/* Mostrar info de aulas si están disponibles */}
-                          {slot.type === 'gap' && (slot.prevAula || slot.nextAula) && (
+                          {(slot.type === 'gap' || slot.type === 'travel-only' || slot.type === 'short-break') && (slot.prevAula || slot.nextAula) && (
                             <div style={{
                               marginTop: '0.5rem',
                               fontSize: '0.85rem',
@@ -4697,7 +4743,7 @@
                             </div>
                           )}
                           
-                          {slot.type === 'after' && slot.prevAula && (
+                          {slot.type === 'end-of-day' && slot.prevAula && (
                             <div style={{
                               marginTop: '0.5rem',
                               fontSize: '0.85rem',
@@ -4707,8 +4753,8 @@
                             </div>
                           )}
                           
-                          {/* Solo mostrar aviso de traslado si hay cambio de aula */}
-                          {slot.needsTravel && (
+                          {/* Solo mostrar aviso de traslado si hay cambio de aula y NO es fin de día */}
+                          {slot.needsTravel && slot.type !== 'end-of-day' && (
                             <div style={{
                               marginTop: '0.5rem',
                               padding: '0.5rem',
@@ -4717,7 +4763,7 @@
                               fontSize: '0.85rem',
                               color: '#f59e0b'
                             }}>
-                              ⚠️ Considera tiempo de traslado entre aulas
+                              ⚠️ Cambio de aula - considera tiempo de traslado
                             </div>
                           )}
                         </div>
