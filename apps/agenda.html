@@ -2326,6 +2326,7 @@
       const [showActivityModal, setShowActivityModal] = useState(false);
       const [editingActivity, setEditingActivity] = useState(null);
       const [showSyncModal, setShowSyncModal] = useState(false);
+      const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
       const [isDarkMode, setIsDarkMode] = useState(() => {
         return localStorage.getItem('agendaTheme') === 'dark';
       });
@@ -2465,6 +2466,13 @@
                   </button>
                   <button className="btn btn-secondary" onClick={() => setShowSyncModal(true)}>
                     ☁️ Sincronizar
+                  </button>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => setShowAvailabilityModal(true)}
+                    title="Ver horarios disponibles"
+                  >
+                    🕐 Disponibilidad
                   </button>
                   <button 
                     className="btn btn-secondary btn-print" 
@@ -2628,6 +2636,15 @@
                 setData(newData);
                 setShowSyncModal(false);
               }}
+            />
+          )}
+
+          {showAvailabilityModal && (
+            <AvailabilityModal
+              sessions={weeklySessions}
+              extracurricularSessions={extracurricularSessions}
+              courses={courses}
+              onClose={() => setShowAvailabilityModal(false)}
             />
           )}
 
@@ -4410,6 +4427,252 @@
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============ MODAL DE DISPONIBILIDAD HORARIA ============
+    
+    function AvailabilityModal({ sessions, extracurricularSessions, courses, onClose }) {
+      const DAYS = [
+        { num: 1, name: 'Lunes' },
+        { num: 2, name: 'Martes' },
+        { num: 3, name: 'Miércoles' },
+        { num: 4, name: 'Jueves' },
+        { num: 5, name: 'Viernes' },
+        { num: 6, name: 'Sábado' }
+      ];
+      
+      const START_HOUR = 8;
+      const END_HOUR = 21;
+      
+      // Combinar todas las actividades
+      const allActivities = [
+        ...sessions.map(s => ({
+          ...s,
+          courseName: courses.find(c => c.id === s.courseId)?.nombre || 'Desconocido',
+          type: 'course'
+        })),
+        ...extracurricularSessions.map(e => ({
+          ...e,
+          courseName: getActivityTitle(e),
+          type: 'extra'
+        }))
+      ];
+      
+      // Función para convertir "HH:MM" a minutos desde medianoche
+      const timeToMinutes = (time) => {
+        const [h, m] = time.split(':').map(Number);
+        return h * 60 + m;
+      };
+      
+      // Función para convertir minutos a "HH:MM"
+      const minutesToTime = (minutes) => {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      };
+      
+      // Calcular disponibilidad para un día
+      const getAvailabilityForDay = (dayNum) => {
+        const dayActivities = allActivities
+          .filter(a => a.dayOfWeek === dayNum)
+          .map(a => ({
+            start: timeToMinutes(a.startTime),
+            end: timeToMinutes(a.endTime),
+            name: a.courseName
+          }))
+          .sort((a, b) => a.start - b.start);
+        
+        if (dayActivities.length === 0) {
+          return [{
+            type: 'free',
+            start: START_HOUR * 60,
+            end: END_HOUR * 60,
+            message: `Todo el día libre (${START_HOUR}:00 - ${END_HOUR}:00)`
+          }];
+        }
+        
+        const availability = [];
+        const dayStart = START_HOUR * 60;
+        const dayEnd = END_HOUR * 60;
+        
+        // Libre antes de la primera actividad
+        if (dayActivities[0].start > dayStart) {
+          availability.push({
+            type: 'free',
+            start: dayStart,
+            end: dayActivities[0].start,
+            nextActivity: dayActivities[0].name,
+            nextStart: dayActivities[0].start,
+            message: `Libre hasta ${minutesToTime(dayActivities[0].start)} (inicia: ${dayActivities[0].name})`
+          });
+        }
+        
+        // Huecos entre actividades
+        for (let i = 0; i < dayActivities.length - 1; i++) {
+          const current = dayActivities[i];
+          const next = dayActivities[i + 1];
+          
+          if (current.end < next.start) {
+            availability.push({
+              type: 'gap',
+              start: current.end,
+              end: next.start,
+              prevActivity: current.name,
+              prevEnd: current.end,
+              nextActivity: next.name,
+              nextStart: next.start,
+              message: `Libre de ${minutesToTime(current.end)} a ${minutesToTime(next.start)} (termina: ${current.name} → inicia: ${next.name})`
+            });
+          }
+        }
+        
+        // Libre después de la última actividad
+        const lastActivity = dayActivities[dayActivities.length - 1];
+        if (lastActivity.end < dayEnd) {
+          availability.push({
+            type: 'after',
+            start: lastActivity.end,
+            end: dayEnd,
+            prevActivity: lastActivity.name,
+            prevEnd: lastActivity.end,
+            message: `Libre desde ${minutesToTime(lastActivity.end)} (termina: ${lastActivity.name})`
+          });
+        }
+        
+        return availability.length > 0 ? availability : [{
+          type: 'none',
+          message: 'Sin huecos libres'
+        }];
+      };
+      
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">🕐 Horarios Disponibles</h2>
+              <button className="modal-close" onClick={onClose}>✕</button>
+            </div>
+            
+            <div className="modal-body">
+              <p style={{ marginBottom: '1.5rem', color: 'var(--text-muted)' }}>
+                Horarios libres de lunes a sábado. Los avisos te indican cuándo termina una actividad para que consideres tiempo de traslado.
+              </p>
+              
+              {DAYS.map(day => {
+                const availability = getAvailabilityForDay(day.num);
+                
+                return (
+                  <div 
+                    key={day.num} 
+                    style={{
+                      marginBottom: '1.5rem',
+                      padding: '1rem',
+                      background: 'var(--background)',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)'
+                    }}
+                  >
+                    <h3 style={{
+                      fontSize: '1.1rem',
+                      fontWeight: 600,
+                      marginBottom: '0.75rem',
+                      color: 'var(--primary)'
+                    }}>
+                      {day.name}
+                    </h3>
+                    
+                    {availability.map((slot, idx) => {
+                      if (slot.type === 'none') {
+                        return (
+                          <div 
+                            key={idx}
+                            style={{
+                              padding: '0.75rem',
+                              background: 'var(--surface)',
+                              borderRadius: '6px',
+                              color: 'var(--text-muted)',
+                              fontStyle: 'italic'
+                            }}
+                          >
+                            {slot.message}
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <div 
+                          key={idx}
+                          style={{
+                            padding: '0.75rem',
+                            background: 'var(--surface)',
+                            borderRadius: '6px',
+                            marginBottom: idx < availability.length - 1 ? '0.5rem' : 0,
+                            borderLeft: `4px solid ${
+                              slot.type === 'free' ? '#4ade80' : 
+                              slot.type === 'after' ? '#60a5fa' : 
+                              '#fbbf24'
+                            }`
+                          }}
+                        >
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginBottom: '0.25rem'
+                          }}>
+                            <span style={{ fontSize: '1.2rem' }}>
+                              {slot.type === 'free' ? '✅' : 
+                               slot.type === 'after' ? '🏁' : 
+                               '⏰'}
+                            </span>
+                            <span style={{ fontWeight: 600 }}>
+                              {minutesToTime(slot.start)} - {minutesToTime(slot.end)}
+                            </span>
+                            <span style={{
+                              fontSize: '0.85rem',
+                              color: 'var(--text-muted)',
+                              marginLeft: 'auto'
+                            }}>
+                              ({Math.floor((slot.end - slot.start) / 60)}h {(slot.end - slot.start) % 60}m)
+                            </span>
+                          </div>
+                          
+                          <div style={{
+                            fontSize: '0.9rem',
+                            color: 'var(--text-muted)',
+                            marginTop: '0.25rem'
+                          }}>
+                            {slot.message}
+                          </div>
+                          
+                          {(slot.type === 'gap' || slot.type === 'after') && (
+                            <div style={{
+                              marginTop: '0.5rem',
+                              padding: '0.5rem',
+                              background: 'rgba(251, 191, 36, 0.1)',
+                              borderRadius: '4px',
+                              fontSize: '0.85rem',
+                              color: '#f59e0b'
+                            }}>
+                              ⚠️ Considera tiempo de traslado
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={onClose}>
+                Cerrar
+              </button>
             </div>
           </div>
         </div>
