@@ -4482,7 +4482,9 @@
           .map(a => ({
             start: timeToMinutes(a.startTime),
             end: timeToMinutes(a.endTime),
-            name: a.courseName
+            name: a.courseName,
+            aula: a.aula || null,
+            fullActivity: a
           }))
           .sort((a, b) => a.start - b.start);
         
@@ -4516,15 +4518,26 @@
           const current = dayActivities[i];
           const next = dayActivities[i + 1];
           
-          if (current.end < next.start) {
+          const gap = next.start - current.end;
+          
+          // Solo mostrar si hay hueco (gap > 0)
+          if (gap > 0) {
+            // Verificar si hay cambio de aula
+            const aula1 = current.aula ? current.aula.trim().toLowerCase() : null;
+            const aula2 = next.aula ? next.aula.trim().toLowerCase() : null;
+            const needsTravel = aula1 && aula2 && aula1 !== aula2;
+            
             availability.push({
               type: 'gap',
               start: current.end,
               end: next.start,
               prevActivity: current.name,
+              prevAula: current.aula,
               prevEnd: current.end,
               nextActivity: next.name,
+              nextAula: next.aula,
               nextStart: next.start,
+              needsTravel: needsTravel,
               message: `Libre de ${minutesToTime(current.end)} a ${minutesToTime(next.start)} (termina: ${current.name} → inicia: ${next.name})`
             });
           }
@@ -4538,7 +4551,9 @@
             start: lastActivity.end,
             end: dayEnd,
             prevActivity: lastActivity.name,
+            prevAula: lastActivity.aula,
             prevEnd: lastActivity.end,
+            needsTravel: !!lastActivity.aula, // Solo alerta si tiene aula (saldrás de algún lugar)
             message: `Libre desde ${minutesToTime(lastActivity.end)} (termina: ${lastActivity.name})`
           });
         }
@@ -4649,7 +4664,32 @@
                             {slot.message}
                           </div>
                           
-                          {(slot.type === 'gap' || slot.type === 'after') && (
+                          {/* Mostrar info de aulas si están disponibles */}
+                          {slot.type === 'gap' && (slot.prevAula || slot.nextAula) && (
+                            <div style={{
+                              marginTop: '0.5rem',
+                              fontSize: '0.85rem',
+                              color: 'var(--text-muted)',
+                              display: 'flex',
+                              gap: '1rem'
+                            }}>
+                              {slot.prevAula && <span>📍 Sale de: {slot.prevAula}</span>}
+                              {slot.nextAula && <span>📍 Va a: {slot.nextAula}</span>}
+                            </div>
+                          )}
+                          
+                          {slot.type === 'after' && slot.prevAula && (
+                            <div style={{
+                              marginTop: '0.5rem',
+                              fontSize: '0.85rem',
+                              color: 'var(--text-muted)'
+                            }}>
+                              📍 Sale de: {slot.prevAula}
+                            </div>
+                          )}
+                          
+                          {/* Solo mostrar aviso de traslado si hay cambio de aula */}
+                          {slot.needsTravel && (
                             <div style={{
                               marginTop: '0.5rem',
                               padding: '0.5rem',
@@ -4658,7 +4698,7 @@
                               fontSize: '0.85rem',
                               color: '#f59e0b'
                             }}>
-                              ⚠️ Considera tiempo de traslado
+                              ⚠️ Considera tiempo de traslado entre aulas
                             </div>
                           )}
                         </div>
