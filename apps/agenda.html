@@ -2343,6 +2343,7 @@
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedItem, setSelectedItem] = useState(null);
       const [showSidePanel, setShowSidePanel] = useState(false);
+      const [hideConflicts, setHideConflicts] = useState(false);
       
       const [data, setData] = useState(() => loadFromStorage());
       const { term, courses, weeklySessions, events, extracurricularSessions, extraMuscleGroupsPreset } = data;
@@ -2512,9 +2513,27 @@
             </div>
           </header>
 
-          {conflicts.length > 0 && (
+          {conflicts.length > 0 && !hideConflicts && (
             <div className="app-container">
-              <div className="alert alert-warning">
+              <div className="alert alert-warning" style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setHideConflicts(true)}
+                  style={{
+                    position: 'absolute',
+                    top: '0.5rem',
+                    right: '0.5rem',
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '1.2rem',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    padding: '0.25rem',
+                    lineHeight: 1
+                  }}
+                  title="Cerrar advertencia"
+                >
+                  ✕
+                </button>
                 <strong>⚠️</strong>
                 <div>
                   <strong>Conflictos detectados:</strong>
