@@ -167,7 +167,10 @@
         <!-- Historial -->
         <div>
             <div class="flex items-center justify-between mb-2">
-                <h2 class="text-lg font-semibold text-gray-300">Historial Reciente</h2>
+                <div class="flex items-center gap-3">
+                    <h2 class="text-lg font-semibold text-gray-300">Historial Reciente</h2>
+                    <span id="average-badge" class="hidden text-xs font-medium bg-cyan-900/50 text-cyan-400 px-2.5 py-1 rounded-full border border-cyan-800/50">Promedio: 0h</span>
+                </div>
                 <button id="clear-history-btn" class="text-gray-400 hover:text-white p-1 rounded-full transition hidden" title="Borrar todo el historial">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                 </button>
@@ -241,6 +244,7 @@
             let isConfirmingDelete = false;
             let confirmDeleteTimeout;
             let inputMode = 'elapsed';
+            let isHistoryExpanded = false; // Estado para saber si la lista está abierta
 
             // --- Funciones de Tabs/UI Manual ---
             const switchTab = (mode) => {
@@ -483,11 +487,24 @@
             };
 
             const renderHistory = () => {
+                const averageBadge = document.getElementById('average-badge');
+                
                 if (state.history.length === 0) {
                     historyContainer.innerHTML = '<p class="text-gray-500 text-center">No hay ayunos completados todavía.</p>';
+                    averageBadge.classList.add('hidden');
                     return;
                 }
-                historyContainer.innerHTML = state.history.map(fast => {
+
+                // Calcular el promedio general
+                const totalMs = state.history.reduce((sum, item) => sum + item.duration, 0);
+                const avgHours = (totalMs / state.history.length / (1000 * 60 * 60)).toFixed(1);
+                averageBadge.textContent = `Promedio: ${avgHours}h`;
+                averageBadge.classList.remove('hidden');
+
+                // Plegar historial (solo mostrar 1 si no está expandido)
+                const visibleHistory = isHistoryExpanded ? state.history : state.history.slice(0, 1);
+
+                let html = visibleHistory.map(fast => {
                     const startDate = new Date(fast.startTime);
                     const endDate = new Date(fast.endTime);
                     const durationStr = formatDuration(fast.duration);
@@ -519,6 +536,17 @@
                         </div>
                     `;
                 }).join('');
+
+                // Agregar el botón de Ver Más / Ver Menos
+                if (state.history.length > 1) {
+                    html += `
+                        <button id="toggle-history-btn" class="w-full mt-2 py-2 text-xs font-semibold uppercase tracking-wider text-cyan-500 hover:text-cyan-400 hover:bg-gray-800/50 rounded-lg transition-colors flex items-center justify-center gap-1">
+                            ${isHistoryExpanded ? 'Ocultar historial <span>▲</span>' : `Ver ${state.history.length - 1} anteriores <span>▼</span>`}
+                        </button>
+                    `;
+                }
+
+                historyContainer.innerHTML = html;
             };
 
             // --- Funciones de Utilidad ---
@@ -580,10 +608,19 @@
             });
 
             historyContainer.addEventListener('click', (e) => {
+                // Si hizo clic en eliminar
                 const deleteButton = e.target.closest('.delete-item-btn');
                 if (deleteButton) {
                     const startTime = parseInt(deleteButton.dataset.id);
                     deleteHistoryItem(startTime);
+                    return;
+                }
+                
+                // Si hizo clic en ver más / ver menos
+                const toggleButton = e.target.closest('#toggle-history-btn');
+                if (toggleButton) {
+                    isHistoryExpanded = !isHistoryExpanded;
+                    renderHistory();
                 }
             });
 
