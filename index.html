@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hub de Productividad</title>
   
-  <!-- PWA Meta Tags -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icon-512x512.png">
@@ -14,9 +13,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Productividad">
-  <meta name="description" content="Hub de productividad: Agenda Universitaria, Gastos, Ayuno Intermitente y Conytaseñas">
+  <meta name="description" content="Hub de productividad: Agenda Universitaria, Gastos, Ayuno Intermitente y Contraseñas">
   
-  <!-- Fuentes -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -41,6 +39,7 @@
       --agenda-color: #1a4d2e;
       --gastos-color: #00ff88;
       --ayuno-color: #06b6d4;
+      --todo-color: #a855f7; /* Color para el ToDo Live */
     }
     
     /* Modo oscuro para bienvenida */
@@ -144,6 +143,27 @@
     .hub-nav.app-ayuno .hub-tab.active {
       color: var(--ayuno-color);
       border-bottom-color: var(--ayuno-color);
+    }
+
+    /* ESTILOS DEL NAVBAR PARA EL TODO LIVE */
+    .hub-nav.app-todo {
+      border-bottom-color: var(--todo-color);
+      background: linear-gradient(135deg, #0f172a 0%, #2e1065 100%);
+    }
+    
+    .hub-nav.app-todo .hub-logo,
+    .hub-nav.app-todo .hub-tab {
+      color: var(--todo-color);
+    }
+    
+    .hub-nav.app-todo .hub-tab:hover {
+      background: rgba(168, 85, 247, 0.1);
+      color: var(--todo-color);
+    }
+    
+    .hub-nav.app-todo .hub-tab.active {
+      color: var(--todo-color);
+      border-bottom-color: var(--todo-color);
     }
     
     .hub-nav-content {
@@ -404,6 +424,7 @@
         <button class="hub-tab" data-app="gastos">💰 Gastos</button>
         <button class="hub-tab" data-app="ayuno">⏱️ Ayuno</button>
         <button class="hub-tab" data-app="mispass">🛡️ Bóveda</button>
+        <button class="hub-tab" data-app="todo">✅ ToDo</button>
         <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
           <span class="theme-icon">🌙</span>
         </button>
@@ -425,6 +446,10 @@
 
   <div id="app-mispass" class="app-container">
     <iframe class="app-frame" src="apps/mispass.html"></iframe>
+  </div>
+
+  <div id="app-todo" class="app-container">
+    <iframe class="app-frame" src="https://TU-LINK-DE-VERCEL.vercel.app"></iframe>
   </div>
 
   <div id="hub-welcome" class="hub-welcome">
@@ -454,6 +479,12 @@
         <div class="app-card-icon">🛡️</div>
         <div class="app-card-title">VAULT_SECURE</div>
         <div class="app-card-desc">Gestor de contraseñas y seguridad</div>
+      </div>
+
+      <div class="app-card" data-app="todo">
+        <div class="app-card-icon">✅</div>
+        <div class="app-card-title">ToDo Live</div>
+        <div class="app-card-desc">Tareas compartidas en tiempo real</div>
       </div>
     </div>
   </div>
@@ -489,7 +520,7 @@
       document.body.classList.remove('home');
       
       // Cambiar color del navbar según la app
-      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno');
+      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo');
       navbar.classList.add(`app-${appName}`);
       
       // Mostrar app seleccionada
@@ -509,7 +540,7 @@
       tabs.forEach(tab => tab.classList.remove('active'));
       
       // Restaurar color original del navbar
-      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno');
+      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo');
       
       // Agregar clase home al body
       document.body.classList.add('home');
