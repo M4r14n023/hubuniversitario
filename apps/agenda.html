@@ -2620,6 +2620,7 @@
                 courses={courses}
                 extracurricularSessions={extracurricularSessions}
                 searchQuery={searchQuery}
+                conflicts={conflicts}
                 onOpenItem={handleOpenItem}
               />
             )}
@@ -2719,7 +2720,7 @@
 
     // ============ VISTA SEMANA ============
     
-    function WeekView({ sessions, courses, extracurricularSessions, searchQuery, onOpenItem }) {
+    function WeekView({ sessions, courses, extracurricularSessions, searchQuery, conflicts, onOpenItem }) {
       const hours = Array.from({ length: 13 }, (_, i) => 8 + i); // 8:00 a 20:00 (última marca es 20:00, termina a las 21:00)
       const isMobile = window.innerWidth <= 768;
       const PIXELS_PER_HOUR = isMobile ? 50 : 60; // Cada hora = 50px en mobile, 60px en desktop
