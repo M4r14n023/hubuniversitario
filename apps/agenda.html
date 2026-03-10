@@ -2359,12 +2359,19 @@
 
       // Detectar conflictos nuevos comparando con los ya vistos
       const [seenConflicts, setSeenConflicts] = useState(() => {
-        const stored = localStorage.getItem('agendaSeenConflicts');
-        return stored ? JSON.parse(stored) : [];
+        try {
+          const stored = localStorage.getItem('agendaSeenConflicts');
+          return stored ? JSON.parse(stored) : [];
+        } catch (e) {
+          return [];
+        }
       });
 
       const newConflicts = useMemo(() => {
+        if (!conflicts || conflicts.length === 0) return [];
+        
         return conflicts.filter(conflict => {
+          if (!conflict.session1 || !conflict.session2) return false;
           const conflictId = `${conflict.session1.id}-${conflict.session2.id}-${conflict.type}`;
           return !seenConflicts.includes(conflictId);
         });
@@ -2372,10 +2379,17 @@
 
       // Función para marcar conflictos como vistos
       const markConflictsAsSeen = () => {
-        const conflictIds = conflicts.map(c => `${c.session1.id}-${c.session2.id}-${c.type}`);
-        setSeenConflicts(conflictIds);
-        localStorage.setItem('agendaSeenConflicts', JSON.stringify(conflictIds));
-        setHideConflicts(true);
+        try {
+          const conflictIds = conflicts
+            .filter(c => c.session1 && c.session2)
+            .map(c => `${c.session1.id}-${c.session2.id}-${c.type}`);
+          setSeenConflicts(conflictIds);
+          localStorage.setItem('agendaSeenConflicts', JSON.stringify(conflictIds));
+          setHideConflicts(true);
+        } catch (e) {
+          console.error('Error guardando conflictos vistos:', e);
+          setHideConflicts(true);
+        }
       };
 
       const handleExport = (format = 'normalized') => {
@@ -2797,8 +2811,9 @@
                     const { top, height } = calculateSessionPosition(session);
                     const courseColor = getCourseColor(session.courseId);
                     
-                    // Verificar si esta sesión tiene conflicto
-                    const hasConflict = conflicts.some(c => 
+                    // Verificar si esta sesión tiene conflicto (de forma segura)
+                    const hasConflict = conflicts && conflicts.length > 0 && conflicts.some(c => 
+                      c && c.session1 && c.session2 &&
                       (c.session1.id === session.id || c.session2.id === session.id) && 
                       c.type === 'no-gap'
                     );
