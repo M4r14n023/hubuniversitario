@@ -2357,41 +2357,6 @@
         return detectConflicts(weeklySessions, courses);
       }, [weeklySessions, courses]);
 
-      // Detectar conflictos nuevos comparando con los ya vistos
-      const [seenConflicts, setSeenConflicts] = useState(() => {
-        try {
-          const stored = localStorage.getItem('agendaSeenConflicts');
-          return stored ? JSON.parse(stored) : [];
-        } catch (e) {
-          return [];
-        }
-      });
-
-      const newConflicts = useMemo(() => {
-        if (!conflicts || conflicts.length === 0) return [];
-        
-        return conflicts.filter(conflict => {
-          if (!conflict.session1 || !conflict.session2) return false;
-          const conflictId = `${conflict.session1.id}-${conflict.session2.id}-${conflict.type}`;
-          return !seenConflicts.includes(conflictId);
-        });
-      }, [conflicts, seenConflicts]);
-
-      // Función para marcar conflictos como vistos
-      const markConflictsAsSeen = () => {
-        try {
-          const conflictIds = conflicts
-            .filter(c => c.session1 && c.session2)
-            .map(c => `${c.session1.id}-${c.session2.id}-${c.type}`);
-          setSeenConflicts(conflictIds);
-          localStorage.setItem('agendaSeenConflicts', JSON.stringify(conflictIds));
-          setHideConflicts(true);
-        } catch (e) {
-          console.error('Error guardando conflictos vistos:', e);
-          setHideConflicts(true);
-        }
-      };
-
       const handleExport = (format = 'normalized') => {
         let exportData;
         if (format === 'legacy') {
@@ -2548,11 +2513,11 @@
             </div>
           </header>
 
-          {newConflicts.length > 0 && !hideConflicts && (
+          {conflicts.length > 0 && !hideConflicts && (
             <div className="app-container">
               <div className="alert alert-warning" style={{ position: 'relative' }}>
                 <button
-                  onClick={markConflictsAsSeen}
+                  onClick={() => setHideConflicts(true)}
                   style={{
                     position: 'absolute',
                     top: '0.5rem',
@@ -2571,16 +2536,16 @@
                 </button>
                 <strong>⚠️</strong>
                 <div>
-                  <strong>Nuevos conflictos detectados:</strong>
+                  <strong>Conflictos detectados:</strong>
                   <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
-                    {newConflicts.slice(0, 3).map((c, i) => (
+                    {conflicts.slice(0, 3).map((c, i) => (
                       <li key={i}>
                         {c.type === 'overlap' ? 'Superposición' : 'Clases pegadas (cambio de aula)'}: 
                         {' '}{c.session1.courseName} y {c.session2.courseName} el {getDayName(c.session1.dayOfWeek)}
                       </li>
                     ))}
                   </ul>
-                  {newConflicts.length > 3 && <div>Y {newConflicts.length - 3} más...</div>}
+                  {conflicts.length > 3 && <div>Y {conflicts.length - 3} más...</div>}
                 </div>
               </div>
             </div>
@@ -2620,7 +2585,6 @@
                 courses={courses}
                 extracurricularSessions={extracurricularSessions}
                 searchQuery={searchQuery}
-                conflicts={conflicts}
                 onOpenItem={handleOpenItem}
               />
             )}
@@ -2720,7 +2684,7 @@
 
     // ============ VISTA SEMANA ============
     
-    function WeekView({ sessions, courses, extracurricularSessions, searchQuery, conflicts, onOpenItem }) {
+    function WeekView({ sessions, courses, extracurricularSessions, searchQuery, onOpenItem }) {
       const hours = Array.from({ length: 13 }, (_, i) => 8 + i); // 8:00 a 20:00 (última marca es 20:00, termina a las 21:00)
       const isMobile = window.innerWidth <= 768;
       const PIXELS_PER_HOUR = isMobile ? 50 : 60; // Cada hora = 50px en mobile, 60px en desktop
@@ -2812,13 +2776,6 @@
                     const { top, height } = calculateSessionPosition(session);
                     const courseColor = getCourseColor(session.courseId);
                     
-                    // Verificar si esta sesión tiene conflicto (de forma segura)
-                    const hasConflict = conflicts && conflicts.length > 0 && conflicts.some(c => 
-                      c && c.session1 && c.session2 &&
-                      (c.session1.id === session.id || c.session2.id === session.id) && 
-                      c.type === 'no-gap'
-                    );
-                    
                     return (
                       <div
                         key={session.id}
@@ -2827,23 +2784,10 @@
                           top: `${top}px`, 
                           height: `${height}px`,
                           background: courseColor.bg,
-                          borderLeftColor: courseColor.border,
-                          position: 'relative'
+                          borderLeftColor: courseColor.border
                         }}
                         onClick={() => onOpenItem(course, 'course')}
                       >
-                        {hasConflict && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '4px',
-                            right: '4px',
-                            fontSize: '0.9rem',
-                            opacity: 0.7,
-                            zIndex: 1
-                          }} title="Horario continuo con cambio de aula">
-                            ⚠️
-                          </div>
-                        )}
                         <div className="session-name" title={course?.nombre}>
                           {isMobile ? shortenCourseName(course?.nombre, 20) : course?.nombre}
                           {!isMobile && (
