@@ -11,11 +11,10 @@
         
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type="number"] { -moz-appearance: textfield; 
-                                appearance: textfield
-        }
+        input[type="number"] { -moz-appearance: textfield;
+                                appearance: textfield }
         
-        .checkbox-custom:checked + div { background-color: #3b82f6; border-color: #3b82f6; }
+        .checkbox-custom:checked + div { background-color: #ea580c; border-color: #ea580c; }
         .checkbox-custom:checked + div svg { display: block; }
         
         @keyframes pulse-sync { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
@@ -26,13 +25,13 @@
 
     <header class="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-50 shadow-md">
         <div class="max-w-md mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold text-blue-500 flex items-center gap-2 cursor-pointer" onclick="window.init()">
+            <h1 class="text-xl font-bold text-orange-500 flex items-center gap-2 cursor-pointer" onclick="window.init()">
                 <span>🏋️</span> Gym Trackr
             </h1>
             <div class="flex items-center gap-3">
                 <span id="sync-icon" class="text-[10px] bg-gray-800 px-2 py-1 rounded-full border border-gray-700" title="Conexión">🟡 Sync</span>
                 <div id="header-stats" class="text-xs font-semibold text-gray-400 bg-gray-800 px-3 py-1.5 rounded-full hidden">
-                    Semana <span id="week-counter" class="text-blue-400">1</span>
+                    Semana <span id="week-counter" class="text-orange-400">1</span>
                 </div>
                 <button onclick="window.renderSettings()" class="text-xl hover:scale-110 transition">⚙️</button>
             </div>
@@ -101,7 +100,7 @@
         // --- ESTADO ---
         window.appState = JSON.parse(localStorage.getItem('gymTrackrState_v2')) || {
             isInitialized: false,
-            baselineSets: {}, // { exId: [ {w, r}, {w, r}... ] }
+            baselineSets: {}, 
             history: [],         
             currentWorkout: null,
             routine: defaultRoutine,
@@ -135,12 +134,13 @@
             }
         });
 
-        // --- SETUP MULTI-SERIE (TRABAJO FINO) ---
+        // --- SETUP MULTI-SERIE ---
         window.renderSetup = function() {
             let html = `
                 <div class="mb-6">
                     <h2 class="text-2xl font-bold text-white mb-2 text-center">Calibración de Series</h2>
-                    <p class="text-gray-400 text-xs text-center">Ingresa el peso y las repeticiones que lograste en CADA serie. La IA ajustará el peso óptimo para Fuerza o Hipertrofia.</p>
+                    <p class="text-gray-400 text-xs text-center mb-2">Ingresa peso y repeticiones logradas. La IA ajustará el peso óptimo.</p>
+                    <p class="text-orange-400 text-[10px] text-center bg-orange-950/30 p-2 rounded-lg border border-orange-900/50">💡 Tip: Para ejercicios con peso corporal (Dominadas, Flexiones), deja el peso en 0.</p>
                 </div>
             `;
 
@@ -154,7 +154,7 @@
                         <div class="bg-gray-950 p-3 rounded-lg border border-gray-800">
                             <div class="mb-3 border-b border-gray-800 pb-2">
                                 <p class="text-sm font-semibold text-gray-200">${ex.name}</p>
-                                <p class="text-[10px] text-blue-400 uppercase tracking-wider">${ex.focus} • Objetivo: ${ex.minReps}-${ex.maxReps} reps</p>
+                                <p class="text-[10px] text-orange-400 uppercase tracking-wider">${ex.focus} • Objetivo: ${ex.minReps}-${ex.maxReps} reps</p>
                             </div>
                             <div class="grid grid-cols-1 gap-2">
                     `;
@@ -163,9 +163,10 @@
                         html += `
                             <div class="flex items-center gap-2">
                                 <span class="text-xs text-gray-500 font-bold w-6">S${i+1}</span>
-                                <input type="number" step="0.5" id="set-w-${ex.id}-${i}" placeholder="kg" class="w-1/2 bg-gray-800 text-white text-center rounded p-2 text-sm border border-gray-700 focus:border-blue-500">
+                                <input type="number" step="0.5" id="set-w-${ex.id}-${i}" placeholder="0" class="w-1/2 bg-gray-800 text-white text-center rounded p-2 text-sm border border-gray-700 focus:border-orange-500">
+                                <span class="text-gray-500 text-xs">kg</span>
                                 <span class="text-gray-500 text-xs">x</span>
-                                <input type="number" id="set-r-${ex.id}-${i}" placeholder="reps" class="w-1/2 bg-gray-800 text-white text-center rounded p-2 text-sm border border-gray-700 focus:border-blue-500">
+                                <input type="number" id="set-r-${ex.id}-${i}" placeholder="reps" class="w-1/2 bg-gray-800 text-white text-center rounded p-2 text-sm border border-gray-700 focus:border-orange-500">
                             </div>
                         `;
                     }
@@ -174,7 +175,7 @@
                 html += `</div></div>`;
             });
 
-            html += `<button onclick="window.finishSetup()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl mt-4 shadow-lg shadow-blue-900/50">Optimizar y Guardar</button>`;
+            html += `<button onclick="window.finishSetup()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 rounded-xl mt-4 shadow-lg shadow-orange-900/50">Optimizar y Guardar</button>`;
             container.innerHTML = html;
         }
 
@@ -184,7 +185,6 @@
             Object.values(window.appState.routine).forEach(block => {
                 block.exercises.forEach(ex => {
                     let optimizedSeries = [];
-                    // Target de optimización: punto medio para asegurar que trabaje en el rango pedido
                     let targetReps = Math.floor((ex.minReps + ex.maxReps) / 2);
                     
                     for(let i=0; i<ex.sets; i++) {
@@ -192,7 +192,7 @@
                         let r = parseFloat(document.getElementById(`set-r-${ex.id}-${i}`).value) || 0;
                         
                         let optimalW = w;
-                        // Fórmula de Epley para ajustar el peso a las repeticiones objetivo del PDF
+                        // Si no es peso corporal, aplicar Epley
                         if(w > 0 && r > 0) {
                             let oneRM = w * (1 + r / 30);
                             optimalW = oneRM / (1 + targetReps / 30);
@@ -201,7 +201,7 @@
                         
                         optimizedSeries.push({ 
                             weight: optimalW, 
-                            reps: ex.maxReps // En la app pedimos que apunten al máximo (dejando 1-2 RIR)
+                            reps: ex.maxReps 
                         });
                     }
                     baselineSets[ex.id] = optimizedSeries;
@@ -248,7 +248,7 @@
             container.innerHTML = html + `</div></div>`;
         }
 
-        // --- ENTRENO ACTIVO (PROGRESIÓN POR SERIE) ---
+        // --- ENTRENO ACTIVO ---
         window.startWorkout = function(blockId) {
             const block = window.appState.routine[blockId];
             let workout = { blockId: blockId, date: new Date().toISOString(), logs: {} };
@@ -257,7 +257,6 @@
                 workout.logs[ex.id] = [];
                 const lastLog = [...window.appState.history].reverse().find(h => h.blockId === blockId);
                 
-                // Lógica del PDF: Progresar solo si se completaron TODAS las series del ejercicio
                 let shouldIncrease = false;
                 if (lastLog && lastLog.logs[ex.id]) {
                     const prevSets = lastLog.logs[ex.id];
@@ -265,14 +264,31 @@
                     
                     for(let i=0; i<ex.sets; i++) {
                         let prevW = prevSets[i]?.weight || 0;
-                        // Subida del 2.5% en ESA serie específica
-                        let nextW = shouldIncrease ? Math.round(prevW * 1.025 * 2) / 2 : prevW; 
-                        workout.logs[ex.id].push({ reps: ex.maxReps, weight: nextW, done: false, shouldIncrease: shouldIncrease && i===0 });
+                        let nextW = prevW;
+                        let isBWProgression = false;
+
+                        if (shouldIncrease) {
+                            if (prevW === 0) {
+                                isBWProgression = true; // Dominó peso corporal
+                            } else {
+                                // Aumento mínimo de 0.5kg garantizado
+                                let increase = Math.max(0.5, prevW * 0.025);
+                                nextW = Math.round((prevW + increase) * 2) / 2;
+                            }
+                        }
+
+                        workout.logs[ex.id].push({ 
+                            reps: ex.maxReps, 
+                            weight: nextW, 
+                            done: false, 
+                            shouldIncrease: shouldIncrease && i===0,
+                            isBWProgression: isBWProgression && i===0
+                        });
                     }
                 } else {
                     const baseSets = window.appState.baselineSets[ex.id] || Array(ex.sets).fill({weight: 0, reps: ex.maxReps});
                     for(let i=0; i<ex.sets; i++) {
-                        workout.logs[ex.id].push({ reps: ex.maxReps, weight: baseSets[i].weight, done: false, shouldIncrease: false });
+                        workout.logs[ex.id].push({ reps: ex.maxReps, weight: baseSets[i].weight, done: false, shouldIncrease: false, isBWProgression: false });
                     }
                 }
             });
@@ -287,37 +303,50 @@
             let html = `
                 <div class="flex justify-between items-center mb-6">
                     <button onclick="window.cancelWorkout()" class="text-xs text-gray-500 hover:text-white">← Cancelar</button>
-                    <button onclick="window.finishWorkout()" class="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded-lg">Finalizar</button>
+                    <button onclick="window.finishWorkout()" class="bg-orange-600 text-white text-sm font-bold px-4 py-2 rounded-lg">Finalizar</button>
                 </div>
             `;
 
             block.exercises.forEach(ex => {
                 const logs = window.appState.currentWorkout.logs[ex.id];
                 html += `
-                    <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden mb-6">
+                    <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden mb-6 shadow-lg">
                         <div class="bg-gray-800/50 p-3 border-b border-gray-800">
                             <h3 class="font-bold text-gray-100">${ex.name}</h3>
                             <p class="text-[10px] text-gray-400 mt-1">${ex.focus} • ${ex.minReps}-${ex.maxReps} reps</p>
                         </div>
                 `;
 
-                if(logs[0].shouldIncrease) html += `<div class="bg-emerald-950/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center">📈 Carga aumentada (+2.5%)</div>`;
+                if(logs[0].shouldIncrease) {
+                    if (logs[0].isBWProgression) {
+                        html += `<div class="bg-emerald-950/50 border-b border-emerald-900/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center">📈 ¡Dominado! Agrega lastre (kg) si lo deseas.</div>`;
+                    } else {
+                        html += `<div class="bg-emerald-950/50 border-b border-emerald-900/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center">📈 Carga aumentada (+2.5%)</div>`;
+                    }
+                }
 
                 html += `<div class="p-3 space-y-2">`;
                 logs.forEach((set, index) => {
                     const isDone = set.done;
+                    const isBodyweight = set.weight === 0;
+
                     html += `
                         <div class="flex items-center gap-2 ${isDone ? 'opacity-50' : ''} transition-opacity">
                             <div class="w-6 text-center text-xs font-bold text-gray-500">${index + 1}</div>
+                            
                             <div class="flex-1 relative">
-                                <input type="number" step="0.5" id="w-${ex.id}-${index}" value="${set.weight}" onchange="window.updateSet('${ex.id}', ${index}, 'weight', this.value)" class="w-full bg-gray-950 text-white text-center text-lg font-bold rounded-lg py-2 border border-gray-700">
+                                ${isBodyweight ? `<span class="absolute -top-2 left-2 bg-gray-900 text-orange-400 text-[8px] px-1 rounded border border-orange-900/50 z-10 font-bold">Corporal</span>` : ''}
+                                <input type="number" step="0.5" id="w-${ex.id}-${index}" value="${set.weight}" onchange="window.updateSet('${ex.id}', ${index}, 'weight', this.value)" class="w-full bg-gray-950 ${isBodyweight ? 'text-orange-300' : 'text-white'} text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-orange-500">
                                 <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">kg</span>
                             </div>
+                            
                             <span class="text-gray-600">x</span>
+                            
                             <div class="flex-1 relative">
-                                <input type="number" id="r-${ex.id}-${index}" value="${set.reps}" onchange="window.updateSet('${ex.id}', ${index}, 'reps', this.value)" class="w-full bg-gray-950 text-white text-center text-lg font-bold rounded-lg py-2 border border-gray-700">
+                                <input type="number" id="r-${ex.id}-${index}" value="${set.reps}" onchange="window.updateSet('${ex.id}', ${index}, 'reps', this.value)" class="w-full bg-gray-950 text-white text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-orange-500">
                                 <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">reps</span>
                             </div>
+                            
                             <label class="relative flex items-center justify-center cursor-pointer w-12 h-10">
                                 <input type="checkbox" class="sr-only checkbox-custom" ${isDone ? 'checked' : ''} onchange="window.toggleSet('${ex.id}', ${index})">
                                 <div class="w-8 h-8 rounded-lg border-2 border-gray-600 bg-gray-800 flex items-center justify-center transition-colors">
@@ -357,7 +386,7 @@
             window.renderDashboard();
         }
 
-        // --- SETTINGS (Para futuras rutinas) ---
+        // --- SETTINGS ---
         window.renderSettings = function() {
             document.getElementById('header-stats').classList.add('hidden');
             let html = `
@@ -365,11 +394,10 @@
                     <h2 class="text-2xl font-bold text-white">⚙️ Configuración</h2>
                     <button onclick="window.renderDashboard()" class="text-sm text-gray-400 hover:text-white">Cerrar</button>
                 </div>
-                <div class="bg-blue-950/20 border border-blue-900/50 rounded-xl p-4 mt-8">
-                    <h3 class="font-bold text-blue-500 mb-2">📥 Importar Nueva Rutina</h3>
-                    <p class="text-xs text-blue-200/60 mb-4">Pega aquí el código JSON para cambiar la rutina.</p>
-                    <textarea id="import-code" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-xs text-gray-400 h-24 mb-3 focus:outline-none focus:border-blue-500" placeholder='Pegar código...'></textarea>
-                    <button onclick="window.importRoutine()" class="w-full bg-gray-800 hover:bg-gray-700 text-blue-400 font-bold py-3 rounded-lg border border-gray-700 transition">Cargar Nueva Rutina</button>
+                <div class="bg-orange-950/20 border border-orange-900/50 rounded-xl p-4 mt-8">
+                    <h3 class="font-bold text-orange-500 mb-2">📥 Importar Nueva Rutina</h3>
+                    <textarea id="import-code" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-xs text-gray-400 h-24 mb-3 focus:outline-none focus:border-orange-500" placeholder='Pegar código...'></textarea>
+                    <button onclick="window.importRoutine()" class="w-full bg-gray-800 hover:bg-gray-700 text-orange-400 font-bold py-3 rounded-lg border border-gray-700 transition">Cargar Nueva Rutina</button>
                 </div>
                 <div class="mt-8 text-center"><button onclick="if(confirm('¿Reiniciar TODO? (Se perderá el historial)')) { localStorage.clear(); location.reload(); }" class="text-xs text-red-500 underline">Peligro: Resetear App</button></div>
             `;
