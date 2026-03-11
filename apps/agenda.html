@@ -4,12 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mi agenda Universitaria</title>
-    <script>
+    <!--<script>
       // Aplicar tema antes de que React cargue para evitar flash
       if (localStorage.getItem("agendaTheme") === "dark") {
         document.body.classList.add("dark-mode");
       }
-    </script>
+    </script>-->
 
     <!-- Firebase SDK -->
     <script type="module">
@@ -1820,6 +1820,12 @@
     </style>
   </head>
   <body>
+    <script>
+      // Aplicar tema antes de que React cargue para evitar flash
+      if (localStorage.getItem("agendaTheme") === "dark") {
+        document.body.classList.add("dark-mode");
+      }
+    </script>
     <div id="root"></div>
 
     <script
