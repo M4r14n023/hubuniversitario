@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="512x512" href="icon-512x512.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <meta name="theme-color" content="#1a4d2e">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Productividad">
   <meta name="description" content="Hub de productividad: Agenda Universitaria, Gastos, Ayuno Intermitente y Contraseñas">
@@ -39,7 +39,8 @@
       --agenda-color: #1a4d2e;
       --gastos-color: #00ff88;
       --ayuno-color: #06b6d4;
-      --todo-color: #a855f7; /* Color para el ToDo Live */
+      --todo-color: #a855f7;
+      --metabolismo-color: #f43f5e; /* Color carmesí/rosado para Metabolismo */
     }
     
     /* Modo oscuro para bienvenida */
@@ -165,6 +166,27 @@
       color: var(--todo-color);
       border-bottom-color: var(--todo-color);
     }
+
+    /* ESTILOS DEL NAVBAR PARA METABOLISMO */
+    .hub-nav.app-metabolismo {
+      border-bottom-color: var(--metabolismo-color);
+      background: linear-gradient(135deg, #4c0519 0%, #881337 100%); /* Fondo rojo muy oscuro/elegante */
+    }
+    
+    .hub-nav.app-metabolismo .hub-logo,
+    .hub-nav.app-metabolismo .hub-tab {
+      color: var(--metabolismo-color);
+    }
+    
+    .hub-nav.app-metabolismo .hub-tab:hover {
+      background: rgba(244, 63, 94, 0.1);
+      color: var(--metabolismo-color);
+    }
+    
+    .hub-nav.app-metabolismo .hub-tab.active {
+      color: var(--metabolismo-color);
+      border-bottom-color: var(--metabolismo-color);
+    }
     
     .hub-nav-content {
       max-width: 1400px;
@@ -278,27 +300,6 @@
       border: none;
     }
     
-    /* Loading */
-    .loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: calc(100vh - 70px);
-      font-size: 1.2rem;
-      color: #666;
-    }
-    
-    .loading::after {
-      content: '...';
-      animation: dots 1.5s steps(4, end) infinite;
-    }
-    
-    @keyframes dots {
-      0%, 20% { content: '.'; }
-      40% { content: '..'; }
-      60%, 100% { content: '...'; }
-    }
-    
     /* Responsive */
     @media (max-width: 768px) {
       .hub-logo {
@@ -344,10 +345,6 @@
       }
       
       .app-frame {
-        min-height: calc(100vh - 120px);
-      }
-      
-      .loading {
         min-height: calc(100vh - 120px);
       }
     }
@@ -423,6 +420,7 @@
         <button class="hub-tab" data-app="agenda">📅 Agenda</button>
         <button class="hub-tab" data-app="gastos">💰 Gastos</button>
         <button class="hub-tab" data-app="ayuno">⏱️ Ayuno</button>
+        <button class="hub-tab" data-app="metabolismo">🧬 Metabolismo</button>
         <button class="hub-tab" data-app="mispass">🛡️ Bóveda</button>
         <button class="hub-tab" data-app="todo">✅ ToDo</button>
         <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
@@ -444,12 +442,16 @@
     <iframe class="app-frame" src="apps/ayuno.html"></iframe>
   </div>
 
+  <div id="app-metabolismo" class="app-container">
+    <iframe class="app-frame" src="https://seguimiento-metabolico-web.onrender.com/"></iframe>
+  </div>
+
   <div id="app-mispass" class="app-container">
     <iframe class="app-frame" src="apps/mispass.html"></iframe>
   </div>
 
   <div id="app-todo" class="app-container">
-    <iframe class="app-frame" src="https://TU-LINK-DE-VERCEL.vercel.app"></iframe>
+    <iframe class="app-frame" src="https://todo-con-gordito.vercel.app/"></iframe>
   </div>
 
   <div id="hub-welcome" class="hub-welcome">
@@ -473,6 +475,12 @@
         <div class="app-card-icon">⏱️</div>
         <div class="app-card-title">Ayuno Intermitente</div>
         <div class="app-card-desc">Seguimiento de ayuno</div>
+      </div>
+
+      <div class="app-card" data-app="metabolismo">
+        <div class="app-card-icon">🧬</div>
+        <div class="app-card-title">Metabolismo</div>
+        <div class="app-card-desc">Peso, medidas y seguimiento</div>
       </div>
 
       <div class="app-card" data-app="mispass">
@@ -519,8 +527,8 @@
       // Quitar clase home del body
       document.body.classList.remove('home');
       
-      // Cambiar color del navbar según la app
-      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo');
+      // Cambiar color del navbar según la app (AÑADIDO METABOLISMO AQUÍ)
+      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo', 'app-metabolismo');
       navbar.classList.add(`app-${appName}`);
       
       // Mostrar app seleccionada
@@ -539,8 +547,8 @@
       appContainers.forEach(container => container.classList.remove('active'));
       tabs.forEach(tab => tab.classList.remove('active'));
       
-      // Restaurar color original del navbar
-      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo');
+      // Restaurar color original del navbar (AÑADIDO METABOLISMO AQUÍ)
+      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo', 'app-metabolismo');
       
       // Agregar clase home al body
       document.body.classList.add('home');
