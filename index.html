@@ -40,7 +40,8 @@
       --gastos-color: #00ff88;
       --ayuno-color: #06b6d4;
       --todo-color: #a855f7;
-      --metabolismo-color: #f43f5e; /* Color carmesí/rosado para Metabolismo */
+      --metabolismo-color: #f43f5e;
+      --gym-color: #ea580c; /* Color naranja oscuro para el Gym */
     }
     
     /* Modo oscuro para bienvenida */
@@ -170,7 +171,7 @@
     /* ESTILOS DEL NAVBAR PARA METABOLISMO */
     .hub-nav.app-metabolismo {
       border-bottom-color: var(--metabolismo-color);
-      background: linear-gradient(135deg, #4c0519 0%, #881337 100%); /* Fondo rojo muy oscuro/elegante */
+      background: linear-gradient(135deg, #4c0519 0%, #881337 100%);
     }
     
     .hub-nav.app-metabolismo .hub-logo,
@@ -186,6 +187,27 @@
     .hub-nav.app-metabolismo .hub-tab.active {
       color: var(--metabolismo-color);
       border-bottom-color: var(--metabolismo-color);
+    }
+
+    /* ESTILOS DEL NAVBAR PARA GYM */
+    .hub-nav.app-gym {
+      border-bottom-color: var(--gym-color);
+      background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%);
+    }
+    
+    .hub-nav.app-gym .hub-logo,
+    .hub-nav.app-gym .hub-tab {
+      color: var(--gym-color);
+    }
+    
+    .hub-nav.app-gym .hub-tab:hover {
+      background: rgba(234, 88, 12, 0.1);
+      color: var(--gym-color);
+    }
+    
+    .hub-nav.app-gym .hub-tab.active {
+      color: var(--gym-color);
+      border-bottom-color: var(--gym-color);
     }
     
     .hub-nav-content {
@@ -421,6 +443,7 @@
         <button class="hub-tab" data-app="gastos">💰 Gastos</button>
         <button class="hub-tab" data-app="ayuno">⏱️ Ayuno</button>
         <button class="hub-tab" data-app="metabolismo">🧬 Metabolismo</button>
+        <button class="hub-tab" data-app="gym">🏋️ Gym</button>
         <button class="hub-tab" data-app="mispass">🛡️ Bóveda</button>
         <button class="hub-tab" data-app="todo">✅ ToDo</button>
         <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
@@ -444,6 +467,10 @@
 
   <div id="app-metabolismo" class="app-container">
     <iframe class="app-frame" src="https://seguimiento-metabolico-web.onrender.com/"></iframe>
+  </div>
+
+  <div id="app-gym" class="app-container">
+    <iframe class="app-frame" src="apps/gym.html"></iframe>
   </div>
 
   <div id="app-mispass" class="app-container">
@@ -481,6 +508,12 @@
         <div class="app-card-icon">🧬</div>
         <div class="app-card-title">Metabolismo</div>
         <div class="app-card-desc">Peso, medidas y seguimiento</div>
+      </div>
+
+      <div class="app-card" data-app="gym">
+        <div class="app-card-icon">🏋️</div>
+        <div class="app-card-title">Gym Trackr</div>
+        <div class="app-card-desc">Seguimiento de rutinas PPL, series y progresiones</div>
       </div>
 
       <div class="app-card" data-app="mispass">
@@ -527,8 +560,8 @@
       // Quitar clase home del body
       document.body.classList.remove('home');
       
-      // Cambiar color del navbar según la app (AÑADIDO METABOLISMO AQUÍ)
-      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo', 'app-metabolismo');
+      // Cambiar color del navbar según la app
+      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo', 'app-metabolismo', 'app-gym');
       navbar.classList.add(`app-${appName}`);
       
       // Mostrar app seleccionada
@@ -547,8 +580,8 @@
       appContainers.forEach(container => container.classList.remove('active'));
       tabs.forEach(tab => tab.classList.remove('active'));
       
-      // Restaurar color original del navbar (AÑADIDO METABOLISMO AQUÍ)
-      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo', 'app-metabolismo');
+      // Restaurar color original del navbar
+      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo', 'app-metabolismo', 'app-gym');
       
       // Agregar clase home al body
       document.body.classList.add('home');
