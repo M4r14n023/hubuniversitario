@@ -3,30 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gym Trackr - PPL</title>
+    <title>Gym Trackr - Sync Automático</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         
-        /* Ocultar flechas de los inputs numéricos */
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
         
-        .checkbox-custom:checked + div { background-color: #f43f5e; border-color: #f43f5e; }
+        .checkbox-custom:checked + div { background-color: #ea580c; border-color: #ea580c; }
         .checkbox-custom:checked + div svg { display: block; }
+        
+        /* Animación de sincronización */
+        @keyframes pulse-sync { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        .syncing { animation: pulse-sync 1s infinite; }
     </style>
 </head>
 <body class="bg-gray-950 text-slate-200 min-h-screen">
 
     <header class="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-50 shadow-md">
         <div class="max-w-md mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold text-rose-500 flex items-center gap-2">
-                <span>🧬</span> Gym Trackr
+            <h1 class="text-xl font-bold text-orange-500 flex items-center gap-2 cursor-pointer" onclick="window.init()">
+                <span>🏋️</span> Gym Trackr
             </h1>
-            <div id="header-stats" class="text-xs font-semibold text-gray-400 bg-gray-800 px-3 py-1.5 rounded-full hidden">
-                Progreso: Semana <span id="week-counter" class="text-rose-400">1</span>
+            <div class="flex items-center gap-3">
+                <span id="sync-icon" class="text-[10px] bg-gray-800 px-2 py-1 rounded-full border border-gray-700" title="Buscando conexión...">🟡 Sync</span>
+                <div id="header-stats" class="text-xs font-semibold text-gray-400 bg-gray-800 px-3 py-1.5 rounded-full hidden">
+                    Semana <span id="week-counter" class="text-orange-400">1</span>
+                </div>
+                <button onclick="window.renderSettings()" class="text-xl hover:scale-110 transition" title="Configurar Rutina">⚙️</button>
             </div>
         </div>
     </header>
@@ -34,9 +41,25 @@
     <main class="max-w-md mx-auto p-4 pb-24" id="app-container">
         </main>
 
-    <script>
-        // --- 1. BASE DE DATOS DE LA RUTINA (Basado en el PDF) ---
-        const routineDB = {
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // --- 0. CONFIGURACIÓN DE FIREBASE (Tomada de tu Hub) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCF7n8W4aKKEeK7T_mUhO5MJLuTeP-YQT8",
+            authDomain: "hub-universitario.firebaseapp.com",
+            projectId: "hub-universitario",
+            storageBucket: "hub-universitario.firebasestorage.app",
+            messagingSenderId: "734572060791",
+            appId: "1:734572060791:web:75bf6280970a60a9906672"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const SYNC_DOC_ID = "rutina-mariano-v1"; // ID único para tu documento en la nube
+
+        // --- 1. RUTINA POR DEFECTO ---
+        const defaultRoutine = {
             push: {
                 id: 'push', name: 'DÍA 1 - PUSH', color: 'text-blue-400', border: 'border-blue-500',
                 exercises: [
@@ -77,34 +100,66 @@
         };
 
         // --- 2. ESTADO DE LA APLICACIÓN ---
-        let appState = JSON.parse(localStorage.getItem('gymTrackrState')) || {
+        window.appState = JSON.parse(localStorage.getItem('gymTrackrState')) || {
             isInitialized: false,
-            baselineWeights: {}, // Pesos iniciales { exId: weight }
-            history: [],         // Registro de entrenos terminados
-            currentWorkout: null // Si hay un entreno en curso
+            baselineWeights: {}, 
+            history: [],         
+            currentWorkout: null,
+            routine: defaultRoutine,
+            lastUpdated: 0
         };
 
         const container = document.getElementById('app-container');
         const headerStats = document.getElementById('header-stats');
+        const syncIcon = document.getElementById('sync-icon');
 
-        // Guardar estado
-        function saveState() {
-            localStorage.setItem('gymTrackrState', JSON.stringify(appState));
+        // Función de Guardado que también sube a Firebase
+        window.saveState = function() {
+            window.appState.lastUpdated = Date.now();
+            localStorage.setItem('gymTrackrState', JSON.stringify(window.appState));
+            
+            // Subir a Firebase en segundo plano
+            syncIcon.innerHTML = '⏳ Sync';
+            syncIcon.classList.add('syncing');
+            
+            setDoc(doc(db, "sync-gym", SYNC_DOC_ID), window.appState)
+                .then(() => {
+                    syncIcon.innerHTML = '🟢 Sync';
+                    syncIcon.classList.remove('syncing');
+                })
+                .catch((error) => {
+                    syncIcon.innerHTML = '🔴 Error';
+                    syncIcon.classList.remove('syncing');
+                    console.error("Error guardando en la nube:", error);
+                });
         }
 
-        // --- 3. VISTAS ---
+        // Escuchar cambios desde otros dispositivos
+        onSnapshot(doc(db, "sync-gym", SYNC_DOC_ID), (docSnap) => {
+            if (docSnap.exists()) {
+                const cloudState = docSnap.data();
+                // Si la nube tiene una versión más nueva que la local, actualizamos todo
+                if (!window.appState.lastUpdated || cloudState.lastUpdated > window.appState.lastUpdated) {
+                    window.appState = cloudState;
+                    localStorage.setItem('gymTrackrState', JSON.stringify(window.appState));
+                    syncIcon.innerHTML = '🟢 Sync';
+                    window.init(); // Recargar la pantalla para mostrar lo nuevo
+                } else {
+                    syncIcon.innerHTML = '🟢 Sync';
+                }
+            }
+        });
 
-        // VISTA 1: Setup Inicial (Primera Semana)
-        function renderSetup() {
+        // --- 3. VISTA: SETUP DE PESOS ---
+        window.renderSetup = function() {
             let html = `
                 <div class="mb-6 text-center">
                     <h2 class="text-2xl font-bold text-white mb-2">Semana de Calibración</h2>
-                    <p class="text-gray-400 text-sm">Ingresa los pesos estimados (en Kg) que usarás en tu primera semana. Esto nos servirá de base para medir tu progreso.</p>
+                    <p class="text-gray-400 text-sm">Ingresa los pesos iniciales (en Kg) que usarás. Esto nos servirá para medir tu progreso.</p>
                 </div>
             `;
 
-            ['push', 'pull', 'legs'].forEach(blockKey => {
-                const block = routineDB[blockKey];
+            Object.values(window.appState.routine).forEach(block => {
                 html += `
                     <div class="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-800">
                         <h3 class="font-bold mb-3 ${block.color}">${block.name}</h3>
@@ -112,6 +167,7 @@
                 `;
                 
                 block.exercises.forEach(ex => {
+                    const savedWeight = window.appState.baselineWeights[ex.id] || '';
                     html += `
                         <div class="flex justify-between items-center bg-gray-950 p-3 rounded-lg border border-gray-800">
                             <div class="flex-1 pr-2">
@@ -119,7 +175,7 @@
                                 <p class="text-[10px] text-gray-500">${ex.sets} series x ${ex.minReps}-${ex.maxReps} reps</p>
                             </div>
                             <div class="flex items-center gap-1">
-                                <input type="number" id="setup-${ex.id}" placeholder="0" class="w-16 bg-gray-800 text-white text-center rounded p-2 border border-gray-700 focus:border-rose-500 outline-none">
+                                <input type="number" id="setup-${ex.id}" value="${savedWeight}" placeholder="0" class="w-16 bg-gray-800 text-white text-center rounded p-2 border border-gray-700 focus:border-orange-500 outline-none">
                                 <span class="text-xs text-gray-500">kg</span>
                             </div>
                         </div>
@@ -129,30 +185,114 @@
                 html += `</div></div>`;
             });
 
-            html += `<button onclick="finishSetup()" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-4 rounded-xl mt-4 transition shadow-lg shadow-rose-900/50">Guardar Pesos Iniciales</button>`;
-            
+            html += `<button onclick="window.finishSetup()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 rounded-xl mt-4 transition shadow-lg shadow-orange-900/50">Guardar Pesos Iniciales</button>`;
             container.innerHTML = html;
         }
 
-        // Finalizar Setup
         window.finishSetup = function() {
-            let baseline = {};
-            ['push', 'pull', 'legs'].forEach(bk => {
-                routineDB[bk].exercises.forEach(ex => {
+            let baseline = window.appState.baselineWeights;
+            Object.values(window.appState.routine).forEach(block => {
+                block.exercises.forEach(ex => {
                     const val = document.getElementById(`setup-${ex.id}`).value;
                     baseline[ex.id] = val ? parseFloat(val) : 0;
                 });
             });
-            appState.baselineWeights = baseline;
-            appState.isInitialized = true;
-            saveState();
-            renderDashboard();
+            window.appState.baselineWeights = baseline;
+            window.appState.isInitialized = true;
+            window.saveState();
+            window.renderDashboard();
         }
 
-        // VISTA 2: Dashboard (Elegir Entreno)
-        function renderDashboard() {
+        // --- 4. VISTA: CONFIGURACIÓN ---
+        window.renderSettings = function() {
+            headerStats.classList.add('hidden');
+            let html = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-white">⚙️ Configuración</h2>
+                    <button onclick="window.renderDashboard()" class="text-sm text-gray-400 hover:text-white">Cerrar</button>
+                </div>
+                <p class="text-sm text-gray-400 mb-6">Agrega ejercicios a tu rutina actual, o importa una rutina nueva.</p>
+            `;
+
+            Object.values(window.appState.routine).forEach(block => {
+                html += `
+                    <div class="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-800">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold ${block.color}">${block.name}</h3>
+                            <button onclick="window.addExercisePrompt('${block.id}')" class="text-xs bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg transition">+ Ejercicio</button>
+                        </div>
+                        <ul class="space-y-2">
+                `;
+                block.exercises.forEach((ex, idx) => {
+                    html += `
+                        <li class="flex justify-between items-center text-sm bg-gray-950 p-2 rounded border border-gray-800 text-gray-300">
+                            <span>${ex.name} (${ex.sets}x${ex.maxReps})</span>
+                            <button onclick="window.removeExercise('${block.id}', ${idx})" class="text-red-500 hover:text-red-400 text-xs">🗑️</button>
+                        </li>
+                    `;
+                });
+                html += `</ul></div>`;
+            });
+
+            html += `
+                <div class="bg-orange-950/20 border border-orange-900/50 rounded-xl p-4 mt-8">
+                    <h3 class="font-bold text-orange-500 mb-2">📥 Importar Nueva Rutina</h3>
+                    <p class="text-xs text-orange-200/60 mb-4">Pega aquí el código que te genere la Inteligencia Artificial cuando tu profe te envíe un nuevo PDF.</p>
+                    <textarea id="import-code" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-xs text-gray-400 h-24 mb-3 focus:outline-none focus:border-orange-500" placeholder='Pega el código JSON aquí...'></textarea>
+                    <button onclick="window.importRoutine()" class="w-full bg-gray-800 hover:bg-gray-700 text-orange-400 font-bold py-3 rounded-lg border border-gray-700 transition">Cargar Nueva Rutina</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        window.addExercisePrompt = function(blockId) {
+            const name = prompt("Nombre del ejercicio:");
+            if(!name) return;
+            const sets = parseInt(prompt("Cantidad de series (ej: 3):", "3"));
+            const min = parseInt(prompt("Repeticiones mínimas (ej: 8):", "8"));
+            const max = parseInt(prompt("Repeticiones máximas (ej: 12):", "12"));
+            
+            if(name && sets && min && max) {
+                const newEx = {
+                    id: 'custom-' + Date.now(), name: name, sets: sets, minReps: min, maxReps: max, focus: 'Añadido'
+                };
+                window.appState.routine[blockId].exercises.push(newEx);
+                window.appState.baselineWeights[newEx.id] = 0; 
+                window.saveState();
+                window.renderSettings();
+            }
+        }
+
+        window.removeExercise = function(blockId, idx) {
+            if(confirm('¿Eliminar este ejercicio de la rutina?')) {
+                window.appState.routine[blockId].exercises.splice(idx, 1);
+                window.saveState();
+                window.renderSettings();
+            }
+        }
+
+        window.importRoutine = function() {
+            const code = document.getElementById('import-code').value;
+            try {
+                const newRoutine = JSON.parse(code);
+                if(confirm('🚨 Esto reemplazará tu rutina actual y reiniciará tus pesos base. Tu historial de entrenos anteriores se conservará. ¿Continuar?')) {
+                    window.appState.routine = newRoutine;
+                    window.appState.baselineWeights = {};
+                    window.appState.isInitialized = false; 
+                    window.saveState();
+                    window.renderSetup();
+                }
+            } catch(e) {
+                alert('Código inválido. Asegúrate de copiar el código exacto generado por la IA.');
+            }
+        }
+
+        // --- 5. VISTA: DASHBOARD ---
+        window.renderDashboard = function() {
+            if(!window.appState.isInitialized) return window.renderSetup();
             headerStats.classList.remove('hidden');
-            const totalWorkouts = appState.history.length;
+            const totalWorkouts = window.appState.history.length;
             document.getElementById('week-counter').innerText = Math.floor(totalWorkouts / 3) + 1;
 
             let html = `
@@ -161,39 +301,33 @@
                     <div class="grid grid-cols-1 gap-4">
             `;
 
-            ['push', 'pull', 'legs'].forEach(bk => {
-                const block = routineDB[bk];
-                // Buscar cuándo fue la última vez que hizo este bloque
-                const lastLog = [...appState.history].reverse().find(h => h.blockId === bk);
+            Object.values(window.appState.routine).forEach(block => {
+                const lastLog = [...window.appState.history].reverse().find(h => h.blockId === block.id);
                 const lastDateStr = lastLog ? new Date(lastLog.date).toLocaleDateString('es-ES', {weekday: 'short', day: 'numeric'}) : 'Nunca';
 
                 html += `
-                    <button onclick="startWorkout('${bk}')" class="relative overflow-hidden group bg-gray-800 hover:bg-gray-700 border-l-4 ${block.border} p-4 rounded-xl flex items-center justify-between transition-all">
+                    <button onclick="window.startWorkout('${block.id}')" class="relative overflow-hidden group bg-gray-800 hover:bg-gray-700 border-l-4 ${block.border} p-4 rounded-xl flex items-center justify-between transition-all">
                         <div class="text-left z-10">
                             <h3 class="font-bold text-lg text-white group-hover:${block.color} transition">${block.name}</h3>
                             <p class="text-xs text-gray-400 mt-1">Última vez: ${lastDateStr}</p>
                         </div>
-                        <div class="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-gray-400 group-hover:text-white transition z-10">
-                            ▶
-                        </div>
+                        <div class="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-gray-400 group-hover:text-white transition z-10">▶</div>
                     </button>
                 `;
             });
 
-            html += `</div></div>`;
+            html += `</div></div><div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider">Historial Reciente</h3>
+                        <button onclick="window.renderSetup()" class="text-xs text-orange-500 hover:text-orange-400">Revisar Pesos Base</button>
+                    </div>
+                    <div class="space-y-3">`;
 
-            // Historial Reciente
-            html += `
-                <div>
-                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Historial Reciente</h3>
-                    <div class="space-y-3">
-            `;
-
-            if(appState.history.length === 0) {
+            if(window.appState.history.length === 0) {
                 html += `<p class="text-center text-gray-600 text-sm italic">Aún no hay entrenamientos registrados.</p>`;
             } else {
-                [...appState.history].reverse().slice(0, 5).forEach(log => {
-                    const block = routineDB[log.blockId];
+                [...window.appState.history].reverse().slice(0, 5).forEach(log => {
+                    const block = window.appState.routine[log.blockId] || { name: 'Rutina Archivada', color: 'text-gray-500' };
                     const date = new Date(log.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short'});
                     html += `
                         <div class="bg-gray-900 p-3 rounded-lg border border-gray-800 flex justify-between items-center opacity-80">
@@ -211,73 +345,65 @@
             container.innerHTML = html;
         }
 
-        // VISTA 3: Entreno Activo
+        // --- 6. VISTA: ENTRENO ACTIVO ---
         window.startWorkout = function(blockId) {
-            const block = routineDB[blockId];
+            const block = window.appState.routine[blockId];
             
-            // Crear instancia de entreno
             let workout = {
                 blockId: blockId,
                 date: new Date().toISOString(),
-                logs: {} // { exId: [ {reps, weight, done} ] }
+                logs: {}
             };
 
-            // Preparar las series buscando el historial
             block.exercises.forEach(ex => {
                 workout.logs[ex.id] = [];
-                
-                // Lógica de progresión: Buscar último peso usado en este ejercicio
-                let suggestedWeight = appState.baselineWeights[ex.id] || 0;
+                let suggestedWeight = window.appState.baselineWeights[ex.id] || 0;
                 let shouldIncrease = false;
 
-                const lastLog = [...appState.history].reverse().find(h => h.blockId === blockId);
+                const lastLog = [...window.appState.history].reverse().find(h => h.blockId === blockId);
                 if (lastLog && lastLog.logs[ex.id]) {
                     const prevSets = lastLog.logs[ex.id];
-                    suggestedWeight = prevSets[0].weight; // Usar el peso de la serie 1 como base
+                    suggestedWeight = prevSets[0].weight; 
                     
-                    // ¿Cumplió todas las series al máximo de repeticiones?
                     const allMaxed = prevSets.every(s => s.reps >= ex.maxReps && s.done);
                     if (allMaxed) {
                         shouldIncrease = true;
-                        // Regla: Aumentar ~2.5% a 5% [Ref PDF Progresión]
-                        suggestedWeight = Math.round((suggestedWeight * 1.05) * 2) / 2; // Redondea a 0.5kg
+                        suggestedWeight = Math.round((suggestedWeight * 1.05) * 2) / 2;
                     }
                 }
 
                 for(let i=0; i<ex.sets; i++) {
                     workout.logs[ex.id].push({
-                        reps: ex.maxReps, // Sugerimos el máximo a apuntar
+                        reps: ex.maxReps,
                         weight: suggestedWeight,
                         done: false,
-                        shouldIncrease: shouldIncrease && i===0 // Solo mostrar flag en la serie 1
+                        shouldIncrease: shouldIncrease && i===0 
                     });
                 }
             });
 
-            appState.currentWorkout = workout;
-            saveState();
-            renderActiveWorkout();
+            window.appState.currentWorkout = workout;
+            window.saveState(); // Esto también subirá el entreno en progreso a la nube
+            window.renderActiveWorkout();
         }
 
-        function renderActiveWorkout() {
-            const blockId = appState.currentWorkout.blockId;
-            const block = routineDB[blockId];
+        window.renderActiveWorkout = function() {
+            const blockId = window.appState.currentWorkout.blockId;
+            const block = window.appState.routine[blockId];
 
             let html = `
                 <div class="flex justify-between items-center mb-6">
                     <div>
-                        <button onclick="cancelWorkout()" class="text-xs text-gray-500 hover:text-white flex items-center gap-1 mb-1">
-                            ← Cancelar
-                        </button>
+                        <button onclick="window.cancelWorkout()" class="text-xs text-gray-500 hover:text-white flex items-center gap-1 mb-1">← Cancelar</button>
                         <h2 class="text-2xl font-black ${block.color}">${block.name}</h2>
                     </div>
-                    <button onclick="finishWorkout()" class="bg-rose-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-lg">Finalizar</button>
+                    <button onclick="window.finishWorkout()" class="bg-orange-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-lg">Finalizar</button>
                 </div>
                 
-                <div class="bg-rose-950/30 border border-rose-900/50 p-3 rounded-lg mb-6 flex items-start gap-3">
+                <div class="bg-orange-950/30 border border-orange-900/50 p-3 rounded-lg mb-6 flex items-start gap-3">
                     <span class="text-xl">💡</span>
-                    <p class="text-xs text-rose-200/80 leading-relaxed">
-                        <strong>Tips del Profe:</strong> Prioriza técnica estricta. Deja 1-2 reps en el tanque (RIR). Descansa 2-3 min para Fuerza, 60-90s para Hipertrofia.
+                    <p class="text-xs text-orange-200/80 leading-relaxed">
+                        <strong>Tips:</strong> Prioriza técnica. Deja 1-2 reps en el tanque. Descansa 2-3 min para Fuerza, 60-90s para Hipertrofia.
                     </p>
                 </div>
 
@@ -285,22 +411,20 @@
             `;
 
             block.exercises.forEach(ex => {
-                const logs = appState.currentWorkout.logs[ex.id];
+                const logs = window.appState.currentWorkout.logs[ex.id];
                 const needsIncrease = logs[0].shouldIncrease;
 
                 html += `
                     <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-                        <div class="bg-gray-800/50 p-3 border-b border-gray-800 flex justify-between items-start">
-                            <div>
-                                <h3 class="font-bold text-gray-100">${ex.name}</h3>
-                                <p class="text-[10px] font-semibold text-gray-400 mt-1 uppercase tracking-wider">${ex.focus} • Objetivo: ${ex.minReps}-${ex.maxReps} reps</p>
-                            </div>
+                        <div class="bg-gray-800/50 p-3 border-b border-gray-800">
+                            <h3 class="font-bold text-gray-100">${ex.name}</h3>
+                            <p class="text-[10px] font-semibold text-gray-400 mt-1 uppercase tracking-wider">${ex.focus} • ${ex.minReps}-${ex.maxReps} reps</p>
                         </div>
                 `;
 
                 if(needsIncrease) {
                     html += `
-                        <div class="bg-emerald-950/50 border-b border-emerald-900/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center flex items-center justify-center gap-1">
+                        <div class="bg-emerald-950/50 border-b border-emerald-900/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center">
                             <span>📈</span> ¡Dominaste este peso! Intenta subir la carga.
                         </div>
                     `;
@@ -308,7 +432,6 @@
 
                 html += `<div class="p-3 space-y-2">`;
 
-                // Series Fijas
                 logs.forEach((set, index) => {
                     const isDone = set.done;
                     html += `
@@ -317,8 +440,8 @@
                             
                             <div class="flex-1 relative">
                                 <input type="number" step="0.5" id="w-${ex.id}-${index}" value="${set.weight}" 
-                                    onchange="updateSet('${ex.id}', ${index}, 'weight', this.value)"
-                                    class="w-full bg-gray-950 text-white text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-rose-500 outline-none">
+                                    onchange="window.updateSet('${ex.id}', ${index}, 'weight', this.value)"
+                                    class="w-full bg-gray-950 text-white text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-orange-500 outline-none">
                                 <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">kg</span>
                             </div>
 
@@ -326,13 +449,13 @@
 
                             <div class="flex-1 relative">
                                 <input type="number" id="r-${ex.id}-${index}" value="${set.reps}" 
-                                    onchange="updateSet('${ex.id}', ${index}, 'reps', this.value)"
-                                    class="w-full bg-gray-950 text-white text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-rose-500 outline-none">
+                                    onchange="window.updateSet('${ex.id}', ${index}, 'reps', this.value)"
+                                    class="w-full bg-gray-950 text-white text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-orange-500 outline-none">
                                 <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">reps</span>
                             </div>
 
                             <label class="relative flex items-center justify-center cursor-pointer w-12 h-10">
-                                <input type="checkbox" class="sr-only checkbox-custom" ${isDone ? 'checked' : ''} onchange="toggleSet('${ex.id}', ${index})">
+                                <input type="checkbox" class="sr-only checkbox-custom" ${isDone ? 'checked' : ''} onchange="window.toggleSet('${ex.id}', ${index})">
                                 <div class="w-8 h-8 rounded-lg border-2 border-gray-600 bg-gray-800 flex items-center justify-center transition-colors">
                                     <svg class="w-5 h-5 text-white hidden pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                                 </div>
@@ -348,30 +471,28 @@
             container.innerHTML = html;
         }
 
-        // Lógica de Entreno Activo
         window.updateSet = function(exId, setIndex, field, value) {
-            appState.currentWorkout.logs[exId][setIndex][field] = parseFloat(value) || 0;
-            saveState();
+            window.appState.currentWorkout.logs[exId][setIndex][field] = parseFloat(value) || 0;
+            window.saveState();
         }
 
         window.toggleSet = function(exId, setIndex) {
-            appState.currentWorkout.logs[exId][setIndex].done = !appState.currentWorkout.logs[exId][setIndex].done;
-            saveState();
-            renderActiveWorkout(); // Re-render para opacidad
+            window.appState.currentWorkout.logs[exId][setIndex].done = !window.appState.currentWorkout.logs[exId][setIndex].done;
+            window.saveState();
+            window.renderActiveWorkout(); 
         }
 
         window.cancelWorkout = function() {
-            if(confirm('¿Seguro que quieres cancelar este entreno? No se guardará.')) {
-                appState.currentWorkout = null;
-                saveState();
-                renderDashboard();
+            if(confirm('¿Seguro que quieres cancelar este entreno?')) {
+                window.appState.currentWorkout = null;
+                window.saveState();
+                window.renderDashboard();
             }
         }
 
         window.finishWorkout = function() {
-            // Validar que haya marcado al menos una serie
             let hasDoneSets = false;
-            Object.values(appState.currentWorkout.logs).forEach(sets => {
+            Object.values(window.appState.currentWorkout.logs).forEach(sets => {
                 if(sets.some(s => s.done)) hasDoneSets = true;
             });
 
@@ -380,25 +501,24 @@
                 return;
             }
 
-            // Guardar al historial
-            appState.history.push(appState.currentWorkout);
-            appState.currentWorkout = null;
-            saveState();
-            renderDashboard();
+            window.appState.history.push(window.appState.currentWorkout);
+            window.appState.currentWorkout = null;
+            window.saveState();
+            window.renderDashboard();
         }
 
-        // --- 4. INICIALIZADOR ---
-        function init() {
-            if (!appState.isInitialized) {
-                renderSetup();
-            } else if (appState.currentWorkout) {
-                renderActiveWorkout();
+        // --- 7. INICIALIZADOR ---
+        window.init = function() {
+            if (!window.appState.isInitialized) {
+                window.renderSetup();
+            } else if (window.appState.currentWorkout) {
+                window.renderActiveWorkout();
             } else {
-                renderDashboard();
+                window.renderDashboard();
             }
         }
 
-        init();
+        window.init();
     </script>
 </body>
 </html>
