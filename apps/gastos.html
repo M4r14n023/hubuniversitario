@@ -22,6 +22,10 @@
     const app = initializeApp(firebaseConfig);
     window.firebaseDb = getFirestore(app);
     window.firebaseDbFunctions = { doc, setDoc, getDoc, onSnapshot };
+
+    // Señal para que el script clásico sepa que Firebase ya está listo
+    window._firebaseReady = true;
+    window.dispatchEvent(new Event('firebaseReady'));
   </script>
   
   <style>
@@ -1241,11 +1245,16 @@
       },
       set(key, value) {
         localStorage.setItem(key, JSON.stringify(value));
-        // Req 2: Interceptar cambios locales
-        const trackedKeys = ['accounts', 'expenses', 'fixedExpenses', 'transfers'];
-        if (trackedKeys.includes(key) && localStorage.getItem('gastosLocalLastSync')) {
-          hasUnsavedChanges = true;
-          updateSyncAlerts();
+        // Interceptar cambios locales relevantes para la sincronización
+        // Solo activar después del arranque para evitar falsos positivos
+        if (_appInitialized) {
+          const trackedKeys = ['accounts', 'expenses', 'fixedExpenses', 'transfers', 'monthClosures'];
+          if (trackedKeys.includes(key)) {
+            hasUnsavedChanges = true;
+            if (typeof updateSyncAlerts === 'function') {
+              updateSyncAlerts();
+            }
+          }
         }
       },
       append(key, value) {
@@ -1269,6 +1278,7 @@
     // Req 2: Variables globales del Radar
     let hasUnsavedChanges = false;
     let cloudSyncDevice = null;
+    let _appInitialized = false; // Evitar falsos positivos durante el arranque
 
     // Initialize
     function init() {
@@ -1299,6 +1309,9 @@
 
       // Req 1: Start the cloud radar
       startCloudRadar();
+
+      // Marcar app como inicializada — a partir de acá los Storage.set disparan alertas
+      _appInitialized = true;
     }
 
     // Tabs
@@ -1894,10 +1907,16 @@
 
     // ============ RADAR DE SINCRONIZACIÓN ============
 
-    // Req 1: Radar de Firebase (Nube)
+    // Radar de Firebase (Nube)
     function startCloudRadar() {
+      // Si Firebase aún no está listo, esperar el evento
+      if (!window._firebaseReady || !window.firebaseDb || !window.firebaseDbFunctions) {
+        window.addEventListener('firebaseReady', () => startCloudRadar(), { once: true });
+        return;
+      }
+
       const pin = localStorage.getItem('gastosSyncPin');
-      if (!pin || !window.firebaseDb || !window.firebaseDbFunctions) return;
+      if (!pin) return; // Sin PIN no hay nada que escuchar
 
       const { doc, onSnapshot } = window.firebaseDbFunctions;
       const db = window.firebaseDb;
@@ -1910,30 +1929,43 @@
         const localLastSync = localStorage.getItem('gastosLocalLastSync');
 
         if (cloudLastSync && cloudLastSync !== localLastSync) {
-          // La nube tiene datos más nuevos
           cloudSyncDevice = cloudData.deviceName || 'Otro dispositivo';
           updateSyncAlerts();
+        } else {
+          // Los datos coinciden: limpiar alerta de nube si estaba activa
+          if (cloudSyncDevice) {
+            cloudSyncDevice = null;
+            updateSyncAlerts();
+          }
         }
       }, (error) => {
         console.warn('Radar Firebase error:', error);
       });
     }
 
-    // Req 3: Sistema de Alertas Visuales
+    // Sistema de Alertas Visuales
     function updateSyncAlerts() {
-      let container = document.getElementById('syncRadarAlerts');
+      // Buscar o crear el contenedor con ID sync-alerts-container
+      let container = document.getElementById('sync-alerts-container');
       if (!container) {
         container = document.createElement('div');
-        container.id = 'syncRadarAlerts';
+        container.id = 'sync-alerts-container';
         container.style.cssText = 'position: relative; z-index: 1; margin-bottom: 1rem;';
         const dashboard = document.querySelector('.dashboard');
-        if (dashboard) {
+        if (dashboard && dashboard.parentNode) {
           dashboard.parentNode.insertBefore(container, dashboard);
         }
       }
 
+      // Si no hay nada que mostrar, vaciar y salir
+      if (!cloudSyncDevice && !hasUnsavedChanges) {
+        container.innerHTML = '';
+        return;
+      }
+
       let html = '';
 
+      // Banner azul: hay actualización disponible desde otro dispositivo
       if (cloudSyncDevice) {
         html += `
           <div style="
@@ -1951,8 +1983,8 @@
             <div style="display: flex; align-items: center; gap: 0.75rem;">
               <span style="font-size: 1.5rem;">☁️</span>
               <div>
-                <div style="font-weight: 600; color: #60d0ff; font-size: 0.95rem;">Actualización en la nube</div>
-                <div style="color: var(--text-secondary); font-size: 0.85rem;">Se guardaron cambios desde <strong style="color: #a0e4ff;">${cloudSyncDevice}</strong></div>
+                <div style="font-weight: 600; color: #60d0ff; font-size: 0.95rem;">Actualización disponible desde ${cloudSyncDevice}</div>
+                <div style="color: var(--text-secondary); font-size: 0.85rem;">Se subieron cambios desde otro dispositivo. Descargalos para estar al día.</div>
               </div>
             </div>
             <button onclick="openSyncModal('download')" class="btn btn-secondary btn-small" style="border-color: rgba(0,180,255,0.5); color: #60d0ff; white-space: nowrap;">
@@ -1962,6 +1994,7 @@
         `;
       }
 
+      // Banner naranja: hay cambios locales sin subir
       if (hasUnsavedChanges) {
         html += `
           <div style="
@@ -1979,8 +2012,8 @@
             <div style="display: flex; align-items: center; gap: 0.75rem;">
               <span style="font-size: 1.5rem;">⚠️</span>
               <div>
-                <div style="font-weight: 600; color: var(--warning); font-size: 0.95rem;">Cambios sin guardar</div>
-                <div style="color: var(--text-secondary); font-size: 0.85rem;">Tenés movimientos locales que no están en la nube</div>
+                <div style="font-weight: 600; color: var(--warning); font-size: 0.95rem;">Cambios sin subir a la nube</div>
+                <div style="color: var(--text-secondary); font-size: 0.85rem;">Tenés movimientos locales que no están en la nube.</div>
               </div>
             </div>
             <button onclick="openSyncModal('upload')" class="btn btn-secondary btn-small" style="border-color: rgba(255,184,0,0.5); color: var(--warning); white-space: nowrap;">
@@ -3076,8 +3109,12 @@
       document.getElementById('calculatorResults').style.display = 'none';
     }
 
-    // Initialize app
-    init();
+    // Initialize app — esperar que el DOM esté completamente cargado
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   </script>
 </body>
 </html>
