@@ -2658,8 +2658,8 @@
 
        // 3. EFECTOS
 
-        // 🛡️ ESCUDO: Herramienta para saber si es la primera vez que carga la app
-        const isFirstLoad = useRef(true);
+        // 🛡️ ESCUDO: Usamos React.useRef directo para no tener que importar nada
+        const isFirstLoad = React.useRef(true);
 
         // Detectar cambios locales sin subir
         useEffect(() => {
@@ -2672,7 +2672,6 @@
           const localLastSync = localStorage.getItem('agendaLocalLastSync');
           if (!localLastSync) return;
           
-          // Solo si pasa el escudo (es decir, fue un cambio real tuyo), mostramos el cartel
           setHasUnsavedChanges(true);
         }, [data]);
 
