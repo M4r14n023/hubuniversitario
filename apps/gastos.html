@@ -1857,17 +1857,17 @@
 
     // Export/Import Functions
     function initializeSettings() {
-      document.getElementById('syncBtn').addEventListener('click', openSyncModal);
-      document.getElementById('exportBtn').addEventListener('click', exportData);
-      document.getElementById('importBtn').addEventListener('click', () => {
-        document.getElementById('importFile').click();
+      document.getElementById('syncBtn')?.addEventListener('click', () => openSyncModal('menu'));
+      document.getElementById('exportBtn')?.addEventListener('click', exportData);
+      document.getElementById('importBtn')?.addEventListener('click', () => {
+        document.getElementById('importFile')?.click();
       });
-      document.getElementById('importFile').addEventListener('change', importData);
-      document.getElementById('updateBalancesBtn').addEventListener('click', manualUpdateBalances);
-      document.getElementById('closeMonthBtn').addEventListener('click', closeCurrentMonth);
-      document.getElementById('viewClosuresBtn').addEventListener('click', viewMonthClosures);
-      document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
-      document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
+      document.getElementById('importFile')?.addEventListener('change', importData);
+      document.getElementById('updateBalancesBtn')?.addEventListener('click', manualUpdateBalances);
+      document.getElementById('closeMonthBtn')?.addEventListener('click', closeCurrentMonth);
+      document.getElementById('viewClosuresBtn')?.addEventListener('click', viewMonthClosures);
+      document.getElementById('clearHistoryBtn')?.addEventListener('click', clearHistory);
+      document.getElementById('clearDataBtn')?.addEventListener('click', clearAllData);
     }
 
     function exportData() {
@@ -2053,44 +2053,59 @@
       document.getElementById('confirmDownloadBtn').addEventListener('click', handleDownloadFromFirebase);
     }
       
-      // Event listeners
-      document.getElementById('closeSyncModal').addEventListener('click', () => modal.remove());
+      // Event listeners protegidos con opcional chaining (?.)
+      document.getElementById('closeSyncModal')?.addEventListener('click', () => modal.remove());
+      
       modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.remove();
       });
       
-      document.getElementById('uploadBtn').addEventListener('click', () => {
-        document.getElementById('syncMenu').style.display = 'none';
-        document.getElementById('syncUpload').style.display = 'block';
+      document.getElementById('uploadBtn')?.addEventListener('click', () => {
+        const syncMenu = document.getElementById('syncMenu');
+        const syncUpload = document.getElementById('syncUpload');
+        if (syncMenu) syncMenu.style.display = 'none';
+        if (syncUpload) syncUpload.style.display = 'block';
       });
       
-      document.getElementById('downloadBtn').addEventListener('click', () => {
-        document.getElementById('syncMenu').style.display = 'none';
-        document.getElementById('syncDownload').style.display = 'block';
+      document.getElementById('downloadBtn')?.addEventListener('click', () => {
+        const syncMenu = document.getElementById('syncMenu');
+        const syncDownload = document.getElementById('syncDownload');
+        if (syncMenu) syncMenu.style.display = 'none';
+        if (syncDownload) syncDownload.style.display = 'block';
       });
       
-      document.getElementById('cancelUploadBtn').addEventListener('click', () => {
-        document.getElementById('syncUpload').style.display = 'none';
-        document.getElementById('syncMenu').style.display = 'block';
-        document.getElementById('uploadPinInput').value = '';
-        document.getElementById('uploadMessage').innerHTML = '';
+      document.getElementById('cancelUploadBtn')?.addEventListener('click', () => {
+        const syncUpload = document.getElementById('syncUpload');
+        const syncMenu = document.getElementById('syncMenu');
+        const uploadPinInput = document.getElementById('uploadPinInput');
+        const uploadMessage = document.getElementById('uploadMessage');
+        
+        if (syncUpload) syncUpload.style.display = 'none';
+        if (syncMenu) syncMenu.style.display = 'block';
+        if (uploadPinInput) uploadPinInput.value = '';
+        if (uploadMessage) uploadMessage.innerHTML = '';
       });
       
-      document.getElementById('cancelDownloadBtn').addEventListener('click', () => {
-        document.getElementById('syncDownload').style.display = 'none';
-        document.getElementById('syncMenu').style.display = 'block';
-        document.getElementById('downloadPinInput').value = '';
-        document.getElementById('downloadMessage').innerHTML = '';
+      document.getElementById('cancelDownloadBtn')?.addEventListener('click', () => {
+        const syncDownload = document.getElementById('syncDownload');
+        const syncMenu = document.getElementById('syncMenu');
+        const downloadPinInput = document.getElementById('downloadPinInput');
+        const downloadMessage = document.getElementById('downloadMessage');
+        
+        if (syncDownload) syncDownload.style.display = 'none';
+        if (syncMenu) syncMenu.style.display = 'block';
+        if (downloadPinInput) downloadPinInput.value = '';
+        if (downloadMessage) downloadMessage.innerHTML = '';
       });
       
-      document.getElementById('confirmUploadBtn').addEventListener('click', handleUploadToFirebase);
-      document.getElementById('confirmDownloadBtn').addEventListener('click', handleDownloadFromFirebase);
+      document.getElementById('confirmUploadBtn')?.addEventListener('click', handleUploadToFirebase);
+      document.getElementById('confirmDownloadBtn')?.addEventListener('click', handleDownloadFromFirebase);
       
       // Solo números en los inputs
-      document.getElementById('uploadPinInput').addEventListener('input', (e) => {
+      document.getElementById('uploadPinInput')?.addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/\D/g, '');
       });
-      document.getElementById('downloadPinInput').addEventListener('input', (e) => {
+      document.getElementById('downloadPinInput')?.addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/\D/g, '');
       });
     
