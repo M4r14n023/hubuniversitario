@@ -2627,69 +2627,26 @@
       // ============ COMPONENTES ============
 
       function App() {
+        // 1. Estados de la interfaz
         const [activeTab, setActiveTab] = useState("semana");
         const [showModal, setShowModal] = useState(false);
         const [showActivityModal, setShowActivityModal] = useState(false);
         const [editingActivity, setEditingActivity] = useState(null);
         const [showSyncModal, setShowSyncModal] = useState(false);
-        const [showAvailabilityModal, setShowAvailabilityModal] =
-          useState(false);
+        const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
         const [isDarkMode, setIsDarkMode] = useState(() => {
           return localStorage.getItem("agendaTheme") === "dark";
         });
-
-        // Aplicar clase dark-mode al body cuando cambia el estado
-        useEffect(() => {
-          if (isDarkMode) {
-            document.body.classList.add("dark-mode");
-          } else {
-            document.body.classList.remove("dark-mode");
-          }
-          localStorage.setItem("agendaTheme", isDarkMode ? "dark" : "light");
-        }, [isDarkMode]);
         const [searchQuery, setSearchQuery] = useState("");
         const [selectedItem, setSelectedItem] = useState(null);
         const [showSidePanel, setShowSidePanel] = useState(false);
-        // Guardamos en memoria los conflictos que ya aceptaste
-        const [dismissedConflicts, setDismissedConflicts] = useState(() => {
-          const saved = localStorage.getItem("agendaDismissedConflicts");
-          return saved ? JSON.parse(saved) : [];
-        });
-
-        // ==========================================
-        // NUEVO: Estados para el menú y alerta de nube
-        // ==========================================
         const [showFileMenu, setShowFileMenu] = useState(false);
         const [cloudSyncAlert, setCloudSyncAlert] = useState(null);
+        const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-        // Radar en tiempo real para la nube
-        useEffect(() => {
-          const savedPin = localStorage.getItem("agendaSyncPin");
-          if (!savedPin || !window.firebaseDbFunctions) return;
-
-          const { doc, onSnapshot } = window.firebaseDbFunctions;
-          const db = window.firebaseDb;
-
-          // Quedarse escuchando el documento de este PIN
-          const unsubscribe = onSnapshot(doc(db, "sync-agenda", savedPin), (docSnap) => {
-            if (docSnap.exists()) {
-              const cloudData = docSnap.data();
-              const localLastSync = localStorage.getItem('agendaLocalLastSync');
-
-              // Si hay una fecha de sync distinta a la que descargamos/subimos por última vez...
-              if (cloudData.lastSync && cloudData.lastSync !== localLastSync) {
-                setCloudSyncAlert(cloudData.deviceName || 'otro dispositivo');
-              } else {
-                setCloudSyncAlert(null); // Estamos al día
-              }
-            }
-          });
-
-          return () => unsubscribe();
-        }, []);
-        // ==========================================
-
+        // 2. CARGA DE DATOS (Importante: Definir antes de los efectos que la usan)
         const [data, setData] = useState(() => loadFromStorage());
+        
         const {
           term,
           courses,
@@ -2698,6 +2655,59 @@
           extracurricularSessions,
           extraMuscleGroupsPreset,
         } = data;
+
+        // 3. EFECTOS
+
+        // Detectar cambios locales sin subir
+        useEffect(() => {
+          const localLastSync = localStorage.getItem('agendaLocalLastSync');
+          if (!localLastSync) return;
+          setHasUnsavedChanges(true);
+        }, [data]);
+
+        // Guardar automáticamente en LocalStorage
+        useEffect(() => {
+          saveToStorage(data);
+        }, [data]);
+
+        // Radar de Firebase (Nube)
+        useEffect(() => {
+          const savedPin = localStorage.getItem("agendaSyncPin");
+          if (!savedPin || !window.firebaseDbFunctions) return;
+
+          const { doc, onSnapshot } = window.firebaseDbFunctions;
+          const db = window.firebaseDb;
+
+          const unsubscribe = onSnapshot(doc(db, "sync-agenda", savedPin), (docSnap) => {
+            if (docSnap.exists()) {
+              const cloudData = docSnap.data();
+              const localLastSync = localStorage.getItem('agendaLocalLastSync');
+
+              if (cloudData.lastSync && cloudData.lastSync !== localLastSync) {
+                setCloudSyncAlert(cloudData.deviceName || 'otro dispositivo');
+              } else {
+                setCloudSyncAlert(null);
+              }
+            }
+          });
+          return () => unsubscribe();
+        }, []);
+
+        // Manejo de tema (Dark Mode)
+        useEffect(() => {
+          if (isDarkMode) {
+            document.body.classList.add("dark-mode");
+          } else {
+            document.body.classList.remove("dark-mode");
+          }
+          localStorage.setItem("agendaTheme", isDarkMode ? "dark" : "light");
+        }, [isDarkMode]);
+
+        // Conflictos aceptados
+        const [dismissedConflicts, setDismissedConflicts] = useState(() => {
+          const saved = localStorage.getItem("agendaDismissedConflicts");
+          return saved ? JSON.parse(saved) : [];
+        });
 
         // Guardar automáticamente
         useEffect(() => {
@@ -2966,19 +2976,47 @@
               </div>
             </header>
 
-            {/* ALERTA DE NUBE */}
-            {cloudSyncAlert && (
-              <div className="alert alert-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1rem', padding: '1rem' }}>
-                <div>
-                  <strong style={{ fontSize: '1.2rem', marginRight: '0.5rem' }}>☁️</strong>
-                  <strong>Actualización disponible:</strong> Se guardaron cambios desde <strong>{cloudSyncAlert}</strong>.
+            {/* ALERTA DINÁMICA: NUBE (AZUL) O LOCAL (NARANJA) */}
+            {(cloudSyncAlert || hasUnsavedChanges) && (
+              <div className="alert" style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                margin: '1rem', 
+                padding: '1rem',
+                background: cloudSyncAlert ? '#e0f2fe' : '#fff7ed', // Azul vs Naranja clarito
+                border: `2px solid ${cloudSyncAlert ? '#3b82f6' : '#f59e0b'}`,
+                borderRadius: '12px',
+                color: cloudSyncAlert ? '#1e40af' : '#9a3412'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '1.5rem', marginRight: '0.75rem' }}>
+                    {cloudSyncAlert ? '☁️' : '⚠️'}
+                  </strong>
+                  <div>
+                    {cloudSyncAlert ? (
+                      <><strong>Actualización disponible:</strong> Se guardaron cambios desde <strong>{cloudSyncAlert}</strong>.</>
+                    ) : (
+                      <><strong>Cambios sin guardar:</strong> Tenés modificaciones locales que no están en la nube.</>
+                    )}
+                  </div>
                 </div>
                 <button 
-                  className="btn btn-primary btn-sm" 
-                  onClick={() => setShowSyncModal(true)}
-                  style={{ background: '#1e40af', borderColor: '#1e40af', color: 'white' }}
+                  className="btn" 
+                  onClick={() => {
+                    // Si hay alerta de nube, abre directo en DESCARGAR. Si no, en SUBIR.
+                    const modoSugerido = cloudSyncAlert ? 'download' : 'upload';
+                    setShowSyncModal(modoSugerido); 
+                  }}
+                  style={{ 
+                    background: cloudSyncAlert ? '#1e40af' : '#c2410c', 
+                    color: 'white',
+                    padding: '0.5rem 1rem',
+                    fontWeight: '600',
+                    border: 'none'
+                  }}
                 >
-                  Abrir para Descargar ⬇️
+                  {cloudSyncAlert ? 'Descargar ahora ⬇️' : 'Subir cambios ⬆️'}
                 </button>
               </div>
             )}
@@ -3136,14 +3174,18 @@
             {showSyncModal && (
               <SyncModal
                 data={data}
+                // Si showSyncModal es un string ('upload' o 'download'), lo usa. 
+                // Si es 'true' (desde el botón del menú), usa 'menu'.
+                initialMode={typeof showSyncModal === 'string' ? showSyncModal : 'menu'}
                 onClose={() => {
                   setShowSyncModal(false);
-                  setCloudSyncAlert(null); // Apaga la alerta al cerrar
+                  setCloudSyncAlert(null);
                 }}
                 onDataLoaded={(newData) => {
-                  setData(newData);
+                  if (newData) setData(newData); // Si descargamos, actualizamos data
                   setShowSyncModal(false);
-                  setCloudSyncAlert(null); // Apaga la alerta al descargar
+                  setCloudSyncAlert(null);
+                  setHasUnsavedChanges(false); // Sea subir o descargar, ya estamos al día
                 }}
               />
             )}
@@ -5142,9 +5184,10 @@
 
       // ============ MODAL DE SINCRONIZACIÓN ============
 
-      function SyncModal({ data, onClose, onDataLoaded }) {
-        const [pin, setPin] = useState("");
-        const [mode, setMode] = useState("menu"); // menu, upload, download, success, error
+      function SyncModal({ data, onClose, onDataLoaded, initialMode = "menu" }) {
+        const [pin, setPin] = useState(() => localStorage.getItem("agendaSyncPin") || "");
+        // Si viene un modo sugerido, saltamos el menú
+        const [mode, setMode] = useState(initialMode); 
         const [message, setMessage] = useState("");
         const [loading, setLoading] = useState(false);
         const [savedPin, setSavedPin] = useState(
@@ -5163,20 +5206,23 @@
 
           setLoading(true);
           try {
-            // NUEVO: Generamos la estampilla de tiempo y el nombre del dispositivo
             const syncTime = new Date().toISOString();
             const deviceName = window.innerWidth <= 768 ? 'Celular' : 'Computadora';
             
             const docRef = doc(db, "sync-agenda", pin);
-            await setDoc(docRef, {
-              ...data,
-              lastSync: syncTime,
-              deviceName: deviceName
-            });
+            await setDoc(docRef, { ...data, lastSync: syncTime, deviceName });
 
             localStorage.setItem("agendaSyncPin", pin);
-            // NUEVO: Guardamos localmente cuándo fue nuestra última subida
-            localStorage.setItem("agendaLocalLastSync", syncTime); 
+            localStorage.setItem("agendaLocalLastSync", syncTime);
+            
+            // ESTO ES LO NUEVO:
+            if (onDataLoaded) { // Usamos el callback para avisar a App que ya subimos
+               setHasUnsavedChanges(false); 
+            }
+            
+            setSavedPin(pin);
+            setMessage("✅ Datos subidos correctamente");
+            setMode("success"); 
             setSavedPin(pin);
             setMessage("✅ Datos subidos a la nube correctamente");
             setMode("success");
