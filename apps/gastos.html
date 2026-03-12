@@ -1241,10 +1241,6 @@
       },
       set(key, value) {
         localStorage.setItem(key, JSON.stringify(value));
-        // NUEVO: Si cambian los datos críticos, avisamos que hay cosas sin subir
-        if (['accounts', 'expenses', 'fixedExpenses', 'transfers'].includes(key)) {
-          if (typeof markUnsavedChanges === 'function') markUnsavedChanges();
-        }
       },
       append(key, value) {
         const existing = this.get(key) || [];
@@ -1252,79 +1248,6 @@
         this.set(key, existing);
       }
     };
-    // ============ SISTEMA DE ALERTAS INTELIGENTES ============
-    let hasUnsavedChanges = false;
-    let cloudSyncDevice = null;
-
-    function updateSyncAlerts() {
-      let container = document.getElementById('syncAlertsContainer');
-      if (!container) {
-        container = document.createElement('div');
-        container.id = 'syncAlertsContainer';
-        const dashboard = document.querySelector('.dashboard');
-        dashboard.parentNode.insertBefore(container, dashboard.nextSibling);
-      }
-
-      if (cloudSyncDevice) {
-        container.innerHTML = `
-          <div style="background: rgba(0, 212, 255, 0.1); border: 1px solid var(--accent-secondary); padding: 1rem 2rem; border-radius: 16px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-              <span style="font-size: 1.5rem">☁️</span>
-              <div>
-                <p style="font-weight: bold; color: white; margin: 0;">Actualización en la nube</p>
-                <p style="color: var(--text-secondary); margin: 0; font-size: 0.85rem;">Se guardaron cambios desde <strong>${cloudSyncDevice}</strong>.</p>
-              </div>
-            </div>
-            <button class="btn btn-primary" onclick="openSyncModal('download')" style="background: var(--accent-secondary); color: black;">Descargar ahora ⬇️</button>
-          </div>
-        `;
-      } else if (hasUnsavedChanges) {
-        container.innerHTML = `
-          <div style="background: rgba(255, 184, 0, 0.1); border: 1px solid var(--warning); padding: 1rem 2rem; border-radius: 16px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-              <span style="font-size: 1.5rem">⚠️</span>
-              <div>
-                <p style="font-weight: bold; color: white; margin: 0;">Cambios sin guardar</p>
-                <p style="color: var(--text-secondary); margin: 0; font-size: 0.85rem;">Tenés movimientos locales que no están en la nube.</p>
-              </div>
-            </div>
-            <button class="btn btn-primary" onclick="openSyncModal('upload')" style="background: var(--warning); color: black;">Subir cambios ⬆️</button>
-          </div>
-        `;
-      } else {
-        container.innerHTML = '';
-      }
-    }
-
-    function markUnsavedChanges() {
-      const localSync = localStorage.getItem('gastosLocalLastSync');
-      if (localSync) { 
-        hasUnsavedChanges = true;
-        updateSyncAlerts();
-      }
-    }
-
-    function startCloudRadar() {
-      const savedPin = localStorage.getItem('gastosSyncPin');
-      if (!savedPin || !window.firebaseDbFunctions) return;
-
-      const { doc, onSnapshot } = window.firebaseDbFunctions;
-      const db = window.firebaseDb;
-
-      onSnapshot(doc(db, "sync-gastos", savedPin), (docSnap) => {
-        if (docSnap.exists()) {
-          const cloudData = docSnap.data();
-          const localSync = localStorage.getItem('gastosLocalLastSync');
-
-          if (cloudData.lastSync && cloudData.lastSync !== localSync) {
-            cloudSyncDevice = cloudData.deviceName || 'otro dispositivo';
-          } else {
-            cloudSyncDevice = null;
-          }
-          updateSyncAlerts();
-        }
-      });
-    }
 
     // State
     let accounts = Storage.get('accounts') || [];
@@ -1857,17 +1780,17 @@
 
     // Export/Import Functions
     function initializeSettings() {
-      document.getElementById('syncBtn')?.addEventListener('click', () => openSyncModal('menu'));
-      document.getElementById('exportBtn')?.addEventListener('click', exportData);
-      document.getElementById('importBtn')?.addEventListener('click', () => {
-        document.getElementById('importFile')?.click();
+      document.getElementById('syncBtn').addEventListener('click', openSyncModal);
+      document.getElementById('exportBtn').addEventListener('click', exportData);
+      document.getElementById('importBtn').addEventListener('click', () => {
+        document.getElementById('importFile').click();
       });
-      document.getElementById('importFile')?.addEventListener('change', importData);
-      document.getElementById('updateBalancesBtn')?.addEventListener('click', manualUpdateBalances);
-      document.getElementById('closeMonthBtn')?.addEventListener('click', closeCurrentMonth);
-      document.getElementById('viewClosuresBtn')?.addEventListener('click', viewMonthClosures);
-      document.getElementById('clearHistoryBtn')?.addEventListener('click', clearHistory);
-      document.getElementById('clearDataBtn')?.addEventListener('click', clearAllData);
+      document.getElementById('importFile').addEventListener('change', importData);
+      document.getElementById('updateBalancesBtn').addEventListener('click', manualUpdateBalances);
+      document.getElementById('closeMonthBtn').addEventListener('click', closeCurrentMonth);
+      document.getElementById('viewClosuresBtn').addEventListener('click', viewMonthClosures);
+      document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
+      document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
     }
 
     function exportData() {
@@ -1958,44 +1881,132 @@
 
     // ============ SINCRONIZACIÓN CON FIREBASE ============
     
-    // Le agregamos el parámetro para que sepa en qué pestaña abrir
-    function openSyncModal(suggestedMode = 'menu') {
+    function openSyncModal() {
       const modal = document.createElement('div');
       modal.id = 'syncModal';
       modal.style.cssText = `
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0, 0, 0, 0.7); display: flex; align-items: center;
-        justify-content: center; z-index: 10000; padding: 1rem;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 1rem;
       `;
       
       const savedPin = localStorage.getItem('gastosSyncPin') || '';
       
       modal.innerHTML = `
-        <div style="background: var(--bg-card); border-radius: 16px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
-          <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+        <div style="
+          background: var(--bg-card);
+          border-radius: 16px;
+          max-width: 500px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        ">
+          <div style="
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          ">
             <h2 style="font-size: 1.5rem; color: var(--accent-primary);">☁️ Sincronización</h2>
-            <button id="closeSyncModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);">✕</button>
+            <button id="closeSyncModal" style="
+              background: none;
+              border: none;
+              font-size: 1.5rem;
+              cursor: pointer;
+              color: var(--text-secondary);
+            ">✕</button>
           </div>
           
           <div id="syncContent" style="padding: 1.5rem;">
             <div id="syncMenu">
-              <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Sincroniza tus datos entre dispositivos usando un PIN de seguridad.</p>
+              <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                Sincroniza tus datos entre dispositivos usando un PIN de seguridad.
+              </p>
+              
               ${savedPin ? `
-                <div style="background: var(--bg-input); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);">
-                  <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">PIN guardado:</div>
-                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: 600; color: var(--accent-primary);">${savedPin}</div>
+                <div style="
+                  background: var(--bg-input);
+                  padding: 1rem;
+                  border-radius: 8px;
+                  margin-bottom: 1.5rem;
+                  border: 1px solid var(--border-color);
+                ">
+                  <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    PIN guardado:
+                  </div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: 600; color: var(--accent-primary);">
+                    ${savedPin}
+                  </div>
                 </div>
               ` : ''}
-              <button class="btn btn-primary" id="uploadBtn" style="width: 100%; margin-bottom: 1rem;">⬆️ Subir datos a la nube</button>
-              <button class="btn btn-secondary" id="downloadBtn" style="width: 100%; margin-bottom: 1.5rem;">⬇️ Descargar desde la nube</button>
+              
+              <button class="btn btn-primary" id="uploadBtn" style="width: 100%; margin-bottom: 1rem;">
+                ⬆️ Subir datos a la nube
+              </button>
+              <button class="btn btn-secondary" id="downloadBtn" style="width: 100%; margin-bottom: 1.5rem;">
+                ⬇️ Descargar desde la nube
+              </button>
+              
+              <div style="
+                padding: 1rem;
+                background: rgba(0, 212, 255, 0.1);
+                border-radius: 8px;
+                font-size: 0.85rem;
+                color: var(--accent-secondary);
+                border: 1px solid rgba(0, 212, 255, 0.3);
+              ">
+                <strong>💡 Cómo funciona:</strong><br/>
+                1. Crea un PIN (4-6 dígitos)<br/>
+                2. Sube tus datos desde un dispositivo<br/>
+                3. Descarga con el mismo PIN en otro dispositivo
+              </div>
             </div>
             
             <div id="syncUpload" style="display: none;">
-              <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">Ingresa un PIN de 4-6 dígitos para proteger tus datos:</p>
+              <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+                Ingresa un PIN de 4-6 dígitos para proteger tus datos:
+              </p>
+              
               <div style="margin-bottom: 1rem;">
-                <input type="text" id="uploadPinInput" inputMode="numeric" pattern="[0-9]*" placeholder="${savedPin || 'Ej: 1234'}" maxlength="6" style="width: 100%; padding: 0.75rem; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; letter-spacing: 0.3em;" />
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">
+                  PIN de sincronización *
+                </label>
+                <input
+                  type="text"
+                  id="uploadPinInput"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="${savedPin || 'Ej: 1234'}"
+                  maxlength="6"
+                  style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: var(--bg-input);
+                    border: 1px solid var(--border-color);
+                    border-radius: 8px;
+                    color: var(--text-primary);
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 1.2rem;
+                    letter-spacing: 0.3em;
+                  "
+                />
+                <small style="color: var(--text-secondary); font-size: 0.85rem;">
+                  ${savedPin ? 'Deja vacío para usar tu PIN guardado' : 'Guarda este PIN, lo necesitarás para descargar'}
+                </small>
               </div>
+              
               <div id="uploadMessage" style="margin-bottom: 1rem;"></div>
+              
               <div style="display: flex; gap: 1rem;">
                 <button class="btn btn-secondary" id="cancelUploadBtn" style="flex: 1;">Cancelar</button>
                 <button class="btn btn-primary" id="confirmUploadBtn" style="flex: 1;">⬆️ Subir</button>
@@ -2003,11 +2014,49 @@
             </div>
             
             <div id="syncDownload" style="display: none;">
-              <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">Ingresa el PIN que usaste para subir los datos:</p>
+              <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+                Ingresa el PIN que usaste para subir los datos:
+              </p>
+              
               <div style="margin-bottom: 1rem;">
-                <input type="text" id="downloadPinInput" inputMode="numeric" pattern="[0-9]*" placeholder="${savedPin || 'Ej: 1234'}" maxlength="6" style="width: 100%; padding: 0.75rem; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; letter-spacing: 0.3em;" />
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">
+                  PIN de sincronización *
+                </label>
+                <input
+                  type="text"
+                  id="downloadPinInput"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="${savedPin || 'Ej: 1234'}"
+                  maxlength="6"
+                  style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: var(--bg-input);
+                    border: 1px solid var(--border-color);
+                    border-radius: 8px;
+                    color: var(--text-primary);
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 1.2rem;
+                    letter-spacing: 0.3em;
+                  "
+                />
               </div>
+              
+              <div style="
+                padding: 0.75rem;
+                background: rgba(255, 184, 0, 0.1);
+                border-radius: 8px;
+                font-size: 0.85rem;
+                color: var(--warning);
+                border: 1px solid rgba(255, 184, 0, 0.3);
+                margin-bottom: 1rem;
+              ">
+                ⚠️ <strong>Advertencia:</strong> Esto reemplazará todos tus datos actuales con los de la nube.
+              </div>
+              
               <div id="downloadMessage" style="margin-bottom: 1rem;"></div>
+              
               <div style="display: flex; gap: 1rem;">
                 <button class="btn btn-secondary" id="cancelDownloadBtn" style="flex: 1;">Cancelar</button>
                 <button class="btn btn-primary" id="confirmDownloadBtn" style="flex: 1;">⬇️ Descargar</button>
@@ -2018,99 +2067,50 @@
       `;
       
       document.body.appendChild(modal);
-
-      // --- LA MAGIA PREDICTIVA ---
-      if (suggestedMode === 'upload') {
-        document.getElementById('syncMenu').style.display = 'none';
-        document.getElementById('syncUpload').style.display = 'block';
-      } else if (suggestedMode === 'download') {
-        document.getElementById('syncMenu').style.display = 'none';
-        document.getElementById('syncDownload').style.display = 'block';
-      }
-
-      // --- EVENT LISTENERS (IGUAL QUE ANTES) ---
+      
+      // Event listeners
       document.getElementById('closeSyncModal').addEventListener('click', () => modal.remove());
-      modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
       
       document.getElementById('uploadBtn').addEventListener('click', () => {
         document.getElementById('syncMenu').style.display = 'none';
         document.getElementById('syncUpload').style.display = 'block';
       });
+      
       document.getElementById('downloadBtn').addEventListener('click', () => {
         document.getElementById('syncMenu').style.display = 'none';
         document.getElementById('syncDownload').style.display = 'block';
       });
+      
       document.getElementById('cancelUploadBtn').addEventListener('click', () => {
         document.getElementById('syncUpload').style.display = 'none';
         document.getElementById('syncMenu').style.display = 'block';
+        document.getElementById('uploadPinInput').value = '';
+        document.getElementById('uploadMessage').innerHTML = '';
       });
+      
       document.getElementById('cancelDownloadBtn').addEventListener('click', () => {
         document.getElementById('syncDownload').style.display = 'none';
         document.getElementById('syncMenu').style.display = 'block';
+        document.getElementById('downloadPinInput').value = '';
+        document.getElementById('downloadMessage').innerHTML = '';
       });
       
       document.getElementById('confirmUploadBtn').addEventListener('click', handleUploadToFirebase);
       document.getElementById('confirmDownloadBtn').addEventListener('click', handleDownloadFromFirebase);
-    }
-      
-      // Event listeners protegidos con opcional chaining (?.)
-      document.getElementById('closeSyncModal')?.addEventListener('click', () => modal.remove());
-      
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-      });
-      
-      document.getElementById('uploadBtn')?.addEventListener('click', () => {
-        const syncMenu = document.getElementById('syncMenu');
-        const syncUpload = document.getElementById('syncUpload');
-        if (syncMenu) syncMenu.style.display = 'none';
-        if (syncUpload) syncUpload.style.display = 'block';
-      });
-      
-      document.getElementById('downloadBtn')?.addEventListener('click', () => {
-        const syncMenu = document.getElementById('syncMenu');
-        const syncDownload = document.getElementById('syncDownload');
-        if (syncMenu) syncMenu.style.display = 'none';
-        if (syncDownload) syncDownload.style.display = 'block';
-      });
-      
-      document.getElementById('cancelUploadBtn')?.addEventListener('click', () => {
-        const syncUpload = document.getElementById('syncUpload');
-        const syncMenu = document.getElementById('syncMenu');
-        const uploadPinInput = document.getElementById('uploadPinInput');
-        const uploadMessage = document.getElementById('uploadMessage');
-        
-        if (syncUpload) syncUpload.style.display = 'none';
-        if (syncMenu) syncMenu.style.display = 'block';
-        if (uploadPinInput) uploadPinInput.value = '';
-        if (uploadMessage) uploadMessage.innerHTML = '';
-      });
-      
-      document.getElementById('cancelDownloadBtn')?.addEventListener('click', () => {
-        const syncDownload = document.getElementById('syncDownload');
-        const syncMenu = document.getElementById('syncMenu');
-        const downloadPinInput = document.getElementById('downloadPinInput');
-        const downloadMessage = document.getElementById('downloadMessage');
-        
-        if (syncDownload) syncDownload.style.display = 'none';
-        if (syncMenu) syncMenu.style.display = 'block';
-        if (downloadPinInput) downloadPinInput.value = '';
-        if (downloadMessage) downloadMessage.innerHTML = '';
-      });
-      
-      document.getElementById('confirmUploadBtn')?.addEventListener('click', handleUploadToFirebase);
-      document.getElementById('confirmDownloadBtn')?.addEventListener('click', handleDownloadFromFirebase);
       
       // Solo números en los inputs
-      document.getElementById('uploadPinInput')?.addEventListener('input', (e) => {
+      document.getElementById('uploadPinInput').addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/\D/g, '');
       });
-      document.getElementById('downloadPinInput')?.addEventListener('input', (e) => {
+      document.getElementById('downloadPinInput').addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/\D/g, '');
       });
+    }
     
-    
-   async function handleUploadToFirebase() {
+    async function handleUploadToFirebase() {
       const pinInput = document.getElementById('uploadPinInput').value;
       const savedPin = localStorage.getItem('gastosSyncPin') || '';
       const pin = pinInput || savedPin;
@@ -2136,39 +2136,23 @@
         const monthClosuresData = JSON.parse(localStorage.getItem('monthClosures') || '[]');
         const lastUpdateData = localStorage.getItem('lastUpdate') || new Date().toISOString();
         
-        // NUEVO: Generamos la estampilla de tiempo y el dispositivo
-        const syncTime = new Date().toISOString();
-        const deviceName = window.innerWidth <= 768 ? 'Celular' : 'Computadora';
-
         const data = {
           accounts: accountsData,
           expenses: expensesData,
           fixedExpenses: fixedExpensesData,
           monthClosures: monthClosuresData,
           lastUpdate: lastUpdateData,
-          lastSync: syncTime,      // Añadimos la hora exacta
-          deviceName: deviceName   // Añadimos quién lo subió
+          lastSync: new Date().toISOString()
         };
         
         const docRef = doc(db, 'sync-gastos', pin);
         await setDoc(docRef, data);
         
         localStorage.setItem('gastosSyncPin', pin);
-        
-        // NUEVO: Guardamos la huella local y apagamos las alertas
-        localStorage.setItem('gastosLocalLastSync', syncTime);
-        if (typeof hasUnsavedChanges !== 'undefined') {
-          hasUnsavedChanges = false;
-        }
-        if (typeof updateSyncAlerts === 'function') {
-          updateSyncAlerts();
-        }
-
         messageDiv.innerHTML = '<div style="color: var(--success); padding: 0.75rem; background: rgba(0, 255, 136, 0.1); border-radius: 8px;">✅ Datos subidos a la nube correctamente</div>';
         
         setTimeout(() => {
-          const modal = document.getElementById('syncModal');
-          if(modal) modal.remove();
+          document.getElementById('syncModal').remove();
           showToast('Datos sincronizados correctamente', 'success');
         }, 1500);
       } catch (error) {
@@ -2210,11 +2194,6 @@
           localStorage.setItem('fixedExpenses', JSON.stringify(cloudData.fixedExpenses || []));
           localStorage.setItem('monthClosures', JSON.stringify(cloudData.monthClosures || []));
           localStorage.setItem('lastUpdate', cloudData.lastUpdate || new Date().toISOString());
-          
-          // NUEVO: Guardamos la estampilla de la nube como nuestra nueva referencia local
-          if (cloudData.lastSync) {
-            localStorage.setItem('gastosLocalLastSync', cloudData.lastSync);
-          }
           
           localStorage.setItem('gastosSyncPin', pin);
           messageDiv.innerHTML = '<div style="color: var(--success); padding: 0.75rem; background: rgba(0, 255, 136, 0.1); border-radius: 8px;">✅ Datos descargados correctamente. Recargando página...</div>';
