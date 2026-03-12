@@ -2656,6 +2656,39 @@
           return saved ? JSON.parse(saved) : [];
         });
 
+        // ==========================================
+        // NUEVO: Estados para el menú y alerta de nube
+        // ==========================================
+        const [showFileMenu, setShowFileMenu] = useState(false);
+        const [cloudSyncAlert, setCloudSyncAlert] = useState(null);
+
+        // Radar en tiempo real para la nube
+        useEffect(() => {
+          const savedPin = localStorage.getItem("agendaSyncPin");
+          if (!savedPin || !window.firebaseDbFunctions) return;
+
+          const { doc, onSnapshot } = window.firebaseDbFunctions;
+          const db = window.firebaseDb;
+
+          // Quedarse escuchando el documento de este PIN
+          const unsubscribe = onSnapshot(doc(db, "sync-agenda", savedPin), (docSnap) => {
+            if (docSnap.exists()) {
+              const cloudData = docSnap.data();
+              const localLastSync = localStorage.getItem('agendaLocalLastSync');
+
+              // Si hay una fecha de sync distinta a la que descargamos/subimos por última vez...
+              if (cloudData.lastSync && cloudData.lastSync !== localLastSync) {
+                setCloudSyncAlert(cloudData.deviceName || 'otro dispositivo');
+              } else {
+                setCloudSyncAlert(null); // Estamos al día
+              }
+            }
+          });
+
+          return () => unsubscribe();
+        }, []);
+        // ==========================================
+
         const [data, setData] = useState(() => loadFromStorage());
         const {
           term,
@@ -2829,24 +2862,53 @@
                       </option>
                     </select>
 
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => {
-                        const input = document.createElement("input");
-                        input.type = "file";
-                        input.accept = ".json";
-                        input.onchange = handleImport;
-                        input.click();
-                      }}
-                    >
-                      Importar JSON
-                    </button>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => handleExport("normalized")}
-                    >
-                      Exportar
-                    </button>
+                    {/* NUEVO: Menú de Archivos Desplegable */}
+                    <div style={{ position: 'relative' }}>
+                      <button 
+                        className="btn btn-secondary" 
+                        onClick={() => setShowFileMenu(!showFileMenu)}
+                      >
+                        📂 Archivos {showFileMenu ? '▲' : '▼'}
+                      </button>
+                      
+                      {showFileMenu && (
+                        <>
+                          <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setShowFileMenu(false)}></div>
+                          <div style={{
+                            position: 'absolute', top: '100%', left: 0, marginTop: '0.5rem',
+                            background: 'var(--surface)', border: '2px solid var(--border)',
+                            borderRadius: '8px', boxShadow: 'var(--shadow-md)', zIndex: 100,
+                            display: 'flex', flexDirection: 'column', minWidth: '180px', overflow: 'hidden'
+                          }}>
+                            <button
+                              className="btn"
+                              style={{ borderRadius: 0, border: 'none', borderBottom: '1px solid var(--border)', background: 'transparent', textAlign: 'left', width: '100%', color: 'var(--text)', padding: '0.75rem 1rem' }}
+                              onClick={() => {
+                                setShowFileMenu(false);
+                                const input = document.createElement("input");
+                                input.type = "file";
+                                input.accept = ".json";
+                                input.onchange = handleImport;
+                                input.click();
+                              }}
+                            >
+                              📥 Importar JSON
+                            </button>
+                            <button
+                              className="btn"
+                              style={{ borderRadius: 0, border: 'none', background: 'transparent', textAlign: 'left', width: '100%', color: 'var(--text)', padding: '0.75rem 1rem' }}
+                              onClick={() => {
+                                setShowFileMenu(false);
+                                handleExport("normalized");
+                              }}
+                            >
+                              📤 Exportar JSON
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
                     <button
                       className="btn btn-secondary"
                       onClick={() => setShowSyncModal(true)}
@@ -2909,6 +2971,24 @@
                 </div>
               </div>
             </header>
+            {/* NUEVO: Alerta de Nube Desactualizada */}
+            {cloudSyncAlert && (
+              <div className="app-container">
+                <div className="alert alert-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', paddingBottom: '1rem' }}>
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong style={{ fontSize: '1.2rem', marginRight: '0.5rem' }}>☁️</strong>
+                    <strong>Actualización disponible:</strong> Se guardaron cambios desde <strong>{cloudSyncAlert}</strong>.
+                  </div>
+                  <button 
+                    className="btn btn-primary btn-sm" 
+                    onClick={() => setShowSyncModal(true)}
+                    style={{ background: '#1e40af', borderColor: '#1e40af', color: 'white' }}
+                  >
+                    Abrir para Descargar ⬇️
+                  </button>
+                </div>
+              </div>
+            )}
 
             {activeConflicts.length > 0 && (
               <div className="app-container">
@@ -5086,13 +5166,20 @@
 
           setLoading(true);
           try {
+            // NUEVO: Generamos la estampilla de tiempo y el nombre del dispositivo
+            const syncTime = new Date().toISOString();
+            const deviceName = window.innerWidth <= 768 ? 'Celular' : 'Computadora';
+            
             const docRef = doc(db, "sync-agenda", pin);
             await setDoc(docRef, {
               ...data,
-              lastSync: new Date().toISOString(),
+              lastSync: syncTime,
+              deviceName: deviceName
             });
 
             localStorage.setItem("agendaSyncPin", pin);
+            // NUEVO: Guardamos localmente cuándo fue nuestra última subida
+            localStorage.setItem("agendaLocalLastSync", syncTime); 
             setSavedPin(pin);
             setMessage("✅ Datos subidos a la nube correctamente");
             setMode("success");
@@ -5119,9 +5206,16 @@
 
             if (docSnap.exists()) {
               const cloudData = docSnap.data();
-              delete cloudData.lastSync; // No guardar este campo
+              // NUEVO: Extraemos la estampilla antes de borrarla
+              const syncTime = cloudData.lastSync;
+              
+              delete cloudData.lastSync; 
+              delete cloudData.deviceName; // Tampoco guardamos el nombre del dispositivo en los datos
 
               localStorage.setItem("agendaSyncPin", pin);
+              // NUEVO: Actualizamos nuestra marca local para saber que ya estamos al día
+              localStorage.setItem("agendaLocalLastSync", syncTime); 
+              
               setSavedPin(pin);
               onDataLoaded(cloudData);
               setMessage("✅ Datos descargados correctamente");
@@ -5138,7 +5232,6 @@
             setLoading(false);
           }
         };
-
         return (
           <div className="modal-overlay" onClick={onClose}>
             <div
