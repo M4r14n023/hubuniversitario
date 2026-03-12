@@ -2827,166 +2827,159 @@
           });
         };
 
-        return (
+       return (
           <div className="app-container">
             <header className="app-header">
-              <div className="app-container">
-                <div className="header-content">
-                  <h1 className="app-title">Mi agenda Universitaria</h1>
-                  <div className="header-actions">
-                    <select
-                      className="form-select"
-                      style={{
-                        width: "auto",
-                        padding: "0.6rem 2.5rem 0.6rem 1rem",
-                        cursor: "pointer",
-                        fontWeight: 600,
-                        background: "var(--surface)",
-                        color: "var(--primary)",
-                        borderColor: "var(--primary)",
-                        appearance: "auto",
-                      }}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          window.open(e.target.value, "_blank");
-                          e.target.value = "";
-                        }
-                      }}
-                    >
-                      <option value="">🔗 Enlaces Importantes</option>
-                      <option value="https://aulas.psicologia.mdp.edu.ar/index.php">
-                        Aulas Virtuales Psico
-                      </option>
-                      <option value="https://siu.psicologia.mdp.edu.ar/">
-                        SIU Guaraní
-                      </option>
-                    </select>
+              <div className="header-content">
+                <h1 className="app-title">Mi agenda Universitaria</h1>
+                <div className="header-actions">
+                  <select
+                    className="form-select"
+                    style={{
+                      width: "auto",
+                      padding: "0.6rem 2.5rem 0.6rem 1rem",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      background: "var(--surface)",
+                      color: "var(--primary)",
+                      borderColor: "var(--primary)",
+                      appearance: "auto",
+                    }}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        window.open(e.target.value, "_blank");
+                        e.target.value = "";
+                      }
+                    }}
+                  >
+                    <option value="">🔗 Enlaces Importantes</option>
+                    <option value="https://aulas.psicologia.mdp.edu.ar/index.php">
+                      Aulas Virtuales Psico
+                    </option>
+                    <option value="https://siu.psicologia.mdp.edu.ar/">
+                      SIU Guaraní
+                    </option>
+                  </select>
 
-                    {/* NUEVO: Menú de Archivos Desplegable */}
-                    <div style={{ position: 'relative' }}>
-                      <button 
-                        className="btn btn-secondary" 
-                        onClick={() => setShowFileMenu(!showFileMenu)}
-                      >
-                        📂 {showFileMenu ? '▲' : '▼'}
-                      </button>
-                      
-                      {showFileMenu && (
-                        <>
-                          <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setShowFileMenu(false)}></div>
-                          <div style={{
-                            position: 'absolute', top: '100%', left: 0, marginTop: '0.5rem',
-                            background: 'var(--surface)', border: '2px solid var(--border)',
-                            borderRadius: '8px', boxShadow: 'var(--shadow-md)', zIndex: 100,
-                            display: 'flex', flexDirection: 'column', minWidth: '180px', overflow: 'hidden'
-                          }}>
-                            <button
-                              className="btn"
-                              style={{ borderRadius: 0, border: 'none', borderBottom: '1px solid var(--border)', background: 'transparent', textAlign: 'left', width: '100%', color: 'var(--text)', padding: '0.75rem 1rem' }}
-                              onClick={() => {
-                                setShowFileMenu(false);
-                                const input = document.createElement("input");
-                                input.type = "file";
-                                input.accept = ".json";
-                                input.onchange = handleImport;
-                                input.click();
-                              }}
-                            >
-                              📥 Importar JSON
-                            </button>
-                            <button
-                              className="btn"
-                              style={{ borderRadius: 0, border: 'none', background: 'transparent', textAlign: 'left', width: '100%', color: 'var(--text)', padding: '0.75rem 1rem' }}
-                              onClick={() => {
-                                setShowFileMenu(false);
-                                handleExport("normalized");
-                              }}
-                            >
-                              📤 Exportar JSON
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                  {/* MENÚ DE ARCHIVOS (SOLO ÍCONO) */}
+                  <div style={{ position: 'relative' }}>
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={() => setShowFileMenu(!showFileMenu)}
+                      title="Archivos (Importar/Exportar)"
+                      style={{ padding: '0.6rem 0.8rem' }}
+                    >
+                      📂 {showFileMenu ? '▲' : '▼'}
+                    </button>
+                    
+                    {showFileMenu && (
+                      <>
+                        <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setShowFileMenu(false)}></div>
+                        <div style={{
+                          position: 'absolute', top: '100%', left: 0, marginTop: '0.5rem',
+                          background: 'var(--surface)', border: '2px solid var(--border)',
+                          borderRadius: '8px', boxShadow: 'var(--shadow-md)', zIndex: 100,
+                          display: 'flex', flexDirection: 'column', minWidth: '180px', overflow: 'hidden'
+                        }}>
+                          <button
+                            className="btn"
+                            style={{ borderRadius: 0, border: 'none', borderBottom: '1px solid var(--border)', background: 'transparent', textAlign: 'left', width: '100%', color: 'var(--text)', padding: '0.75rem 1rem' }}
+                            onClick={() => {
+                              setShowFileMenu(false);
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = ".json";
+                              input.onchange = handleImport;
+                              input.click();
+                            }}
+                          >
+                            📥 Importar JSON
+                          </button>
+                          <button
+                            className="btn"
+                            style={{ borderRadius: 0, border: 'none', background: 'transparent', textAlign: 'left', width: '100%', color: 'var(--text)', padding: '0.75rem 1rem' }}
+                            onClick={() => {
+                              setShowFileMenu(false);
+                              handleExport("normalized");
+                            }}
+                          >
+                            📤 Exportar JSON
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
 
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setShowSyncModal(true)}
-                    >
-                      ☁️ Sincronizar
-                    </button>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setShowAvailabilityModal(true)}
-                      title="Ver horarios disponibles"
-                    >
-                      🕐 Disponibilidad
-                    </button>
-                    <button
-                      className="btn btn-secondary btn-print"
-                      onClick={() => window.print()}
-                      title="Imprimir agenda semanal"
-                    >
-                      <span className="print-desktop">🖨️ Imprimir</span>
-                      <span className="print-mobile">PDF</span>
-                    </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setShowSyncModal(true)}
+                  >
+                    ☁️ Sincronizar
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setShowAvailabilityModal(true)}
+                    title="Ver horarios disponibles"
+                  >
+                    🕐 Disponibilidad
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-print"
+                    onClick={() => window.print()}
+                    title="Imprimir agenda semanal"
+                  >
+                    <span className="print-desktop">🖨️ Imprimir</span>
+                    <span className="print-mobile">PDF</span>
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setShowModal(true)}
+                  >
+                    Agregar / Editar datos
+                  </button>
+                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                     <button
                       className="btn btn-primary"
-                      onClick={() => setShowModal(true)}
+                      onClick={() => setShowActivityModal(true)}
                     >
-                      Agregar / Editar datos
+                      + Actividad
                     </button>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "0.5rem",
-                        alignItems: "center",
-                      }}
+                    <button
+                      className="theme-toggle-btn"
+                      onClick={() => setIsDarkMode(!isDarkMode)}
+                      title="Cambiar tema"
                     >
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => setShowActivityModal(true)}
-                      >
-                        + Actividad
-                      </button>
-                      <button
-                        className="theme-toggle-btn"
-                        onClick={() => setIsDarkMode(!isDarkMode)}
-                        title="Cambiar tema"
-                      >
-                        {isDarkMode ? "☀️" : "🌙"}
-                      </button>
-                    </div>
+                      {isDarkMode ? "☀️" : "🌙"}
+                    </button>
                   </div>
-                </div>
-
-                <div className="search-bar">
-                  <input
-                    type="text"
-                    className="search-input"
-                    placeholder="Buscar por materia, docente, aula, comisión..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
                 </div>
               </div>
+
+              <div className="search-bar">
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Buscar por materia, docente, aula, comisión..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
             </header>
-            {/* NUEVO: Alerta de Nube Desactualizada */}
+
+            {/* ALERTA DE NUBE */}
             {cloudSyncAlert && (
-              <div className="app-container">
-                <div className="alert alert-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', paddingBottom: '1rem' }}>
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <strong style={{ fontSize: '1.2rem', marginRight: '0.5rem' }}>☁️</strong>
-                    <strong>Actualización disponible:</strong> Se guardaron cambios desde <strong>{cloudSyncAlert}</strong>.
-                  </div>
-                  <button 
-                    className="btn btn-primary btn-sm" 
-                    onClick={() => setShowSyncModal(true)}
-                    style={{ background: '#1e40af', borderColor: '#1e40af', color: 'white' }}
-                  >
-                    Abrir para Descargar ⬇️
-                  </button>
+              <div className="alert alert-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1rem', padding: '1rem' }}>
+                <div>
+                  <strong style={{ fontSize: '1.2rem', marginRight: '0.5rem' }}>☁️</strong>
+                  <strong>Actualización disponible:</strong> Se guardaron cambios desde <strong>{cloudSyncAlert}</strong>.
                 </div>
+                <button 
+                  className="btn btn-primary btn-sm" 
+                  onClick={() => setShowSyncModal(true)}
+                  style={{ background: '#1e40af', borderColor: '#1e40af', color: 'white' }}
+                >
+                  Abrir para Descargar ⬇️
+                </button>
               </div>
             )}
 
