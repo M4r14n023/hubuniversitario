@@ -2868,7 +2868,7 @@
                         className="btn btn-secondary" 
                         onClick={() => setShowFileMenu(!showFileMenu)}
                       >
-                        📂 Archivos {showFileMenu ? '▲' : '▼'}
+                        📂 {showFileMenu ? '▲' : '▼'}
                       </button>
                       
                       {showFileMenu && (
@@ -3143,10 +3143,14 @@
             {showSyncModal && (
               <SyncModal
                 data={data}
-                onClose={() => setShowSyncModal(false)}
+                onClose={() => {
+                  setShowSyncModal(false);
+                  setCloudSyncAlert(null); // Apaga la alerta al cerrar
+                }}
                 onDataLoaded={(newData) => {
                   setData(newData);
                   setShowSyncModal(false);
+                  setCloudSyncAlert(null); // Apaga la alerta al descargar
                 }}
               />
             )}
