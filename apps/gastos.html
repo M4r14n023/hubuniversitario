@@ -1243,20 +1243,29 @@
         const data = localStorage.getItem(key);
         return data ? JSON.parse(data) : null;
       },
+      
       set(key, value) {
+        // 1. Guardamos el dato en la memoria del navegador
         localStorage.setItem(key, JSON.stringify(value));
-        // Interceptar cambios locales relevantes para la sincronización
-        // Solo activar después del arranque para evitar falsos positivos
-        if (_appInitialized) {
+        
+        // 2. Interceptamos cambios para el Radar de Sincronización
+        // Solo activamos si la app ya terminó de arrancar (evita falsos positivos al inicio)
+        if (typeof _appInitialized !== 'undefined' && _appInitialized) {
           const trackedKeys = ['accounts', 'expenses', 'fixedExpenses', 'transfers', 'monthClosures'];
+          
+          // Si el dato que se guardó está en nuestra lista de datos importantes...
           if (trackedKeys.includes(key)) {
-            hasUnsavedChanges = true;
-            if (typeof updateSyncAlerts === 'function') {
-              updateSyncAlerts();
+            // ...y si el usuario ya tiene configurado el sistema de sincronización local
+            if (localStorage.getItem('gastosLocalLastSync')) {
+              hasUnsavedChanges = true;
+              if (typeof updateSyncAlerts === 'function') {
+                updateSyncAlerts();
+              }
             }
           }
         }
       },
+      
       append(key, value) {
         const existing = this.get(key) || [];
         existing.push(value);
@@ -1280,7 +1289,7 @@
     let cloudSyncDevice = null;
     let _appInitialized = false; // Evitar falsos positivos durante el arranque
 
-    // Initialize
+// Initialize
     function init() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('date').value = today;
@@ -1312,6 +1321,11 @@
 
       // Marcar app como inicializada — a partir de acá los Storage.set disparan alertas
       _appInitialized = true;
+
+      // REVISIÓN INICIAL: Chequear si ya había alertas pendientes (nube o locales) al abrir la app
+      if (typeof updateSyncAlerts === 'function') {
+        updateSyncAlerts();
+      }
     }
 
     // Tabs
@@ -1410,7 +1424,6 @@
         });
       });
     }
-
     function populateAccountSelects() {
       const selects = ['account', 'fixedAccount'];
       selects.forEach(selectId => {
