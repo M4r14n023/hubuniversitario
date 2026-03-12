@@ -8,7 +8,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-    import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
     
     const firebaseConfig = {
       apiKey: "AIzaSyCF7n8W4aKKEeK7T_mUhO5MJLuTeP-YQT8",
@@ -21,7 +21,7 @@
     
     const app = initializeApp(firebaseConfig);
     window.firebaseDb = getFirestore(app);
-    window.firebaseDbFunctions = { doc, setDoc, getDoc };
+    window.firebaseDbFunctions = { doc, setDoc, getDoc, onSnapshot };
   </script>
   
   <style>
@@ -1241,6 +1241,12 @@
       },
       set(key, value) {
         localStorage.setItem(key, JSON.stringify(value));
+        // Req 2: Interceptar cambios locales
+        const trackedKeys = ['accounts', 'expenses', 'fixedExpenses', 'transfers'];
+        if (trackedKeys.includes(key) && localStorage.getItem('gastosLocalLastSync')) {
+          hasUnsavedChanges = true;
+          updateSyncAlerts();
+        }
       },
       append(key, value) {
         const existing = this.get(key) || [];
@@ -1259,6 +1265,10 @@
     let lastDailyCheck = Storage.get('lastDailyCheck') || null;
     let lastMonth = Storage.get('lastMonth') || null;
     let currentFilter = 'all';
+
+    // Req 2: Variables globales del Radar
+    let hasUnsavedChanges = false;
+    let cloudSyncDevice = null;
 
     // Initialize
     function init() {
@@ -1286,6 +1296,9 @@
       
       // Then check for daily summary
       checkDailySummary();
+
+      // Req 1: Start the cloud radar
+      startCloudRadar();
     }
 
     // Tabs
@@ -1780,17 +1793,17 @@
 
     // Export/Import Functions
     function initializeSettings() {
-      document.getElementById('syncBtn').addEventListener('click', openSyncModal);
-      document.getElementById('exportBtn').addEventListener('click', exportData);
-      document.getElementById('importBtn').addEventListener('click', () => {
-        document.getElementById('importFile').click();
+      document.getElementById('syncBtn')?.addEventListener('click', openSyncModal);
+      document.getElementById('exportBtn')?.addEventListener('click', exportData);
+      document.getElementById('importBtn')?.addEventListener('click', () => {
+        document.getElementById('importFile')?.click();
       });
-      document.getElementById('importFile').addEventListener('change', importData);
-      document.getElementById('updateBalancesBtn').addEventListener('click', manualUpdateBalances);
-      document.getElementById('closeMonthBtn').addEventListener('click', closeCurrentMonth);
-      document.getElementById('viewClosuresBtn').addEventListener('click', viewMonthClosures);
-      document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
-      document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
+      document.getElementById('importFile')?.addEventListener('change', importData);
+      document.getElementById('updateBalancesBtn')?.addEventListener('click', manualUpdateBalances);
+      document.getElementById('closeMonthBtn')?.addEventListener('click', closeCurrentMonth);
+      document.getElementById('viewClosuresBtn')?.addEventListener('click', viewMonthClosures);
+      document.getElementById('clearHistoryBtn')?.addEventListener('click', clearHistory);
+      document.getElementById('clearDataBtn')?.addEventListener('click', clearAllData);
     }
 
     function exportData() {
@@ -1879,9 +1892,110 @@
       info.textContent = `Última actualización: ${date.toLocaleDateString('es-AR')} ${date.toLocaleTimeString('es-AR')}`;
     }
 
+    // ============ RADAR DE SINCRONIZACIÓN ============
+
+    // Req 1: Radar de Firebase (Nube)
+    function startCloudRadar() {
+      const pin = localStorage.getItem('gastosSyncPin');
+      if (!pin || !window.firebaseDb || !window.firebaseDbFunctions) return;
+
+      const { doc, onSnapshot } = window.firebaseDbFunctions;
+      const db = window.firebaseDb;
+      const docRef = doc(db, 'sync-gastos', pin);
+
+      onSnapshot(docRef, (snapshot) => {
+        if (!snapshot.exists()) return;
+        const cloudData = snapshot.data();
+        const cloudLastSync = cloudData.lastSync;
+        const localLastSync = localStorage.getItem('gastosLocalLastSync');
+
+        if (cloudLastSync && cloudLastSync !== localLastSync) {
+          // La nube tiene datos más nuevos
+          cloudSyncDevice = cloudData.deviceName || 'Otro dispositivo';
+          updateSyncAlerts();
+        }
+      }, (error) => {
+        console.warn('Radar Firebase error:', error);
+      });
+    }
+
+    // Req 3: Sistema de Alertas Visuales
+    function updateSyncAlerts() {
+      let container = document.getElementById('syncRadarAlerts');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'syncRadarAlerts';
+        container.style.cssText = 'position: relative; z-index: 1; margin-bottom: 1rem;';
+        const dashboard = document.querySelector('.dashboard');
+        if (dashboard) {
+          dashboard.parentNode.insertBefore(container, dashboard);
+        }
+      }
+
+      let html = '';
+
+      if (cloudSyncDevice) {
+        html += `
+          <div style="
+            background: linear-gradient(135deg, rgba(0, 180, 255, 0.15), rgba(0, 120, 200, 0.1));
+            border: 1px solid rgba(0, 180, 255, 0.5);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+          ">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.5rem;">☁️</span>
+              <div>
+                <div style="font-weight: 600; color: #60d0ff; font-size: 0.95rem;">Actualización en la nube</div>
+                <div style="color: var(--text-secondary); font-size: 0.85rem;">Se guardaron cambios desde <strong style="color: #a0e4ff;">${cloudSyncDevice}</strong></div>
+              </div>
+            </div>
+            <button onclick="openSyncModal('download')" class="btn btn-secondary btn-small" style="border-color: rgba(0,180,255,0.5); color: #60d0ff; white-space: nowrap;">
+              ⬇️ Descargar ahora
+            </button>
+          </div>
+        `;
+      }
+
+      if (hasUnsavedChanges) {
+        html += `
+          <div style="
+            background: linear-gradient(135deg, rgba(255, 184, 0, 0.15), rgba(255, 120, 0, 0.1));
+            border: 1px solid rgba(255, 184, 0, 0.5);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+          ">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.5rem;">⚠️</span>
+              <div>
+                <div style="font-weight: 600; color: var(--warning); font-size: 0.95rem;">Cambios sin guardar</div>
+                <div style="color: var(--text-secondary); font-size: 0.85rem;">Tenés movimientos locales que no están en la nube</div>
+              </div>
+            </div>
+            <button onclick="openSyncModal('upload')" class="btn btn-secondary btn-small" style="border-color: rgba(255,184,0,0.5); color: var(--warning); white-space: nowrap;">
+              ⬆️ Subir ahora
+            </button>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+
     // ============ SINCRONIZACIÓN CON FIREBASE ============
     
-    function openSyncModal() {
+    function openSyncModal(suggestedMode = 'menu') {
       const modal = document.createElement('div');
       modal.id = 'syncModal';
       modal.style.cssText = `
@@ -2068,44 +2182,53 @@
       
       document.body.appendChild(modal);
       
-      // Event listeners
-      document.getElementById('closeSyncModal').addEventListener('click', () => modal.remove());
+      // Req 4: Modo "adivino" - navegar automáticamente según suggestedMode
+      if (suggestedMode === 'upload') {
+        document.getElementById('syncMenu')?.style && (document.getElementById('syncMenu').style.display = 'none');
+        document.getElementById('syncUpload')?.style && (document.getElementById('syncUpload').style.display = 'block');
+      } else if (suggestedMode === 'download') {
+        document.getElementById('syncMenu')?.style && (document.getElementById('syncMenu').style.display = 'none');
+        document.getElementById('syncDownload')?.style && (document.getElementById('syncDownload').style.display = 'block');
+      }
+
+      // Event listeners (protegidos con optional chaining)
+      document.getElementById('closeSyncModal')?.addEventListener('click', () => modal.remove());
       modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.remove();
       });
       
-      document.getElementById('uploadBtn').addEventListener('click', () => {
+      document.getElementById('uploadBtn')?.addEventListener('click', () => {
         document.getElementById('syncMenu').style.display = 'none';
         document.getElementById('syncUpload').style.display = 'block';
       });
       
-      document.getElementById('downloadBtn').addEventListener('click', () => {
+      document.getElementById('downloadBtn')?.addEventListener('click', () => {
         document.getElementById('syncMenu').style.display = 'none';
         document.getElementById('syncDownload').style.display = 'block';
       });
       
-      document.getElementById('cancelUploadBtn').addEventListener('click', () => {
+      document.getElementById('cancelUploadBtn')?.addEventListener('click', () => {
         document.getElementById('syncUpload').style.display = 'none';
         document.getElementById('syncMenu').style.display = 'block';
-        document.getElementById('uploadPinInput').value = '';
-        document.getElementById('uploadMessage').innerHTML = '';
+        if (document.getElementById('uploadPinInput')) document.getElementById('uploadPinInput').value = '';
+        if (document.getElementById('uploadMessage')) document.getElementById('uploadMessage').innerHTML = '';
       });
       
-      document.getElementById('cancelDownloadBtn').addEventListener('click', () => {
+      document.getElementById('cancelDownloadBtn')?.addEventListener('click', () => {
         document.getElementById('syncDownload').style.display = 'none';
         document.getElementById('syncMenu').style.display = 'block';
-        document.getElementById('downloadPinInput').value = '';
-        document.getElementById('downloadMessage').innerHTML = '';
+        if (document.getElementById('downloadPinInput')) document.getElementById('downloadPinInput').value = '';
+        if (document.getElementById('downloadMessage')) document.getElementById('downloadMessage').innerHTML = '';
       });
       
-      document.getElementById('confirmUploadBtn').addEventListener('click', handleUploadToFirebase);
-      document.getElementById('confirmDownloadBtn').addEventListener('click', handleDownloadFromFirebase);
+      document.getElementById('confirmUploadBtn')?.addEventListener('click', handleUploadToFirebase);
+      document.getElementById('confirmDownloadBtn')?.addEventListener('click', handleDownloadFromFirebase);
       
       // Solo números en los inputs
-      document.getElementById('uploadPinInput').addEventListener('input', (e) => {
+      document.getElementById('uploadPinInput')?.addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/\D/g, '');
       });
-      document.getElementById('downloadPinInput').addEventListener('input', (e) => {
+      document.getElementById('downloadPinInput')?.addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/\D/g, '');
       });
     }
@@ -2142,13 +2265,19 @@
           fixedExpenses: fixedExpensesData,
           monthClosures: monthClosuresData,
           lastUpdate: lastUpdateData,
-          lastSync: new Date().toISOString()
+          lastSync: new Date().toISOString(),
+          deviceName: window.innerWidth <= 768 ? 'Celular' : 'Computadora'
         };
         
+        const syncTime = data.lastSync;
         const docRef = doc(db, 'sync-gastos', pin);
         await setDoc(docRef, data);
         
         localStorage.setItem('gastosSyncPin', pin);
+        localStorage.setItem('gastosLocalLastSync', syncTime);
+        hasUnsavedChanges = false;
+        cloudSyncDevice = null;
+        updateSyncAlerts();
         messageDiv.innerHTML = '<div style="color: var(--success); padding: 0.75rem; background: rgba(0, 255, 136, 0.1); border-radius: 8px;">✅ Datos subidos a la nube correctamente</div>';
         
         setTimeout(() => {
@@ -2196,6 +2325,9 @@
           localStorage.setItem('lastUpdate', cloudData.lastUpdate || new Date().toISOString());
           
           localStorage.setItem('gastosSyncPin', pin);
+          if (cloudData.lastSync) {
+            localStorage.setItem('gastosLocalLastSync', cloudData.lastSync);
+          }
           messageDiv.innerHTML = '<div style="color: var(--success); padding: 0.75rem; background: rgba(0, 255, 136, 0.1); border-radius: 8px;">✅ Datos descargados correctamente. Recargando página...</div>';
           
           setTimeout(() => {
