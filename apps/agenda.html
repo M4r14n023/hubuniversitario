@@ -3174,6 +3174,7 @@
             {showSyncModal && (
               <SyncModal
                 data={data}
+                setHasUnsavedChanges={setHasUnsavedChanges} // <--- AGREGAR ESTA LÍNEA
                 // Si showSyncModal es un string ('upload' o 'download'), lo usa. 
                 // Si es 'true' (desde el botón del menú), usa 'menu'.
                 initialMode={typeof showSyncModal === 'string' ? showSyncModal : 'menu'}
@@ -5184,10 +5185,10 @@
 
       // ============ MODAL DE SINCRONIZACIÓN ============
 
-      function SyncModal({ data, onClose, onDataLoaded, initialMode = "menu" }) {
+      // Agregamos setHasUnsavedChanges aquí arriba
+      function SyncModal({ data, onClose, onDataLoaded, initialMode = "menu", setHasUnsavedChanges }) {
         const [pin, setPin] = useState(() => localStorage.getItem("agendaSyncPin") || "");
-        // Si viene un modo sugerido, saltamos el menú
-        const [mode, setMode] = useState(initialMode); 
+        const [mode, setMode] = useState(initialMode);
         const [message, setMessage] = useState("");
         const [loading, setLoading] = useState(false);
         const [savedPin, setSavedPin] = useState(
@@ -5213,18 +5214,14 @@
             await setDoc(docRef, { ...data, lastSync: syncTime, deviceName });
 
             localStorage.setItem("agendaSyncPin", pin);
-            localStorage.setItem("agendaLocalLastSync", syncTime);
+            localStorage.setItem("agendaLocalLastSync", syncTime); // <--- CLAVE PARA QUE NO APAREZCA EL CARTEL AZUL A VOS MISMO
             
-            // ESTO ES LO NUEVO:
-            if (onDataLoaded) { // Usamos el callback para avisar a App que ya subimos
-               setHasUnsavedChanges(false); 
+            if (setHasUnsavedChanges) {
+                setHasUnsavedChanges(false); // <--- ESTO QUITA EL CARTEL NARANJA
             }
-            
+
             setSavedPin(pin);
             setMessage("✅ Datos subidos correctamente");
-            setMode("success"); 
-            setSavedPin(pin);
-            setMessage("✅ Datos subidos a la nube correctamente");
             setMode("success");
           } catch (error) {
             console.error("Error subiendo:", error);
