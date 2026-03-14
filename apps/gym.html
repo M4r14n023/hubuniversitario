@@ -96,6 +96,11 @@
                 ]
             }
         };
+        const getPausa = (focus) => {
+  if (focus === 'Fuerza') return '2-3 min';
+  if (focus === 'Hipertrofia') return '60-90 seg';
+  return '60 seg'; // Por defecto para otros como 'Pecho/Tríceps'
+};
 
         // --- ESTADO ---
         window.appState = JSON.parse(localStorage.getItem('gymTrackrState_v2')) || {
@@ -309,11 +314,23 @@
 
             block.exercises.forEach(ex => {
                 const logs = window.appState.currentWorkout.logs[ex.id];
+                // Determinamos el color y la letra según el focus
+                const focusChar = ex.focus === 'Fuerza' ? 'F' : 'H';
+                const focusColor = ex.focus === 'Fuerza' ? 'text-orange-500 bg-orange-500/10 border-orange-500/20' : 'text-purple-400 bg-purple-500/10 border-purple-500/20';
+
                 html += `
                     <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden mb-6 shadow-lg">
                         <div class="bg-gray-800/50 p-3 border-b border-gray-800">
-                            <h3 class="font-bold text-gray-100">${ex.name}</h3>
-                            <p class="text-[10px] text-gray-400 mt-1">${ex.focus} • ${ex.minReps}-${ex.maxReps} reps</p>
+                            <div class="flex items-center gap-2 mb-1">
+                                <h3 class="font-bold text-gray-100">${ex.name}</h3>
+                                <span class="text-[9px] font-black px-1.5 py-0.5 rounded border ${focusColor}">${focusChar}</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <p class="text-[10px] text-gray-400">${ex.minReps}-${ex.maxReps} reps</p>
+                                <p class="text-[10px] text-cyan-400 font-mono flex items-center gap-1 bg-cyan-950/30 px-2 py-0.5 rounded-full border border-cyan-900/50">
+                                    ⏱️ ${getPausa(ex.focus)}
+                                </p>
+                            </div>
                         </div>
                 `;
 
@@ -380,10 +397,26 @@
         }
 
         window.finishWorkout = function() {
-            window.appState.history.push(window.appState.currentWorkout);
+            if(!confirm('¿Finalizar y guardar este entrenamiento en el historial?')) return;
+            
+            // Creamos el registro del entrenamiento terminado
+            const completedWorkout = {
+                ...window.appState.currentWorkout,
+                date: new Date().toISOString(), // Fecha y hora exacta
+                workoutName: window.appState.routine[window.appState.currentWorkout.blockId].name
+            };
+
+            // Lo guardamos en el array de historial
+            window.appState.history.push(completedWorkout);
+            
+            // Limpiamos el entrenamiento activo
             window.appState.currentWorkout = null;
+            
+            // Guardamos en Firebase y LocalStorage automáticamente
             window.saveState();
             window.renderDashboard();
+            
+            alert('✅ Entrenamiento guardado en el historial');
         }
 
         // --- SETTINGS ---
@@ -399,12 +432,18 @@
                     <textarea id="import-code" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-xs text-gray-400 h-24 mb-3 focus:outline-none focus:border-orange-500" placeholder='Pegar código...'></textarea>
                     <button onclick="window.importRoutine()" class="w-full bg-gray-800 hover:bg-gray-700 text-orange-400 font-bold py-3 rounded-lg border border-gray-700 transition">Cargar Nueva Rutina</button>
                 </div>
+                <div class="mt-8 pt-8 border-t border-gray-800">
+                    <h3 class="font-bold text-gray-300 mb-4 text-left">Exportar Datos</h3>
+                    <button onclick="window.downloadPDF()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg shadow-lg flex items-center justify-center gap-2 transition">
+                        📄 Descargar Historial PDF
+                    </button>
+                </div>
                 <div class="mt-8 text-center"><button onclick="if(confirm('¿Reiniciar TODO? (Se perderá el historial)')) { localStorage.clear(); location.reload(); }" class="text-xs text-red-500 underline">Peligro: Resetear App</button></div>
             `;
             container.innerHTML = html;
         }
 
-        window.importRoutine = function() {
+window.importRoutine = function() {
             try {
                 window.appState.routine = JSON.parse(document.getElementById('import-code').value);
                 window.appState.baselineSets = {};
@@ -414,12 +453,82 @@
             } catch(e) { alert('Código inválido.'); }
         }
 
+        // --- FUNCIÓN PARA EL PDF (VERSIÓN 100% SEGURA) ---
+        window.downloadPDF = function() {
+            const history = window.appState.history;
+            if(!history || history.length === 0) return alert('No hay entrenamientos en el historial para exportar.');
+
+            const printWindow = window.open('', '_blank');
+            
+            // 1. Apertura del HTML fragmentada para evitar errores del editor
+            let html = '<ht' + 'ml><he' + 'ad><ti' + 'tle>Reporte Gym Trackr</ti' + 'tle>';
+            html += '<scr' + 'ipt src="https://cdn.tailwindcss.com"></scr' + 'ipt>';
+            html += '</he' + 'ad><bo' + 'dy class="p-10 bg-white text-black">';
+            
+            // 2. Encabezado del reporte
+            html += `
+                <h1 class="text-3xl font-bold border-b-4 border-orange-500 pb-2">Historial de Entrenamiento</h1>
+                <p class="text-gray-500 mb-8 italic">Reporte generado el: ${new Date().toLocaleDateString()}</p>
+            `;
+
+            // 3. Recorremos el historial guardado
+            history.forEach((workout) => {
+                html += `
+                    <div class="mb-10 p-4 border border-gray-200 rounded-xl shadow-sm break-inside-avoid">
+                        <div class="flex justify-between items-center bg-gray-50 p-3 rounded-t-lg border-b border-gray-200">
+                            <h2 class="text-lg font-bold text-orange-600">${workout.workoutName || 'Entrenamiento'}</h2>
+                            <span class="text-sm font-mono text-gray-500">${new Date(workout.date).toLocaleDateString()}</span>
+                        </div>
+                        <table class="w-full mt-4 text-left border-collapse">
+                            <thead>
+                                <tr class="border-b-2 border-gray-100">
+                                    <th class="py-2 text-xs uppercase text-gray-400">Ejercicio</th>
+                                    <th class="py-2 text-xs uppercase text-gray-400 text-right">Peso x Reps</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                Object.entries(workout.logs).forEach(([exId, sets]) => {
+                    let exName = "Ejercicio";
+                    Object.values(window.appState.routine).forEach(b => {
+                        const found = b.exercises.find(e => e.id === exId);
+                        if(found) exName = found.name;
+                    });
+
+                    html += `
+                        <tr class="border-b border-gray-50">
+                            <td class="py-3 text-sm font-semibold text-gray-700">${exName}</td>
+                            <td class="py-3 text-sm text-right font-mono">
+                                ${sets.map((s, i) => `<span class="ml-2 bg-gray-100 px-1 rounded text-black font-bold border border-gray-300">S${i+1}: ${s.weight}kg x ${s.reps}</span>`).join('')}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table></div>`;
+            });
+
+            // 4. Cierre del HTML fragmentado
+            html += '</bo' + 'dy></ht' + 'ml>';
+            
+            // 5. Escribimos y lanzamos la impresión
+            printWindow.document.write(html);
+            printWindow.document.close();
+            
+            setTimeout(() => {
+                printWindow.print();
+            }, 1000);
+        };
+
         window.init = function() {
             if (!window.appState.isInitialized) window.renderSetup();
             else if (window.appState.currentWorkout) window.renderActiveWorkout();
             else window.renderDashboard();
         }
+        
         window.init();
+        
     </script>
 </body>
 </html>
