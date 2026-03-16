@@ -3297,37 +3297,37 @@
         const dateSource = ev.dateISO || ev.date; 
         if (dateSource) {
           const formattedDate = dateSource.split('T')[0].replace(/-/g, '');
-          // Buscamos el nombre de la materia para el examen
-          const curso = data.courses?.find(c => c.id === ev.courseId);
-          const nombreMateria = curso ? curso.name : "";
-          const titulo = `${nombreMateria} (${ev.examType || ev.eventualType || 'Examen'})`.trim();
+          
+          // BUSCAR NOMBRE DE MATERIA: Verificamos data.courses
+          const curso = (data.courses || []).find(c => c.id === ev.courseId);
+          const nombreMateria = curso ? curso.name : "Materia";
+          const tipoEvento = ev.examType || ev.eventualType || 'Evento';
+          const titulo = `${nombreMateria}: ${tipoEvento}`;
           
           icsContent += "BEGIN:VEVENT\n";
           icsContent += `DTSTART;VALUE=DATE:${formattedDate}\n`;
           icsContent += `DTEND;VALUE=DATE:${formattedDate}\n`;
           icsContent += `SUMMARY:${titulo}\n`;
           icsContent += `DESCRIPTION:${ev.notes || ''}\n`;
-          icsContent += `UID:${ev.id}@agenda\n`;
+          icsContent += `UID:${ev.id || Date.now()}@agenda\n`;
           icsContent += "END:VEVENT\n";
         }
       });
     }
 
-    // 2. CLASES SEMANALES (Tenis, Gimnasio, Materias)
+    // 2. CLASES SEMANALES
     if (data.weeklySessions && data.weeklySessions.length > 0) {
       const diasSemana = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
-      const startLimit = data.term.startDate.replace(/-/g, '');
-      const endLimit = data.term.endDate.replace(/-/g, '');
+      const startLimit = (data.term.startDate || "2026-03-16").replace(/-/g, '');
+      const endLimit = (data.term.endDate || "2026-07-03").replace(/-/g, '');
 
       data.weeklySessions.forEach(session => {
         const diaNombre = diasSemana[session.dayOfWeek];
-        const startH = session.startTime.replace(':', '') + "00";
-        const endH = session.endTime.replace(':', '') + "00";
+        const startH = (session.startTime || "00:00").replace(':', '') + "00";
+        const endH = (session.endTime || "00:00").replace(':', '') + "00";
 
-        // LÓGICA PARA EL NOMBRE: 
-        // 1. Si tiene courseId, buscamos el nombre de la materia.
-        // 2. Si no (como Tenis), usamos session.title.
-        const curso = data.courses?.find(c => c.id === session.courseId);
+        // BUSCAR NOMBRE: Si no hay curso (como en Tenis), usamos session.title
+        const curso = (data.courses || []).find(c => c.id === session.courseId);
         const tituloFinal = curso ? curso.name : (session.title || "Actividad");
 
         icsContent += "BEGIN:VEVENT\n";
@@ -3336,7 +3336,7 @@
         icsContent += `DTEND;TZID=America/Argentina/Buenos_Aires:${startLimit}T${endH}\n`;
         icsContent += `SUMMARY:${tituloFinal}\n`;
         icsContent += `DESCRIPTION:${session.type || ''} ${session.metadata?.studentLevel || ''}\n`;
-        icsContent += `UID:${session.id}@agenda\n`;
+        icsContent += `UID:${session.id || Date.now()}@agenda\n`;
         icsContent += "END:VEVENT\n";
       });
     }
@@ -3347,7 +3347,7 @@
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Agenda_Corregida_${new Date().toISOString().split('T')[0]}.ics`;
+    link.download = `Agenda_Final_${new Date().toISOString().split('T')[0]}.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
