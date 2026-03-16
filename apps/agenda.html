@@ -2633,7 +2633,8 @@
         const [showActivityModal, setShowActivityModal] = useState(false);
         const [editingActivity, setEditingActivity] = useState(null);
         const [showSyncModal, setShowSyncModal] = useState(false);
-        const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+        const [showAvailabilityModal, setShowAvailabilityModal] =
+          useState(false);
         const [isDarkMode, setIsDarkMode] = useState(() => {
           return localStorage.getItem("agendaTheme") === "dark";
         });
@@ -2646,7 +2647,7 @@
 
         // 2. CARGA DE DATOS (Importante: Definir antes de los efectos que la usan)
         const [data, setData] = useState(() => loadFromStorage());
-        
+
         const {
           term,
           courses,
@@ -2656,7 +2657,7 @@
           extraMuscleGroupsPreset,
         } = data;
 
-       // 3. EFECTOS
+        // 3. EFECTOS
 
         // 🛡️ ESCUDO: Usamos React.useRef directo para no tener que importar nada
         const isFirstLoad = React.useRef(true);
@@ -2669,9 +2670,9 @@
             return;
           }
 
-          const localLastSync = localStorage.getItem('agendaLocalLastSync');
+          const localLastSync = localStorage.getItem("agendaLocalLastSync");
           if (!localLastSync) return;
-          
+
           setHasUnsavedChanges(true);
         }, [data]);
 
@@ -2688,18 +2689,26 @@
           const { doc, onSnapshot } = window.firebaseDbFunctions;
           const db = window.firebaseDb;
 
-          const unsubscribe = onSnapshot(doc(db, "sync-agenda", savedPin), (docSnap) => {
-            if (docSnap.exists()) {
-              const cloudData = docSnap.data();
-              const localLastSync = localStorage.getItem('agendaLocalLastSync');
+          const unsubscribe = onSnapshot(
+            doc(db, "sync-agenda", savedPin),
+            (docSnap) => {
+              if (docSnap.exists()) {
+                const cloudData = docSnap.data();
+                const localLastSync = localStorage.getItem(
+                  "agendaLocalLastSync",
+                );
 
-              if (cloudData.lastSync && cloudData.lastSync !== localLastSync) {
-                setCloudSyncAlert(cloudData.deviceName || 'otro dispositivo');
-              } else {
-                setCloudSyncAlert(null);
+                if (
+                  cloudData.lastSync &&
+                  cloudData.lastSync !== localLastSync
+                ) {
+                  setCloudSyncAlert(cloudData.deviceName || "otro dispositivo");
+                } else {
+                  setCloudSyncAlert(null);
+                }
               }
-            }
-          });
+            },
+          );
           return () => unsubscribe();
         }, []);
         // Manejo de tema (Dark Mode)
@@ -2846,7 +2855,7 @@
           });
         };
 
-       return (
+        return (
           <div className="app-container">
             <header className="app-header">
               <div className="header-content">
@@ -2881,28 +2890,51 @@
                   </select>
 
                   {/* MENÚ DE ARCHIVOS (SOLO ÍCONO) */}
-                  <div style={{ position: 'relative' }}>
-                    <button 
-                      className="btn btn-secondary" 
+                  <div style={{ position: "relative" }}>
+                    <button
+                      className="btn btn-secondary"
                       onClick={() => setShowFileMenu(!showFileMenu)}
                       title="Archivos (Importar/Exportar)"
-                      style={{ padding: '0.6rem 0.8rem' }}
+                      style={{ padding: "0.6rem 0.8rem" }}
                     >
-                      📂 {showFileMenu ? '▲' : '▼'}
+                      📂 {showFileMenu ? "▲" : "▼"}
                     </button>
-                    
+
                     {showFileMenu && (
                       <>
-                        <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setShowFileMenu(false)}></div>
-                        <div style={{
-                          position: 'absolute', top: '100%', left: 0, marginTop: '0.5rem',
-                          background: 'var(--surface)', border: '2px solid var(--border)',
-                          borderRadius: '8px', boxShadow: 'var(--shadow-md)', zIndex: 100,
-                          display: 'flex', flexDirection: 'column', minWidth: '180px', overflow: 'hidden'
-                        }}>
+                        <div
+                          style={{ position: "fixed", inset: 0, zIndex: 90 }}
+                          onClick={() => setShowFileMenu(false)}
+                        ></div>
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            marginTop: "0.5rem",
+                            background: "var(--surface)",
+                            border: "2px solid var(--border)",
+                            borderRadius: "8px",
+                            boxShadow: "var(--shadow-md)",
+                            zIndex: 100,
+                            display: "flex",
+                            flexDirection: "column",
+                            minWidth: "180px",
+                            overflow: "hidden",
+                          }}
+                        >
                           <button
                             className="btn"
-                            style={{ borderRadius: 0, border: 'none', borderBottom: '1px solid var(--border)', background: 'transparent', textAlign: 'left', width: '100%', color: 'var(--text)', padding: '0.75rem 1rem' }}
+                            style={{
+                              borderRadius: 0,
+                              border: "none",
+                              borderBottom: "1px solid var(--border)",
+                              background: "transparent",
+                              textAlign: "left",
+                              width: "100%",
+                              color: "var(--text)",
+                              padding: "0.75rem 1rem",
+                            }}
                             onClick={() => {
                               setShowFileMenu(false);
                               const input = document.createElement("input");
@@ -2916,7 +2948,15 @@
                           </button>
                           <button
                             className="btn"
-                            style={{ borderRadius: 0, border: 'none', background: 'transparent', textAlign: 'left', width: '100%', color: 'var(--text)', padding: '0.75rem 1rem' }}
+                            style={{
+                              borderRadius: 0,
+                              border: "none",
+                              background: "transparent",
+                              textAlign: "left",
+                              width: "100%",
+                              color: "var(--text)",
+                              padding: "0.75rem 1rem",
+                            }}
                             onClick={() => {
                               setShowFileMenu(false);
                               handleExport("normalized");
@@ -2928,7 +2968,12 @@
                       </>
                     )}
                   </div>
-
+                  <button
+                      className="btn btn-secondary"
+                      onClick={() => exportAgendaToICS(data)}
+                    >
+                      📅 Exportar para Google Calendar (.ics)
+                    </button>
                   <button
                     className="btn btn-secondary"
                     onClick={() => setShowSyncModal(true)}
@@ -2940,12 +2985,6 @@
                     onClick={() => setShowAvailabilityModal(true)}
                     title="Ver horarios disponibles"
                   >
-                  <button 
-  className="btn btn-secondary" 
-  onClick={() => exportAgendaToICS(data)}
->
-  📅 Exportar para Google Calendar (.ics)
-</button>
                     🕐 Disponibilidad
                   </button>
                   <button
@@ -2962,7 +3001,13 @@
                   >
                     Agregar / Editar datos
                   </button>
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "0.5rem",
+                      alignItems: "center",
+                    }}
+                  >
                     <button
                       className="btn btn-primary"
                       onClick={() => setShowActivityModal(true)}
@@ -2993,45 +3038,56 @@
 
             {/* ALERTA DINÁMICA: NUBE (AZUL) O LOCAL (NARANJA) */}
             {(cloudSyncAlert || hasUnsavedChanges) && (
-              <div className="alert" style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                margin: '1rem', 
-                padding: '1rem',
-                background: cloudSyncAlert ? '#e0f2fe' : '#fff7ed', // Azul vs Naranja clarito
-                border: `2px solid ${cloudSyncAlert ? '#3b82f6' : '#f59e0b'}`,
-                borderRadius: '12px',
-                color: cloudSyncAlert ? '#1e40af' : '#9a3412'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <strong style={{ fontSize: '1.5rem', marginRight: '0.75rem' }}>
-                    {cloudSyncAlert ? '☁️' : '⚠️'}
+              <div
+                className="alert"
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  margin: "1rem",
+                  padding: "1rem",
+                  background: cloudSyncAlert ? "#e0f2fe" : "#fff7ed", // Azul vs Naranja clarito
+                  border: `2px solid ${cloudSyncAlert ? "#3b82f6" : "#f59e0b"}`,
+                  borderRadius: "12px",
+                  color: cloudSyncAlert ? "#1e40af" : "#9a3412",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <strong
+                    style={{ fontSize: "1.5rem", marginRight: "0.75rem" }}
+                  >
+                    {cloudSyncAlert ? "☁️" : "⚠️"}
                   </strong>
                   <div>
                     {cloudSyncAlert ? (
-                      <><strong>Actualización disponible:</strong> Se guardaron cambios desde <strong>{cloudSyncAlert}</strong>.</>
+                      <>
+                        <strong>Actualización disponible:</strong> Se guardaron
+                        cambios desde <strong>{cloudSyncAlert}</strong>.
+                      </>
                     ) : (
-                      <><strong>Cambios sin guardar:</strong> Tenés modificaciones locales que no están en la nube.</>
+                      <>
+                        <strong>Cambios sin guardar:</strong> Tenés
+                        modificaciones locales que no están en la nube.
+                      </>
                     )}
                   </div>
                 </div>
-                <button 
-                  className="btn" 
+                <button
+                  className="btn"
                   onClick={() => {
                     // Si hay alerta de nube, abre directo en DESCARGAR. Si no, en SUBIR.
-                    const modoSugerido = cloudSyncAlert ? 'download' : 'upload';
-                    setShowSyncModal(modoSugerido); 
+                    const modoSugerido = cloudSyncAlert ? "download" : "upload";
+                    setShowSyncModal(modoSugerido);
                   }}
-                  style={{ 
-                    background: cloudSyncAlert ? '#1e40af' : '#c2410c', 
-                    color: 'white',
-                    padding: '0.5rem 1rem',
-                    fontWeight: '600',
-                    border: 'none'
+                  style={{
+                    background: cloudSyncAlert ? "#1e40af" : "#c2410c",
+                    color: "white",
+                    padding: "0.5rem 1rem",
+                    fontWeight: "600",
+                    border: "none",
                   }}
                 >
-                  {cloudSyncAlert ? 'Descargar ahora ⬇️' : 'Subir cambios ⬆️'}
+                  {cloudSyncAlert ? "Descargar ahora ⬇️" : "Subir cambios ⬆️"}
                 </button>
               </div>
             )}
@@ -3190,9 +3246,11 @@
               <SyncModal
                 data={data}
                 setHasUnsavedChanges={setHasUnsavedChanges} // <--- AGREGAR ESTA LÍNEA
-                // Si showSyncModal es un string ('upload' o 'download'), lo usa. 
+                // Si showSyncModal es un string ('upload' o 'download'), lo usa.
                 // Si es 'true' (desde el botón del menú), usa 'menu'.
-                initialMode={typeof showSyncModal === 'string' ? showSyncModal : 'menu'}
+                initialMode={
+                  typeof showSyncModal === "string" ? showSyncModal : "menu"
+                }
                 onClose={() => {
                   setShowSyncModal(false);
                   setCloudSyncAlert(null);
@@ -3231,45 +3289,48 @@
         );
       }
       const exportAgendaToICS = (data) => {
-    // 1. Cabecera obligatoria del formato iCalendar
-    let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Mi Agenda Universitaria//ES\nCALSCALE:GREGORIAN\n";
+        // 1. Cabecera obligatoria del formato iCalendar
+        let icsContent =
+          "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Mi Agenda Universitaria//ES\nCALSCALE:GREGORIAN\n";
 
-    // 2. Recorremos tus eventos (exámenes, entregas, etc.)
-    if (data.events && data.events.length > 0) {
-      data.events.forEach(ev => {
-        // Formatear la fecha de "YYYY-MM-DD" a "YYYYMMDD"
-        if (ev.date) {
-          const formattedDate = ev.date.replace(/-/g, '');
-          
-          icsContent += "BEGIN:VEVENT\n";
-          // DTSTART y DTEND requieren fecha y hora. 
-          // Si tus eventos son de todo el día, se usa VALUE=DATE
-          icsContent += `DTSTART;VALUE=DATE:${formattedDate}\n`; 
-          // En ICS, el día de fin para eventos de todo el día tiene que ser el día siguiente, 
-          // pero para no complicarla, lo dejamos como evento simple.
-          icsContent += `SUMMARY:${ev.title || ev.type + ' - ' + ev.courseId}\n`;
-          icsContent += `DESCRIPTION:${ev.description || 'Exportado desde mi Agenda'}\n`;
-          icsContent += "END:VEVENT\n";
+        // 2. Recorremos tus eventos (exámenes, entregas, etc.)
+        if (data.events && data.events.length > 0) {
+          data.events.forEach((ev) => {
+            // Formatear la fecha de "YYYY-MM-DD" a "YYYYMMDD"
+            if (ev.date) {
+              const formattedDate = ev.date.replace(/-/g, "");
+
+              icsContent += "BEGIN:VEVENT\n";
+              // DTSTART y DTEND requieren fecha y hora.
+              // Si tus eventos son de todo el día, se usa VALUE=DATE
+              icsContent += `DTSTART;VALUE=DATE:${formattedDate}\n`;
+              // En ICS, el día de fin para eventos de todo el día tiene que ser el día siguiente,
+              // pero para no complicarla, lo dejamos como evento simple.
+              icsContent += `SUMMARY:${ev.title || ev.type + " - " + ev.courseId}\n`;
+              icsContent += `DESCRIPTION:${ev.description || "Exportado desde mi Agenda"}\n`;
+              icsContent += "END:VEVENT\n";
+            }
+          });
         }
-      });
-    }
 
-    // (Opcional) Si quisieras exportar las clases semanales (weeklySessions), 
-    // lleva un poquito más de lógica porque hay que usar reglas de repetición (RRULE),
-    // pero podemos sumarlo después si te interesa.
+        // (Opcional) Si quisieras exportar las clases semanales (weeklySessions),
+        // lleva un poquito más de lógica porque hay que usar reglas de repetición (RRULE),
+        // pero podemos sumarlo después si te interesa.
 
-    icsContent += "END:VCALENDAR";
+        icsContent += "END:VCALENDAR";
 
-    // 3. Crear el archivo y forzar la descarga
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Agenda_${new Date().toISOString().split('T')[0]}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+        // 3. Crear el archivo y forzar la descarga
+        const blob = new Blob([icsContent], {
+          type: "text/calendar;charset=utf-8",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `Agenda_${new Date().toISOString().split("T")[0]}.ics`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
 
       // ============ VISTA SEMANA ============
 
@@ -5241,8 +5302,16 @@
       // ============ MODAL DE SINCRONIZACIÓN ============
 
       // Agregamos setHasUnsavedChanges aquí arriba
-      function SyncModal({ data, onClose, onDataLoaded, initialMode = "menu", setHasUnsavedChanges }) {
-        const [pin, setPin] = useState(() => localStorage.getItem("agendaSyncPin") || "");
+      function SyncModal({
+        data,
+        onClose,
+        onDataLoaded,
+        initialMode = "menu",
+        setHasUnsavedChanges,
+      }) {
+        const [pin, setPin] = useState(
+          () => localStorage.getItem("agendaSyncPin") || "",
+        );
         const [mode, setMode] = useState(initialMode);
         const [message, setMessage] = useState("");
         const [loading, setLoading] = useState(false);
@@ -5263,16 +5332,17 @@
           setLoading(true);
           try {
             const syncTime = new Date().toISOString();
-            const deviceName = window.innerWidth <= 768 ? 'Celular' : 'Computadora';
-            
+            const deviceName =
+              window.innerWidth <= 768 ? "Celular" : "Computadora";
+
             const docRef = doc(db, "sync-agenda", pin);
             await setDoc(docRef, { ...data, lastSync: syncTime, deviceName });
 
             localStorage.setItem("agendaSyncPin", pin);
             localStorage.setItem("agendaLocalLastSync", syncTime); // <--- CLAVE PARA QUE NO APAREZCA EL CARTEL AZUL A VOS MISMO
-            
+
             if (setHasUnsavedChanges) {
-                setHasUnsavedChanges(false); // <--- ESTO QUITA EL CARTEL NARANJA
+              setHasUnsavedChanges(false); // <--- ESTO QUITA EL CARTEL NARANJA
             }
 
             setSavedPin(pin);
@@ -5303,14 +5373,14 @@
               const cloudData = docSnap.data();
               // NUEVO: Extraemos la estampilla antes de borrarla
               const syncTime = cloudData.lastSync;
-              
-              delete cloudData.lastSync; 
+
+              delete cloudData.lastSync;
               delete cloudData.deviceName; // Tampoco guardamos el nombre del dispositivo en los datos
 
               localStorage.setItem("agendaSyncPin", pin);
               // NUEVO: Actualizamos nuestra marca local para saber que ya estamos al día
-              localStorage.setItem("agendaLocalLastSync", syncTime); 
-              
+              localStorage.setItem("agendaLocalLastSync", syncTime);
+
               setSavedPin(pin);
               onDataLoaded(cloudData);
               setMessage("✅ Datos descargados correctamente");
