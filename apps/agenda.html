@@ -3293,8 +3293,7 @@
 
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Mi Agenda Universitaria//ES\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n";
 
-    // --- RADAR DE MATERIAS ---
-    // Intentamos todas las rutas posibles donde React guarda las materias
+    // Intentamos capturar la lista de cursos de donde sea que esté
     const cursos = data.courses || data.materias || [];
 
     // 1. EXÁMENES Y EVENTOS
@@ -3304,22 +3303,22 @@
         if (dateSource) {
           const formattedDate = dateSource.split('T')[0].replace(/-/g, '');
           
-          // Buscamos el curso por ID
+          // Buscamos el curso
           const curso = cursos.find(c => String(c.id) === String(ev.courseId));
           
-          // Prioridad de nombre: 
-          // 1. El nombre de la materia encontrada.
-          // 2. El título que ya tiene el evento (si existe).
-          // 3. "Examen" como último recurso.
-          const nombreMateria = curso ? curso.name : (ev.title || "Examen");
-          const tipoExamen = ev.examType || "";
+          // LÓGICA DE NOMBRE SEGURA:
+          // Si hay curso -> Nombre del curso
+          // Si no hay curso pero hay examen -> Tipo de Examen
+          // Si no hay nada -> "Evento"
+          let nombreBase = curso ? curso.name : (ev.examType || ev.title || "Examen");
           
-          const tituloFinal = `${nombreMateria}${tipoExamen ? ': ' + tipoExamen : ''}`;
-          
+          // Limpieza final: si el resultado es el texto "undefined", lo cambiamos
+          if (!nombreBase || nombreBase === "undefined") nombreBase = "Evento Universitario";
+
           icsContent += "BEGIN:VEVENT\n";
           icsContent += `DTSTART;VALUE=DATE:${formattedDate}\n`;
           icsContent += `DTEND;VALUE=DATE:${formattedDate}\n`;
-          icsContent += `SUMMARY:${tituloFinal}\n`;
+          icsContent += `SUMMARY:${nombreBase}\n`;
           icsContent += `DESCRIPTION:${ev.notes || ''}\n`;
           icsContent += `UID:${ev.id || Math.random()}@agenda\n`;
           icsContent += "END:VEVENT\n";
@@ -3338,19 +3337,19 @@
         const startH = (session.startTime || "00:00").replace(':', '') + "00";
         const endH = (session.endTime || "00:00").replace(':', '') + "00";
 
-        // Buscamos el curso
+        // LÓGICA DE NOMBRE PARA SESIONES:
+        // En tu JSON, las sesiones de Tenis tienen el nombre en session.title
         const curso = cursos.find(c => String(c.id) === String(session.courseId));
-        
-        // Si es "Clase Tenis", el nombre está en session.title. 
-        // Si es una materia, está en curso.name.
-        let tituloFinal = curso ? curso.name : (session.title || "Clase");
+        let nombreActividad = curso ? curso.name : (session.title || "Clase");
+
+        if (!nombreActividad || nombreActividad === "undefined") nombreActividad = "Actividad Universitaria";
 
         icsContent += "BEGIN:VEVENT\n";
         icsContent += `RRULE:FREQ=WEEKLY;BYDAY=${diaNombre};UNTIL=${endLimit}T235959Z\n`;
         icsContent += `DTSTART;TZID=America/Argentina/Buenos_Aires:${startLimit}T${startH}\n`;
         icsContent += `DTEND;TZID=America/Argentina/Buenos_Aires:${startLimit}T${endH}\n`;
-        icsContent += `SUMMARY:${tituloFinal}\n`;
-        icsContent += `DESCRIPTION:${session.type || ''} ${session.metadata?.studentLevel || ''}\n`;
+        icsContent += `SUMMARY:${nombreActividad}\n`;
+        icsContent += `DESCRIPTION:${session.type || ''}\n`;
         icsContent += `UID:${session.id || Math.random()}@agenda\n`;
         icsContent += "END:VEVENT\n";
       });
@@ -3362,7 +3361,7 @@
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Agenda_Final_OK.ics`;
+    link.download = `Agenda_VALIDA.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
