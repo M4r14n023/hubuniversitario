@@ -5,51 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seguimiento de Ayuno Intermitente</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .progress-ring__circle {
-            transition: stroke-dashoffset 0.5s, stroke 0.3s; /* Agregamos transición de color */
-            transform: rotate(-90deg);
-            transform-origin: 50% 50%;
-        }
-        /* Animación para el countdown */
-        @keyframes pulse-scale {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-        .animate-pulse-scale {
-            animation: pulse-scale 0.8s infinite ease-in-out;
-        }
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .progress-ring__circle { transition: stroke-dashoffset 0.5s, stroke 0.3s; transform: rotate(-90deg); transform-origin: 50% 50%; }
+        @keyframes pulse-scale { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .animate-pulse-scale { animation: pulse-scale 0.8s infinite ease-in-out; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+        ::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
         
-        input[type=number]::-webkit-inner-spin-button,
-        input[type=number]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        input[type=number] {
-            -moz-appearance: textfield;
-            appearance: textfield;
-        }
-        ::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            cursor: pointer;
+        #cloud-sync-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(17, 24, 39, 0.9); z-index: 50;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
     </style>
 </head>
 <body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
 
+    <div id="cloud-sync-overlay">
+        <svg class="animate-spin h-10 w-10 text-cyan-500 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p class="text-cyan-400 font-semibold tracking-wide">Sincronizando con JSONBin...</p>
+    </div>
+
     <div class="w-full max-w-md mx-auto bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
         
         <header class="text-center">
-            <h1 class="text-2xl md:text-3xl font-bold text-cyan-400">Rastreador de Ayuno</h1>
-            <p class="text-gray-400 mt-1">Controla tus períodos de ayuno y alimentación.</p>
+            <h1 class="text-2xl md:text-3xl font-bold text-cyan-400">Ayuno Sincronizado</h1>
+            <p class="text-gray-400 mt-1">Multi-dispositivo en tiempo real.</p>
         </header>
+
+        <div class="flex justify-center">
+            <div class="bg-gray-700 p-1 rounded-lg flex gap-1 w-full">
+                <button id="btn-user-mariano" class="flex-1 py-2 text-sm font-bold rounded-md bg-cyan-600 text-white shadow transition-all">🧑🏻 Mariano</button>
+                <button id="btn-user-gordito" class="flex-1 py-2 text-sm font-bold rounded-md text-gray-400 hover:text-white transition-all">👩🏻 Gordito</button>
+            </div>
+        </div>
 
         <div id="plan-selector-container">
             <label for="plan-selector" class="block text-sm font-medium text-gray-300 mb-2">Selecciona tu plan de ayuno:</label>
@@ -58,7 +53,7 @@
                 <option value="14">14:10 - Intermedio</option>
                 <option value="16" selected>16:8 - Estándar</option>
                 <option value="18">18:6 - Guerrero</option>
-                <option value="20">20:4 - El Guerrero Definitivo</option>
+                <option value="20">20:4 - Definitivo</option>
             </select>
         </div>
 
@@ -67,26 +62,18 @@
                 <circle class="text-gray-700" stroke-width="8" stroke="currentColor" fill="transparent" r="56" cx="60" cy="60"/>
                 <circle id="progress-circle"
                     class="progress-ring__circle text-cyan-400"
-                    stroke-width="8"
-                    stroke-linecap="round"
-                    stroke="currentColor"
-                    fill="transparent"
-                    r="56"
-                    cx="60"
-                    cy="60"/>
+                    stroke-width="8" stroke-linecap="round" stroke="currentColor"
+                    fill="transparent" r="56" cx="60" cy="60"/>
             </svg>
             
-            <!-- Contenedor central del círculo -->
             <div id="timer-display" class="text-center z-10 flex flex-col items-center justify-center w-48 h-48 absolute">
                 
-                <!-- Estado: LISTO (Default) -->
                 <div id="state-ready" class="flex flex-col items-center">
                     <div class="text-lg font-semibold text-gray-300">Listo para empezar</div>
                     <div class="text-4xl font-bold tracking-tighter my-1">00:00:00</div>
                     <div class="text-sm text-gray-500">Objetivo: --:--</div>
                 </div>
 
-                <!-- Estado: EN PROGRESO (Normal) -->
                 <div id="state-active" class="hidden flex flex-col items-center">
                     <div class="text-lg font-semibold text-cyan-400" id="status-text-active">En ayuno</div>
                     <div id="time-elapsed-active" class="text-4xl font-bold tracking-tighter my-1">00:00:00</div>
@@ -102,13 +89,11 @@
                     </div>
                 </div>
 
-                <!-- Estado: CUENTA REGRESIVA (Últimos 10s) -->
                 <div id="state-countdown" class="hidden flex flex-col items-center justify-center">
                     <div class="text-sm font-bold text-cyan-500 uppercase tracking-widest mb-2">¡Casi listo!</div>
                     <div id="countdown-number" class="text-6xl font-black text-white animate-pulse-scale">10</div>
                 </div>
 
-                <!-- Estado: COMPLETADO -->
                 <div id="state-completed" class="hidden flex flex-col items-center">
                      <div class="text-sm font-bold text-green-400 mb-1">¡OBJETIVO LOGRADO!</div>
                      <div class="text-xs text-gray-400 mb-2">
@@ -121,39 +106,27 @@
             </div>
         </div>
 
-        <!-- Hitos / Opciones Anteriores -->
-        <div id="milestones-container" class="hidden grid grid-cols-2 gap-3 transition-all duration-300">
-            <!-- Se llena dinámicamente con JS -->
-        </div>
+        <div id="milestones-container" class="hidden grid grid-cols-2 gap-3 transition-all duration-300"></div>
 
-        <!-- Controles -->
         <div class="space-y-4">
-            
-            <!-- Sección de Inicio Manual -->
             <div id="manual-start-section" class="bg-gray-700/30 rounded-lg p-3 border border-gray-700">
                 <div class="flex items-center justify-center gap-2 mb-3">
                     <button id="tab-elapsed" class="text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full bg-cyan-600 text-white transition">Tiempo Pasado</button>
                     <button id="tab-datetime" class="text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full bg-transparent text-gray-400 hover:text-white transition">Fecha Exacta</button>
                 </div>
-
                 <div id="option-elapsed" class="block">
                      <div class="flex items-center justify-center gap-2">
                          <div class="relative">
-                             <input type="number" id="elapsed-hours" placeholder="0" min="0" class="w-16 bg-gray-800 text-white text-center rounded-md p-2 border border-gray-600 focus:ring-cyan-500 focus:border-cyan-500 placeholder-gray-500">
-                             <span class="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 pointer-events-none">H</span>
+                             <input type="number" id="elapsed-hours" placeholder="0" min="0" class="w-16 bg-gray-800 text-white text-center rounded-md p-2 border border-gray-600 focus:ring-cyan-500">
                          </div>
                          <span class="text-gray-400">:</span>
                          <div class="relative">
-                             <input type="number" id="elapsed-minutes" placeholder="0" min="0" max="59" class="w-16 bg-gray-800 text-white text-center rounded-md p-2 border border-gray-600 focus:ring-cyan-500 focus:border-cyan-500 placeholder-gray-500">
-                             <span class="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 pointer-events-none">M</span>
+                             <input type="number" id="elapsed-minutes" placeholder="0" min="0" max="59" class="w-16 bg-gray-800 text-white text-center rounded-md p-2 border border-gray-600 focus:ring-cyan-500">
                          </div>
                      </div>
-                     <p class="text-[10px] text-center text-gray-400 mt-1">Ingresa cuánto llevas ayunando</p>
                 </div>
-
                 <div id="option-datetime" class="hidden">
-                    <input type="datetime-local" id="start-datetime-picker" class="w-full bg-gray-800 text-white rounded-md p-2 border border-gray-600 focus:ring-cyan-500 focus:border-cyan-500 text-sm text-center">
-                    <p class="text-[10px] text-center text-gray-400 mt-1">Selecciona cuándo empezaste</p>
+                    <input type="datetime-local" id="start-datetime-picker" class="w-full bg-gray-800 text-white rounded-md p-2 border border-gray-600 text-sm text-center">
                 </div>
             </div>
 
@@ -168,42 +141,49 @@
         <div>
             <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center gap-3">
-                    <h2 class="text-lg font-semibold text-gray-300">Historial Reciente</h2>
-                    <span id="average-badge" class="hidden text-xs font-medium bg-cyan-900/50 text-cyan-400 px-2.5 py-1 rounded-full border border-cyan-800/50">Promedio: 0h</span>
+                    <h2 class="text-lg font-semibold text-gray-300">Historial Cloud</h2>
+                    <span id="average-badge" class="hidden text-xs font-medium bg-cyan-900/50 text-cyan-400 px-2.5 py-1 rounded-full border border-cyan-800/50"></span>
                 </div>
-                <button id="clear-history-btn" class="text-gray-400 hover:text-white p-1 rounded-full transition hidden" title="Borrar todo el historial">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                </button>
             </div>
             <div id="history-container" class="bg-gray-900/50 rounded-lg p-4 max-h-40 overflow-y-auto space-y-2">
-                <p class="text-gray-500 text-center">No hay ayunos completados todavía.</p>
+                <p class="text-gray-500 text-center">Cargando historial...</p>
             </div>
         </div>
      </div>
+     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- Elementos del DOM ---
+            
+            // 👇 TUS DATOS DE JSONBIN YA CONFIGURADOS 👇
+            const JSONBIN_ID = '69b81709c3097a1dd52dc4b4'; 
+            const JSONBIN_KEY = '$2a$10$19OclHQasOKZ1EXNb1Gx/uLuBLdrvYG0cO54UQP.eDvMi4EKgpBWO';
+            // 👆 ------------------------------------- 👆
+
+            const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+            
+            let activeUser = 'Mariano';
+
+            // DOM Elements
             const planSelector = document.getElementById('plan-selector');
             const startBtn = document.getElementById('start-fast-btn');
             const endBtn = document.getElementById('end-fast-btn');
             const planSelectorContainer = document.getElementById('plan-selector-container');
+            const manualStartSection = document.getElementById('manual-start-section');
+            const syncOverlay = document.getElementById('cloud-sync-overlay');
             
-            // Vistas dentro del círculo
+            const btnMariano = document.getElementById('btn-user-mariano');
+            const btnGordito = document.getElementById('btn-user-gordito');
+
             const stateReady = document.getElementById('state-ready');
             const stateActive = document.getElementById('state-active');
             const stateCountdown = document.getElementById('state-countdown');
             const stateCompleted = document.getElementById('state-completed');
 
-            // Elementos de Active State
             const statusTextActive = document.getElementById('status-text-active');
             const timeElapsedActive = document.getElementById('time-elapsed-active');
             const startTimeDisplay = document.getElementById('start-time-display');
             const endTimeDisplay = document.getElementById('end-time-display');
-            
-            // Elementos de Countdown State
             const countdownNumber = document.getElementById('countdown-number');
-            
-            // Elementos de Completed State
             const completedPlanLabel = document.getElementById('completed-plan-label');
             const completedTimeLabel = document.getElementById('completed-time-label');
             const timeElapsedCompleted = document.getElementById('time-elapsed-completed');
@@ -211,10 +191,7 @@
             const milestonesContainer = document.getElementById('milestones-container');
             const historyContainer = document.getElementById('history-container');
             const progressCircle = document.getElementById('progress-circle');
-            const clearHistoryBtn = document.getElementById('clear-history-btn');
             
-            // Sección manual
-            const manualStartSection = document.getElementById('manual-start-section');
             const tabElapsed = document.getElementById('tab-elapsed');
             const tabDatetime = document.getElementById('tab-datetime');
             const optionElapsed = document.getElementById('option-elapsed');
@@ -226,10 +203,8 @@
             const radius = progressCircle.r.baseVal.value;
             const circumference = 2 * Math.PI * radius;
             progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
-            
             const availablePlans = [12, 14, 16, 18, 20];
 
-            // --- Estado de la aplicación ---
             let state = {
                 isFasting: false,
                 startTime: null,
@@ -239,12 +214,96 @@
                 timerInterval: null
             };
 
-            let isConfirmingDelete = false;
-            let confirmDeleteTimeout;
             let inputMode = 'elapsed';
-            let isHistoryExpanded = false; // Estado para saber si la lista está abierta
+            let isHistoryExpanded = false;
 
-            // --- Funciones de Tabs/UI Manual ---
+            // --- USER SWITCHER ---
+            const switchUser = async (user) => {
+                activeUser = user;
+                if(user === 'Mariano') {
+                    btnMariano.classList.replace('text-gray-400', 'text-white');
+                    btnMariano.classList.replace('bg-transparent', 'bg-cyan-600');
+                    btnGordito.classList.replace('text-white', 'text-gray-400');
+                    btnGordito.classList.replace('bg-cyan-600', 'bg-transparent');
+                } else {
+                    btnGordito.classList.replace('text-gray-400', 'text-white');
+                    btnGordito.classList.replace('bg-transparent', 'bg-cyan-600');
+                    btnMariano.classList.replace('text-white', 'text-gray-400');
+                    btnMariano.classList.replace('bg-cyan-600', 'bg-transparent');
+                }
+                
+                if (state.timerInterval) clearInterval(state.timerInterval);
+                await loadStateFromCloud();
+            };
+
+            btnMariano.addEventListener('click', () => switchUser('Mariano'));
+            btnGordito.addEventListener('click', () => switchUser('Gordito'));
+
+            // --- LÓGICA MÁGICA DE JSONBIN ---
+            const loadStateFromCloud = async () => {
+                syncOverlay.style.display = 'flex';
+                try {
+                    const res = await fetch(JSONBIN_URL, {
+                        headers: { 'X-Master-Key': JSONBIN_KEY }
+                    });
+                    const data = await res.json();
+                    const globalData = data.record;
+                    const userData = globalData[activeUser] || {};
+                    
+                    state.planHours = userData.planHours || 16;
+                    planSelector.value = state.planHours;
+                    state.isFasting = userData.isFasting || false;
+                    state.history = userData.history || [];
+                    
+                    if (state.isFasting && userData.startTime) {
+                        state.startTime = userData.startTime;
+                        state.endTime = state.startTime + (state.planHours * 60 * 60 * 1000);
+                        state.timerInterval = setInterval(updateTimer, 1000);
+                    } else {
+                        state.startTime = null;
+                        state.endTime = null;
+                    }
+                } catch (error) {
+                    console.error("Error conectando a JSONBin:", error);
+                } finally {
+                    syncOverlay.style.display = 'none';
+                    updateUI();
+                }
+            };
+
+            const pushStateToCloud = async () => {
+                syncOverlay.style.display = 'flex';
+                try {
+                    // 1. Traer todo el buzón para no pisar al otro usuario
+                    const resGet = await fetch(JSONBIN_URL, { headers: { 'X-Master-Key': JSONBIN_KEY } });
+                    const dataGet = await resGet.json();
+                    let globalData = dataGet.record;
+
+                    // 2. Modificar solo la parte del usuario activo
+                    globalData[activeUser] = {
+                        isFasting: state.isFasting,
+                        startTime: state.startTime,
+                        planHours: state.planHours,
+                        history: state.history
+                    };
+
+                    // 3. Volver a guardar el buzón
+                    await fetch(JSONBIN_URL, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Master-Key': JSONBIN_KEY
+                        },
+                        body: JSON.stringify(globalData)
+                    });
+                } catch (error) {
+                    console.error("No se pudo guardar estado en JSONBin:", error);
+                } finally {
+                    syncOverlay.style.display = 'none';
+                }
+            };
+
+            // --- UI y TABS ---
             const switchTab = (mode) => {
                 inputMode = mode;
                 if (mode === 'elapsed') {
@@ -270,8 +329,11 @@
                 }
             };
 
-            // --- Funciones principales ---
-            const startFast = () => {
+            tabElapsed.addEventListener('click', () => switchTab('elapsed'));
+            tabDatetime.addEventListener('click', () => switchTab('datetime'));
+
+            // --- ACCIONES PRINCIPALES ---
+            const startFast = async () => {
                 const now = new Date();
                 const planHours = parseInt(planSelector.value);
                 let calculatedStartTime = now.getTime();
@@ -283,14 +345,8 @@
                     calculatedStartTime = now.getTime() - elapsedMilliseconds;
                 } else {
                     const pickedDate = new Date(startDatetimePicker.value);
-                    if (isNaN(pickedDate.getTime())) {
-                        alert("Por favor selecciona una fecha válida.");
-                        return;
-                    }
-                    if (pickedDate > now) {
-                        alert("La fecha de inicio no puede ser en el futuro.");
-                        return;
-                    }
+                    if (isNaN(pickedDate.getTime())) return alert("Fecha inválida.");
+                    if (pickedDate > now) return alert("No puede ser en el futuro.");
                     calculatedStartTime = pickedDate.getTime();
                 }
                 
@@ -299,23 +355,27 @@
                 state.planHours = planHours;
                 state.endTime = new Date(state.startTime + planHours * 60 * 60 * 1000).getTime();
                 
+                await pushStateToCloud();
+                
                 state.timerInterval = setInterval(updateTimer, 1000);
                 updateUI();
-                saveState();
             };
 
-            const endFast = () => {
+            const endFast = async () => {
                 if (state.isFasting) {
                     const now = new Date().getTime();
                     const duration = now - state.startTime;
+                    
+                    // Agregar al historial local
                     state.history.unshift({
+                        id: now,
                         startTime: state.startTime,
                         endTime: now,
                         duration: duration,
                         planHours: state.planHours,
                         completed: duration >= state.planHours * 60 * 60 * 1000
                     });
-                     if (state.history.length > 20) state.history.pop();
+                    if (state.history.length > 20) state.history.pop();
                 }
 
                 clearInterval(state.timerInterval);
@@ -324,20 +384,23 @@
                 state.endTime = null;
                 state.timerInterval = null;
                 
+                await pushStateToCloud();
                 updateUI();
-                saveState();
-            };
-            
-            const clearHistory = () => {
-                state.history = [];
-                updateUI();
-                saveState();
             };
 
-            const deleteHistoryItem = (startTime) => {
-                state.history = state.history.filter(item => item.startTime !== startTime);
+            startBtn.addEventListener('click', startFast);
+            endBtn.addEventListener('click', endFast);
+            
+            planSelector.addEventListener('change', async (e) => {
+                state.planHours = parseInt(e.target.value);
+                if(!state.isFasting) await pushStateToCloud();
+            });
+
+            const deleteHistoryItem = async (id) => {
+                if(!confirm("¿Borrar este registro?")) return;
+                state.history = state.history.filter(item => item.id !== id);
+                await pushStateToCloud();
                 updateUI();
-                saveState();
             };
 
             const updateTimer = () => {
@@ -347,101 +410,58 @@
                 const totalDuration = state.planHours * 60 * 60 * 1000;
                 const remaining = totalDuration - elapsed;
 
-                // Actualizar milestones
                 updateMilestones(elapsed);
 
-                // --- Lógica de Visualización ---
-
-                // Caso 1: ¡Meta Lograda!
                 if (elapsed >= totalDuration) {
                     showView('completed');
-                    
-                    // Texto: "Objetivo 16h"
                     completedPlanLabel.textContent = `${state.planHours}h`;
-                    // Hora exacta en que se cumplió
-                    const endDate = new Date(state.endTime);
-                    completedTimeLabel.textContent = formatTime(endDate);
-                    
-                    // Timer sigue corriendo
+                    completedTimeLabel.textContent = formatTime(new Date(state.endTime));
                     timeElapsedCompleted.textContent = formatDuration(elapsed);
-                    
-                    // Círculo Verde completo
                     setProgress(1);
                     progressCircle.classList.replace('text-cyan-400', 'text-green-500');
                     return;
                 }
 
-                // Caso 2: Cuenta Regresiva (Últimos 10 segundos)
                 if (remaining > 0 && remaining <= 10000) {
                     showView('countdown');
-                    const secondsLeft = Math.ceil(remaining / 1000);
-                    countdownNumber.textContent = secondsLeft;
-                    
-                    // Progreso casi lleno
-                    const progress = Math.min(elapsed / totalDuration, 1);
-                    setProgress(progress);
+                    countdownNumber.textContent = Math.ceil(remaining / 1000);
+                    setProgress(Math.min(elapsed / totalDuration, 1));
                     progressCircle.classList.replace('text-green-500', 'text-cyan-400');
                     return;
                 }
 
-                // Caso 3: Progreso Normal
                 showView('active');
                 statusTextActive.textContent = `En ayuno (${state.planHours}h)`;
                 timeElapsedActive.textContent = formatDuration(elapsed);
-                
-                const progress = Math.min(elapsed / totalDuration, 1);
-                setProgress(progress);
+                setProgress(Math.min(elapsed / totalDuration, 1));
                 progressCircle.classList.replace('text-green-500', 'text-cyan-400');
             };
 
-            // Helper para cambiar vistas del centro
             const showView = (viewName) => {
-                stateReady.classList.add('hidden');
-                stateActive.classList.add('hidden');
-                stateCountdown.classList.add('hidden');
-                stateCompleted.classList.add('hidden');
-
+                stateReady.classList.add('hidden'); stateActive.classList.add('hidden');
+                stateCountdown.classList.add('hidden'); stateCompleted.classList.add('hidden');
                 if (viewName === 'ready') stateReady.classList.remove('hidden');
                 if (viewName === 'active') stateActive.classList.remove('hidden');
                 if (viewName === 'countdown') stateCountdown.classList.remove('hidden');
                 if (viewName === 'completed') stateCompleted.classList.remove('hidden');
             };
 
-            // --- Funciones de UI ---
-
             const updateMilestones = (elapsed) => {
-                const currentPlan = state.planHours;
-                const previousPlans = availablePlans
-                    .filter(p => p < currentPlan)
-                    .sort((a, b) => b - a) // Orden descendente
-                    .slice(0, 2); 
-
-                if (previousPlans.length === 0) {
-                    milestonesContainer.classList.add('hidden');
-                    return;
-                }
-
+                const previousPlans = availablePlans.filter(p => p < state.planHours).sort((a, b) => b - a).slice(0, 2); 
+                if (previousPlans.length === 0) { milestonesContainer.classList.add('hidden'); return; }
                 milestonesContainer.classList.remove('hidden');
                 milestonesContainer.innerHTML = previousPlans.map(hours => {
                     const milestoneDuration = hours * 60 * 60 * 1000;
                     const isReached = elapsed >= milestoneDuration;
                     const milestoneTime = new Date(state.startTime + milestoneDuration);
-                    
-                    // Estilos dinámicos
                     const bgClass = isReached ? 'bg-green-900/40 border-green-500/50' : 'bg-gray-800/80 border-gray-700';
                     const textClass = isReached ? 'text-green-400' : 'text-gray-400';
                     const timeClass = isReached ? 'text-white' : 'text-gray-500';
-                    const icon = isReached 
-                        ? `<svg class="w-4 h-4 text-green-400 inline-block mb-0.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>`
-                        : '';
-
+                    const icon = isReached ? `<svg class="w-4 h-4 text-green-400 inline-block mb-0.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>` : '';
                     return `
-                        <div class="${bgClass} border rounded-lg p-3 text-center shadow-sm transition-colors duration-500 flex flex-col items-center justify-center">
-                            <p class="text-xs ${textClass} font-bold uppercase tracking-wide mb-1">
-                                ${hours} Horas ${icon}
-                            </p>
+                        <div class="${bgClass} border rounded-lg p-3 text-center transition-colors flex flex-col items-center justify-center">
+                            <p class="text-xs ${textClass} font-bold uppercase tracking-wide mb-1">${hours} Horas ${icon}</p>
                             <p class="text-lg font-bold ${timeClass}">${formatTime(milestoneTime)}</p>
-                            ${!isReached ? '<p class="text-[10px] text-gray-600 mt-1">Pendiente</p>' : '<p class="text-[10px] text-green-400/70 mt-1">Completado</p>'}
                         </div>
                     `;
                 }).join('');
@@ -449,105 +469,70 @@
 
             const updateUI = () => {
                 if (state.isFasting) {
-                    startBtn.classList.add('hidden');
-                    endBtn.classList.remove('hidden');
-                    planSelectorContainer.classList.add('hidden');
-                    manualStartSection.classList.add('hidden'); 
-                    
-                    const startDate = new Date(state.startTime);
-                    const endDate = new Date(state.endTime);
-                    startTimeDisplay.textContent = formatTime(startDate);
-                    endTimeDisplay.textContent = formatTime(endDate);
-
-                    // Inicializar estado del círculo (se actualizará en el próximo tick del intervalo)
+                    startBtn.classList.add('hidden'); endBtn.classList.remove('hidden');
+                    planSelectorContainer.classList.add('hidden'); manualStartSection.classList.add('hidden'); 
+                    startTimeDisplay.textContent = formatTime(new Date(state.startTime));
+                    endTimeDisplay.textContent = formatTime(new Date(state.endTime));
                     updateTimer(); 
                 } else {
                     showView('ready');
-                    startBtn.classList.remove('hidden');
-                    endBtn.classList.add('hidden');
-                    planSelectorContainer.classList.remove('hidden');
-                    manualStartSection.classList.remove('hidden');
+                    startBtn.classList.remove('hidden'); endBtn.classList.add('hidden');
+                    planSelectorContainer.classList.remove('hidden'); manualStartSection.classList.remove('hidden');
                     milestonesContainer.classList.add('hidden');
-                    
-                    elapsedHoursInput.value = '';
-                    elapsedMinutesInput.value = '';
-                    
-                    setProgress(0);
-                    progressCircle.classList.replace('text-green-500', 'text-cyan-400');
+                    elapsedHoursInput.value = ''; elapsedMinutesInput.value = '';
+                    setProgress(0); progressCircle.classList.replace('text-green-500', 'text-cyan-400');
                 }
-                clearHistoryBtn.classList.toggle('hidden', state.history.length === 0);
                 renderHistory();
             };
             
             const setProgress = (percent) => {
-                const offset = circumference - percent * circumference;
-                progressCircle.style.strokeDashoffset = offset;
+                progressCircle.style.strokeDashoffset = circumference - percent * circumference;
             };
 
             const renderHistory = () => {
                 const averageBadge = document.getElementById('average-badge');
-                
                 if (state.history.length === 0) {
                     historyContainer.innerHTML = '<p class="text-gray-500 text-center">No hay ayunos completados todavía.</p>';
                     averageBadge.classList.add('hidden');
                     return;
                 }
-
-                // Calcular el promedio general
                 const totalMs = state.history.reduce((sum, item) => sum + item.duration, 0);
-                const avgHours = (totalMs / state.history.length / (1000 * 60 * 60)).toFixed(1);
-                averageBadge.textContent = `Promedio: ${avgHours}h`;
+                averageBadge.textContent = `Promedio: ${(totalMs / state.history.length / (1000 * 60 * 60)).toFixed(1)}h`;
                 averageBadge.classList.remove('hidden');
 
-                // Plegar historial (solo mostrar 1 si no está expandido)
                 const visibleHistory = isHistoryExpanded ? state.history : state.history.slice(0, 1);
-
                 let html = visibleHistory.map(fast => {
-                    const startDate = new Date(fast.startTime);
-                    const endDate = new Date(fast.endTime);
-                    const durationStr = formatDuration(fast.duration);
                     const completedClass = fast.completed ? 'border-green-500/50' : 'border-yellow-500/50';
                     const icon = fast.completed 
-                        ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400 flex-shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`
-                        : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-400 flex-shrink-0"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+                        ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-400"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`
+                        : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-yellow-400"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
                     
-                    const dateStr = startDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-                    const timeStartStr = formatTime(startDate);
-                    const timeEndStr = formatTime(endDate);
-
                     return `
                         <div class="flex items-center justify-between p-3 bg-gray-700/60 rounded-lg border-l-4 ${completedClass}">
-                            <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="flex items-center gap-3">
                                 ${icon}
-                                <div class="min-w-0">
-                                    <p class="font-medium text-sm text-gray-200 truncate">
-                                        ${dateStr} • ${timeStartStr} - ${timeEndStr}
+                                <div>
+                                    <p class="font-medium text-sm text-gray-200">
+                                        ${new Date(fast.startTime).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} • ${formatTime(new Date(fast.startTime))} - ${formatTime(new Date(fast.endTime))}
                                     </p>
-                                    <p class="text-xs text-gray-400">
-                                        Total: ${durationStr} <span class="opacity-50">|</span> Meta: ${fast.planHours}h
-                                    </p>
+                                    <p class="text-xs text-gray-400">Total: ${formatDuration(fast.duration)} <span class="opacity-50">|</span> Meta: ${fast.planHours}h</p>
                                 </div>
                             </div>
-                            <button class="delete-item-btn text-gray-500 hover:text-red-400 p-2 flex-shrink-0" data-id="${fast.startTime}" title="Eliminar este registro">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            </button>
+                            <button class="delete-item-btn text-gray-500 hover:text-red-400 p-2" data-id="${fast.id}" title="Eliminar este registro">🗑️</button>
                         </div>
                     `;
                 }).join('');
 
-                // Agregar el botón de Ver Más / Ver Menos
                 if (state.history.length > 1) {
                     html += `
-                        <button id="toggle-history-btn" class="w-full mt-2 py-2 text-xs font-semibold uppercase tracking-wider text-cyan-500 hover:text-cyan-400 hover:bg-gray-800/50 rounded-lg transition-colors flex items-center justify-center gap-1">
+                        <button id="toggle-history-btn" class="w-full mt-2 py-2 text-xs font-semibold uppercase text-cyan-500 hover:text-cyan-400 transition-colors">
                             ${isHistoryExpanded ? 'Ocultar historial <span>▲</span>' : `Ver ${state.history.length - 1} anteriores <span>▼</span>`}
                         </button>
                     `;
                 }
-
                 historyContainer.innerHTML = html;
             };
 
-            // --- Funciones de Utilidad ---
             const formatDuration = (ms) => {
                 if (ms < 0) ms = 0;
                 const totalSeconds = Math.floor(ms / 1000);
@@ -559,73 +544,16 @@
             
             const formatTime = (date) => date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
-            // --- Local Storage ---
-            const saveState = () => {
-                const stateToSave = { ...state, timerInterval: null };
-                localStorage.setItem('fastingTrackerState', JSON.stringify(stateToSave));
-            };
-
-            const loadState = () => {
-                const savedState = localStorage.getItem('fastingTrackerState');
-                if (savedState) {
-                    const parsedState = JSON.parse(savedState);
-                    state = { ...state, ...parsedState };
-                    if (state.isFasting) {
-                        state.timerInterval = setInterval(updateTimer, 1000);
-                    }
-                }
-                planSelector.value = state.planHours;
-                updateUI();
-            };
-            
-            // --- Event Listeners ---
-            startBtn.addEventListener('click', startFast);
-            endBtn.addEventListener('click', endFast);
-            planSelector.addEventListener('change', (e) => {
-                state.planHours = parseInt(e.target.value);
-                saveState();
-            });
-
-            tabElapsed.addEventListener('click', () => switchTab('elapsed'));
-            tabDatetime.addEventListener('click', () => switchTab('datetime'));
-
-            clearHistoryBtn.addEventListener('click', () => {
-                if (!isConfirmingDelete) {
-                    isConfirmingDelete = true;
-                    clearHistoryBtn.classList.add('text-red-500');
-                    confirmDeleteTimeout = setTimeout(() => {
-                        isConfirmingDelete = false;
-                        clearHistoryBtn.classList.remove('text-red-500');
-                    }, 3000);
-                } else {
-                    clearTimeout(confirmDeleteTimeout);
-                    isConfirmingDelete = false;
-                    clearHistoryBtn.classList.remove('text-red-500');
-                    clearHistory();
-                }
-            });
-
             historyContainer.addEventListener('click', (e) => {
-                // Si hizo clic en eliminar
                 const deleteButton = e.target.closest('.delete-item-btn');
-                if (deleteButton) {
-                    const startTime = parseInt(deleteButton.dataset.id);
-                    deleteHistoryItem(startTime);
-                    return;
-                }
-                
-                // Si hizo clic en ver más / ver menos
+                if (deleteButton) return deleteHistoryItem(parseInt(deleteButton.dataset.id));
                 const toggleButton = e.target.closest('#toggle-history-btn');
-                if (toggleButton) {
-                    isHistoryExpanded = !isHistoryExpanded;
-                    renderHistory();
-                }
+                if (toggleButton) { isHistoryExpanded = !isHistoryExpanded; renderHistory(); }
             });
 
-            // --- Inicialización ---
-            loadState();
+            // Iniciar trayendo los datos de la nube
+            loadStateFromCloud();
         });
     </script>
-
 </body>
 </html>
