@@ -3289,12 +3289,12 @@
         );
       }
      const exportAgendaToICS = (data) => {
-    // Verificación de seguridad para no trabajar sobre la nada
     if (!data) return;
 
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Mi Agenda Universitaria//ES\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n";
 
-    // Intentar obtener la lista de cursos de varias fuentes posibles
+    // --- RADAR DE MATERIAS ---
+    // Intentamos todas las rutas posibles donde React guarda las materias
     const cursos = data.courses || data.materias || [];
 
     // 1. EXÁMENES Y EVENTOS
@@ -3304,18 +3304,22 @@
         if (dateSource) {
           const formattedDate = dateSource.split('T')[0].replace(/-/g, '');
           
-          // Buscar materia por ID
-          const curso = cursos.find(c => c.id === ev.courseId);
-          // Si no hay curso, intentamos usar el título directo del evento
-          const nombreMateria = curso ? curso.name : (ev.title || "Materia");
-          const tipoEvento = ev.examType || ev.eventualType || 'Evento';
+          // Buscamos el curso por ID
+          const curso = cursos.find(c => String(c.id) === String(ev.courseId));
           
-          const titulo = `${nombreMateria}: ${tipoEvento}`.replace('undefined', 'Evento');
+          // Prioridad de nombre: 
+          // 1. El nombre de la materia encontrada.
+          // 2. El título que ya tiene el evento (si existe).
+          // 3. "Examen" como último recurso.
+          const nombreMateria = curso ? curso.name : (ev.title || "Examen");
+          const tipoExamen = ev.examType || "";
+          
+          const tituloFinal = `${nombreMateria}${tipoExamen ? ': ' + tipoExamen : ''}`;
           
           icsContent += "BEGIN:VEVENT\n";
           icsContent += `DTSTART;VALUE=DATE:${formattedDate}\n`;
           icsContent += `DTEND;VALUE=DATE:${formattedDate}\n`;
-          icsContent += `SUMMARY:${titulo}\n`;
+          icsContent += `SUMMARY:${tituloFinal}\n`;
           icsContent += `DESCRIPTION:${ev.notes || ''}\n`;
           icsContent += `UID:${ev.id || Math.random()}@agenda\n`;
           icsContent += "END:VEVENT\n";
@@ -3334,12 +3338,12 @@
         const startH = (session.startTime || "00:00").replace(':', '') + "00";
         const endH = (session.endTime || "00:00").replace(':', '') + "00";
 
-        // Lógica de nombre: Prioridad 1: Curso, Prioridad 2: Título de sesión, Prioridad 3: "Actividad"
-        const curso = cursos.find(c => c.id === session.courseId);
-        let tituloFinal = curso ? curso.name : (session.title || "Actividad");
+        // Buscamos el curso
+        const curso = cursos.find(c => String(c.id) === String(session.courseId));
         
-        // Limpieza final por si acaso
-        if (tituloFinal === "undefined" || !tituloFinal) tituloFinal = "Actividad Universitaria";
+        // Si es "Clase Tenis", el nombre está en session.title. 
+        // Si es una materia, está en curso.name.
+        let tituloFinal = curso ? curso.name : (session.title || "Clase");
 
         icsContent += "BEGIN:VEVENT\n";
         icsContent += `RRULE:FREQ=WEEKLY;BYDAY=${diaNombre};UNTIL=${endLimit}T235959Z\n`;
@@ -3358,7 +3362,7 @@
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Agenda_Ok_${new Date().toISOString().split('T')[0]}.ics`;
+    link.download = `Agenda_Final_OK.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
