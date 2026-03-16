@@ -3293,8 +3293,8 @@
 
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Mi Agenda Universitaria//ES\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n";
 
-    // Intentamos capturar la lista de cursos de donde sea que esté
-    const cursos = data.courses || data.materias || [];
+    // --- DETECTOR DE MATERIAS (Buscamos en todas las rutas posibles) ---
+    const cursos = data.courses || data.materias || (data.state && data.state.courses) || [];
 
     // 1. EXÁMENES Y EVENTOS
     if (data.events && data.events.length > 0) {
@@ -3303,22 +3303,24 @@
         if (dateSource) {
           const formattedDate = dateSource.split('T')[0].replace(/-/g, '');
           
-          // Buscamos el curso
+          // Buscar materia por ID (comparación flexible de número y string)
           const curso = cursos.find(c => String(c.id) === String(ev.courseId));
           
-          // LÓGICA DE NOMBRE SEGURA:
-          // Si hay curso -> Nombre del curso
-          // Si no hay curso pero hay examen -> Tipo de Examen
-          // Si no hay nada -> "Evento"
-          let nombreBase = curso ? curso.name : (ev.examType || ev.title || "Examen");
-          
-          // Limpieza final: si el resultado es el texto "undefined", lo cambiamos
-          if (!nombreBase || nombreBase === "undefined") nombreBase = "Evento Universitario";
+          // PRIORIDAD DE NOMBRE:
+          // 1. El nombre de la materia (ej: Derecho) + el tipo de examen
+          // 2. Solo el tipo de examen (ej: 1er Parcial)
+          // 3. El título que tenga el objeto
+          let tituloFinal = "";
+          if (curso) {
+            tituloFinal = `${curso.name}: ${ev.examType || 'Examen'}`;
+          } else {
+            tituloFinal = ev.examType || ev.title || "Examen Universitario";
+          }
 
           icsContent += "BEGIN:VEVENT\n";
           icsContent += `DTSTART;VALUE=DATE:${formattedDate}\n`;
           icsContent += `DTEND;VALUE=DATE:${formattedDate}\n`;
-          icsContent += `SUMMARY:${nombreBase}\n`;
+          icsContent += `SUMMARY:${tituloFinal}\n`;
           icsContent += `DESCRIPTION:${ev.notes || ''}\n`;
           icsContent += `UID:${ev.id || Math.random()}@agenda\n`;
           icsContent += "END:VEVENT\n";
@@ -3326,7 +3328,7 @@
       });
     }
 
-    // 2. CLASES SEMANALES (Tenis, Gimnasio, etc.)
+    // 2. CLASES SEMANALES (Tenis, Gimnasio, Materias)
     if (data.weeklySessions && data.weeklySessions.length > 0) {
       const diasSemana = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
       const startLimit = (data.term?.startDate || "2026-03-16").replace(/-/g, '');
@@ -3337,12 +3339,10 @@
         const startH = (session.startTime || "00:00").replace(':', '') + "00";
         const endH = (session.endTime || "00:00").replace(':', '') + "00";
 
-        // LÓGICA DE NOMBRE PARA SESIONES:
-        // En tu JSON, las sesiones de Tenis tienen el nombre en session.title
+        // BUSCAR NOMBRE:
         const curso = cursos.find(c => String(c.id) === String(session.courseId));
+        // Si es Tenis, el nombre está en session.title. Si es materia, en curso.name.
         let nombreActividad = curso ? curso.name : (session.title || "Clase");
-
-        if (!nombreActividad || nombreActividad === "undefined") nombreActividad = "Actividad Universitaria";
 
         icsContent += "BEGIN:VEVENT\n";
         icsContent += `RRULE:FREQ=WEEKLY;BYDAY=${diaNombre};UNTIL=${endLimit}T235959Z\n`;
@@ -3361,12 +3361,11 @@
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Agenda_VALIDA.ics`;
+    link.download = `Agenda_IMPORTAR.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
-
       // ============ VISTA SEMANA ============
 
       function WeekView({
