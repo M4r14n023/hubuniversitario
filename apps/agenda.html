@@ -2940,6 +2940,12 @@
                     onClick={() => setShowAvailabilityModal(true)}
                     title="Ver horarios disponibles"
                   >
+                  <button 
+  className="btn btn-secondary" 
+  onClick={() => exportAgendaToICS(data)}
+>
+  📅 Exportar para Google Calendar (.ics)
+</button>
                     🕐 Disponibilidad
                   </button>
                   <button
@@ -3224,6 +3230,46 @@
           </div>
         );
       }
+      const exportAgendaToICS = (data) => {
+    // 1. Cabecera obligatoria del formato iCalendar
+    let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Mi Agenda Universitaria//ES\nCALSCALE:GREGORIAN\n";
+
+    // 2. Recorremos tus eventos (exámenes, entregas, etc.)
+    if (data.events && data.events.length > 0) {
+      data.events.forEach(ev => {
+        // Formatear la fecha de "YYYY-MM-DD" a "YYYYMMDD"
+        if (ev.date) {
+          const formattedDate = ev.date.replace(/-/g, '');
+          
+          icsContent += "BEGIN:VEVENT\n";
+          // DTSTART y DTEND requieren fecha y hora. 
+          // Si tus eventos son de todo el día, se usa VALUE=DATE
+          icsContent += `DTSTART;VALUE=DATE:${formattedDate}\n`; 
+          // En ICS, el día de fin para eventos de todo el día tiene que ser el día siguiente, 
+          // pero para no complicarla, lo dejamos como evento simple.
+          icsContent += `SUMMARY:${ev.title || ev.type + ' - ' + ev.courseId}\n`;
+          icsContent += `DESCRIPTION:${ev.description || 'Exportado desde mi Agenda'}\n`;
+          icsContent += "END:VEVENT\n";
+        }
+      });
+    }
+
+    // (Opcional) Si quisieras exportar las clases semanales (weeklySessions), 
+    // lleva un poquito más de lógica porque hay que usar reglas de repetición (RRULE),
+    // pero podemos sumarlo después si te interesa.
+
+    icsContent += "END:VCALENDAR";
+
+    // 3. Crear el archivo y forzar la descarga
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Agenda_${new Date().toISOString().split('T')[0]}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
       // ============ VISTA SEMANA ============
 
