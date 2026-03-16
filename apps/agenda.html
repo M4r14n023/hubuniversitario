@@ -3292,65 +3292,164 @@
     if (!data) return;
 
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Mi Agenda Universitaria//ES\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n";
+    icsContent += "X-WR-TIMEZONE:America/Argentina/Buenos_Aires\n";
 
-    // --- DETECTOR DE MATERIAS (Buscamos en todas las rutas posibles) ---
-    const cursos = data.courses || data.materias || (data.state && data.state.courses) || [];
+    const cursos = data.courses || [];
+    const termStart = data.term?.startDate || new Date().toISOString().split('T')[0];
+    const termEnd = data.term?.endDate || new Date(new Date().setMonth(new Date().getMonth() + 4)).toISOString().split('T')[0];
 
     // 1. EXÁMENES Y EVENTOS
     if (data.events && data.events.length > 0) {
       data.events.forEach(ev => {
         const dateSource = ev.dateISO || ev.date; 
         if (dateSource) {
-          const formattedDate = dateSource.split('T')[0].replace(/-/g, '');
+          const eventDate = new Date(dateSource);
+          const formattedDate = eventDate.toISOString().split('T')[0].replace(/-/g, '');
           
-          // Buscar materia por ID (comparación flexible de número y string)
-          const curso = cursos.find(c => String(c.id) === String(ev.courseId));
+          const curso = cursos.find(c => c.id === ev.courseId);
           
-          // PRIORIDAD DE NOMBRE:
-          // 1. El nombre de la materia (ej: Derecho) + el tipo de examen
-          // 2. Solo el tipo de examen (ej: 1er Parcial)
-          // 3. El título que tenga el objeto
-          let tituloFinal = "";
+          // Construir título del evento
+          let titulo = "";
+          let descripcion = "";
+          
           if (curso) {
-            tituloFinal = `${curso.name}: ${ev.examType || 'Examen'}`;
+            const tipoExamen = ev.examType === 'Otro' && ev.customExamType 
+              ? ev.customExamType 
+              : (ev.examType || 'Examen');
+            titulo = `${curso.nombre} - ${tipoExamen}`;
+            descripcion = `Materia: ${curso.nombre}\\nTipo: ${tipoExamen}`;
           } else {
-            tituloFinal = ev.examType || ev.title || "Examen Universitario";
+            titulo = ev.examType || ev.title || "Evento Académico";
+            descripcion = titulo;
           }
+          
+          if (ev.notes) {
+            descripcion += `\\nNotas: ${ev.notes}`;
+          }
+          
+          // Escapar caracteres especiales
+          titulo = titulo.replace(/[,;\\]/g, '\\$&');
+          descripcion = descripcion.replace(/[,;\\]/g, '\\$&');
 
           icsContent += "BEGIN:VEVENT\n";
           icsContent += `DTSTART;VALUE=DATE:${formattedDate}\n`;
           icsContent += `DTEND;VALUE=DATE:${formattedDate}\n`;
-          icsContent += `SUMMARY:${tituloFinal}\n`;
-          icsContent += `DESCRIPTION:${ev.notes || ''}\n`;
-          icsContent += `UID:${ev.id || Math.random()}@agenda\n`;
+          icsContent += `SUMMARY:${titulo}\n`;
+          icsContent += `DESCRIPTION:${descripcion}\n`;
+          icsContent += `UID:${ev.id}@agenda-universitaria\n`;
+          icsContent += `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z\n`;
+          icsContent += "STATUS:CONFIRMED\n";
           icsContent += "END:VEVENT\n";
         }
       });
     }
 
-    // 2. CLASES SEMANALES (Tenis, Gimnasio, Materias)
+    // 2. CLASES SEMANALES (Materias)
     if (data.weeklySessions && data.weeklySessions.length > 0) {
       const diasSemana = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
-      const startLimit = (data.term?.startDate || "2026-03-16").replace(/-/g, '');
-      const endLimit = (data.term?.endDate || "2026-07-03").replace(/-/g, '');
 
       data.weeklySessions.forEach(session => {
-        const diaNombre = diasSemana[session.dayOfWeek];
-        const startH = (session.startTime || "00:00").replace(':', '') + "00";
-        const endH = (session.endTime || "00:00").replace(':', '') + "00";
+        const curso = cursos.find(c => c.id === session.courseId);
+        if (!curso) return;
 
-        // BUSCAR NOMBRE:
-        const curso = cursos.find(c => String(c.id) === String(session.courseId));
-        // Si es Tenis, el nombre está en session.title. Si es materia, en curso.name.
-        let nombreActividad = curso ? curso.name : (session.title || "Clase");
+        const diaNombre = diasSemana[session.dayOfWeek];
+        
+        // Calcular fecha de inicio correcta para esta sesión
+        let startDate = new Date(termStart);
+        const sessionDay = session.dayOfWeek === 0 ? 7 : session.dayOfWeek;
+        const currentDay = startDate.getDay() === 0 ? 7 : startDate.getDay();
+        
+        // Avanzar hasta el primer día que coincida
+        let daysToAdd = sessionDay - currentDay;
+        if (daysToAdd < 0) daysToAdd += 7;
+        startDate.setDate(startDate.getDate() + daysToAdd);
+        
+        const startLimit = startDate.toISOString().split('T')[0].replace(/-/g, '');
+        const endLimit = termEnd.replace(/-/g, '');
+        
+        const startH = (session.startTime || "08:00").replace(':', '') + "00";
+        const endH = (session.endTime || "10:00").replace(':', '') + "00";
+
+        // Construir título y descripción
+        const modalidad = session.modalidad === 'teoria' ? 'Teoría' : 'Práctica';
+        const titulo = `${curso.nombre} (${modalidad})`;
+        
+        let descripcion = `Materia: ${curso.nombre}\\nModalidad: ${modalidad}`;
+        if (session.aula) descripcion += `\\nAula: ${session.aula}`;
+        if (session.docente) descripcion += `\\nDocente: ${session.docente}`;
+        if (session.numeroComision) descripcion += `\\nComisión: ${session.numeroComision}`;
+        
+        // Escapar caracteres
+        const tituloEscapado = titulo.replace(/[,;\\]/g, '\\$&');
+        const descripcionEscapada = descripcion.replace(/[,;\\]/g, '\\$&');
 
         icsContent += "BEGIN:VEVENT\n";
-        icsContent += `RRULE:FREQ=WEEKLY;BYDAY=${diaNombre};UNTIL=${endLimit}T235959Z\n`;
         icsContent += `DTSTART;TZID=America/Argentina/Buenos_Aires:${startLimit}T${startH}\n`;
         icsContent += `DTEND;TZID=America/Argentina/Buenos_Aires:${startLimit}T${endH}\n`;
-        icsContent += `SUMMARY:${nombreActividad}\n`;
-        icsContent += `DESCRIPTION:${session.type || ''}\n`;
-        icsContent += `UID:${session.id || Math.random()}@agenda\n`;
+        icsContent += `RRULE:FREQ=WEEKLY;BYDAY=${diaNombre};UNTIL=${endLimit}T235959Z\n`;
+        icsContent += `SUMMARY:${tituloEscapado}\n`;
+        icsContent += `DESCRIPTION:${descripcionEscapada}\n`;
+        if (session.aula) {
+          icsContent += `LOCATION:${session.aula.replace(/[,;\\]/g, '\\$&')}\n`;
+        }
+        icsContent += `UID:${session.id}@agenda-universitaria\n`;
+        icsContent += `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z\n`;
+        icsContent += "STATUS:CONFIRMED\n";
+        icsContent += "END:VEVENT\n";
+      });
+    }
+
+    // 3. ACTIVIDADES EXTRACURRICULARES
+    if (data.extracurricularSessions && data.extracurricularSessions.length > 0) {
+      const diasSemana = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+
+      data.extracurricularSessions.forEach(session => {
+        const diaNombre = diasSemana[session.dayOfWeek];
+        
+        // Usar fecha de inicio específica de la actividad o la del término
+        let startDate = session.startDate ? new Date(session.startDate + 'T00:00:00') : new Date(termStart);
+        const sessionDay = session.dayOfWeek === 0 ? 7 : session.dayOfWeek;
+        const currentDay = startDate.getDay() === 0 ? 7 : startDate.getDay();
+        
+        // Avanzar hasta el primer día que coincida
+        let daysToAdd = sessionDay - currentDay;
+        if (daysToAdd < 0) daysToAdd += 7;
+        startDate.setDate(startDate.getDate() + daysToAdd);
+        
+        const startLimit = startDate.toISOString().split('T')[0].replace(/-/g, '');
+        const endLimit = termEnd.replace(/-/g, '');
+        
+        const startH = (session.startTime || "08:00").replace(':', '') + "00";
+        const endH = (session.endTime || "10:00").replace(':', '') + "00";
+
+        // Construir título según tipo de actividad
+        let titulo = getActivityTitle(session);
+        let descripcion = `Actividad: ${titulo}`;
+        
+        if (session.kind === 'gym' && session.metadata.muscleGroups?.length > 0) {
+          descripcion += `\\nGrupos: ${session.metadata.muscleGroups.join(', ')}`;
+        }
+        if (session.kind === 'clase_tenis') {
+          if (session.metadata.studentLevel) descripcion += `\\nNivel: ${session.metadata.studentLevel}`;
+          if (session.metadata.modality) descripcion += `\\nModalidad: ${session.metadata.modality}`;
+        }
+        if (session.metadata.note) {
+          descripcion += `\\nNotas: ${session.metadata.note}`;
+        }
+        
+        // Escapar caracteres
+        const tituloEscapado = titulo.replace(/[,;\\]/g, '\\$&');
+        const descripcionEscapada = descripcion.replace(/[,;\\]/g, '\\$&');
+
+        icsContent += "BEGIN:VEVENT\n";
+        icsContent += `DTSTART;TZID=America/Argentina/Buenos_Aires:${startLimit}T${startH}\n`;
+        icsContent += `DTEND;TZID=America/Argentina/Buenos_Aires:${startLimit}T${endH}\n`;
+        icsContent += `RRULE:FREQ=WEEKLY;BYDAY=${diaNombre};UNTIL=${endLimit}T235959Z\n`;
+        icsContent += `SUMMARY:${tituloEscapado}\n`;
+        icsContent += `DESCRIPTION:${descripcionEscapada}\n`;
+        icsContent += `UID:${session.id}@agenda-universitaria\n`;
+        icsContent += `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z\n`;
+        icsContent += "STATUS:CONFIRMED\n";
         icsContent += "END:VEVENT\n";
       });
     }
@@ -3361,10 +3460,11 @@
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Agenda_IMPORTAR.ics`;
+    link.download = `Agenda-Universitaria.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
       // ============ VISTA SEMANA ============
 
