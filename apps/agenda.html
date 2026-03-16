@@ -3291,14 +3291,16 @@
      const exportAgendaToICS = (data) => {
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Mi Agenda Universitaria//ES\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n";
 
-    // 1. EXÁMENES Y EVENTOS ÚNICOS (del array data.events)
+    // 1. EXÁMENES Y EVENTOS ÚNICOS
     if (data.events && data.events.length > 0) {
       data.events.forEach(ev => {
-        // En tu JSON la fecha está en 'dateISO'
         const dateSource = ev.dateISO || ev.date; 
         if (dateSource) {
           const formattedDate = dateSource.split('T')[0].replace(/-/g, '');
-          const titulo = ev.examType || ev.title || ev.eventualType || "Evento";
+          // Buscamos el nombre de la materia para el examen
+          const curso = data.courses?.find(c => c.id === ev.courseId);
+          const nombreMateria = curso ? curso.name : "";
+          const titulo = `${nombreMateria} (${ev.examType || ev.eventualType || 'Examen'})`.trim();
           
           icsContent += "BEGIN:VEVENT\n";
           icsContent += `DTSTART;VALUE=DATE:${formattedDate}\n`;
@@ -3311,26 +3313,29 @@
       });
     }
 
-    // 2. CLASES SEMANALES (del array data.weeklySessions)
+    // 2. CLASES SEMANALES (Tenis, Gimnasio, Materias)
     if (data.weeklySessions && data.weeklySessions.length > 0) {
       const diasSemana = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
-      // Fecha de inicio y fin del cuatrimestre para limitar la repetición
       const startLimit = data.term.startDate.replace(/-/g, '');
       const endLimit = data.term.endDate.replace(/-/g, '');
 
       data.weeklySessions.forEach(session => {
         const diaNombre = diasSemana[session.dayOfWeek];
-        // Formateamos horas (de "08:00" a "080000")
         const startH = session.startTime.replace(':', '') + "00";
         const endH = session.endTime.replace(':', '') + "00";
 
+        // LÓGICA PARA EL NOMBRE: 
+        // 1. Si tiene courseId, buscamos el nombre de la materia.
+        // 2. Si no (como Tenis), usamos session.title.
+        const curso = data.courses?.find(c => c.id === session.courseId);
+        const tituloFinal = curso ? curso.name : (session.title || "Actividad");
+
         icsContent += "BEGIN:VEVENT\n";
-        // RRULE hace que se repita semanalmente (Weekly) hasta la fecha de fin de cursada
         icsContent += `RRULE:FREQ=WEEKLY;BYDAY=${diaNombre};UNTIL=${endLimit}T235959Z\n`;
         icsContent += `DTSTART;TZID=America/Argentina/Buenos_Aires:${startLimit}T${startH}\n`;
         icsContent += `DTEND;TZID=America/Argentina/Buenos_Aires:${startLimit}T${endH}\n`;
-        icsContent += `SUMMARY:${session.title}\n`;
-        icsContent += `DESCRIPTION:${session.type || ''} - ${session.metadata?.studentLevel || ''}\n`;
+        icsContent += `SUMMARY:${tituloFinal}\n`;
+        icsContent += `DESCRIPTION:${session.type || ''} ${session.metadata?.studentLevel || ''}\n`;
         icsContent += `UID:${session.id}@agenda\n`;
         icsContent += "END:VEVENT\n";
       });
@@ -3338,12 +3343,11 @@
 
     icsContent += "END:VCALENDAR";
 
-    // Generar descarga
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Agenda_Completa_${new Date().toISOString().split('T')[0]}.ics`;
+    link.download = `Agenda_Corregida_${new Date().toISOString().split('T')[0]}.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
