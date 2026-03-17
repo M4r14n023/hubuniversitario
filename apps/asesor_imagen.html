@@ -333,35 +333,35 @@
   const storage = getStorage(app);
   const COLLECTION_NAME = "sync-asesor"; // Tu nueva colección basada en tus reglas
 
-  // 2. Base Data (Prendas Iniciales Quemadas)
+// 2. Base Data (Prendas Iniciales Quemadas)
   const BASE_GARMENTS = [
-    {id:'3643',file:'ropa/IMG_3643.jpeg',type:'bottom',name:'Chino Beige',color:'#d4c5a9',isBase:true},
-    {id:'3644',file:'ropa/IMG_3644.jpeg',type:'bottom',name:'Jean Sage',color:'#7a8c7e',isBase:true},
-    {id:'3645',file:'ropa/IMG_3645.jpeg',type:'bottom',name:'Jean Azul Oscuro',color:'#2c3e50',isBase:true},
-    {id:'3646',file:'ropa/IMG_3646.jpeg',type:'bottom',name:'Chino Navy',color:'#354255',isBase:true},
-    {id:'3647',file:'ropa/IMG_3647.jpeg',type:'bottom',name:'Chino Olive',color:'#5a6642',isBase:true},
-    {id:'3648',file:'ropa/IMG_3648.jpeg',type:'bottom',name:'Chino Negro',color:'#1a1a18',isBase:true},
-    {id:'3649',file:'ropa/IMG_3649.jpeg',type:'top',name:'Remera Olive OS',color:'#4a5240',isBase:true},
-    {id:'3650',file:'ropa/IMG_3650.jpeg',type:'top',name:'Remera ML Marrón',color:'#5c4033',isBase:true},
-    {id:'3651',file:'ropa/IMG_3651.jpeg',type:'top',name:'Remera Studio Marrón',color:'#4a2c2a',isBase:true},
-    {id:'3652',file:'ropa/IMG_3652.jpeg',type:'top',name:'Remera Negra',color:'#1a1a18',isBase:true},
-    {id:'3653',file:'ropa/IMG_3653.jpeg',type:'shirt',name:'Camisa Rayas Gris',color:'#a0a0a0',isBase:true},
-    {id:'3654',file:'ropa/IMG_3654.jpeg',type:'shirt',name:'Camisa Cuadros Lacoste',color:'#c0392b',isBase:true},
-    {id:'3655',file:'ropa/IMG_3655.jpeg',type:'shirt',name:'Camisa Rosa MC Lacoste',color:'#f4c2c2',isBase:true},
-    {id:'3656',file:'ropa/IMG_3656.jpeg',type:'shirt',name:'Camisa Off-White Lacoste',color:'#faf0e6',isBase:true},
-    {id:'3657',file:'ropa/IMG_3657.jpeg',type:'shirt',name:'Camisa Puntos Navy',color:'#e8e8f0',isBase:true},
-    {id:'3658',file:'ropa/IMG_3658.jpeg',type:'shirt',name:'Camisa Rosa ML',color:'#f9c4d0',isBase:true},
-    {id:'3659',file:'ropa/IMG_3659.jpeg',type:'shirt',name:'Camisa Navy ML',color:'#2c3e6e',isBase:true},
+    {id:'3643',file:'../ropa/IMG_3643.jpeg',type:'bottom',name:'Chino Beige',color:'#d4c5a9',isBase:true},
+    {id:'3644',file:'../ropa/IMG_3644.jpeg',type:'bottom',name:'Jean Sage',color:'#7a8c7e',isBase:true},
+    {id:'3645',file:'../ropa/IMG_3645.jpeg',type:'bottom',name:'Jean Azul Oscuro',color:'#2c3e50',isBase:true},
+    {id:'3646',file:'../ropa/IMG_3646.jpeg',type:'bottom',name:'Chino Navy',color:'#354255',isBase:true},
+    {id:'3647',file:'../ropa/IMG_3647.jpeg',type:'bottom',name:'Chino Olive',color:'#5a6642',isBase:true},
+    {id:'3648',file:'../ropa/IMG_3648.jpeg',type:'bottom',name:'Chino Negro',color:'#1a1a18',isBase:true},
+    {id:'3649',file:'../ropa/IMG_3649.jpeg',type:'top',name:'Remera Olive OS',color:'#4a5240',isBase:true},
+    {id:'3650',file:'../ropa/IMG_3650.jpeg',type:'top',name:'Remera ML Marrón',color:'#5c4033',isBase:true},
+    {id:'3651',file:'../ropa/IMG_3651.jpeg',type:'top',name:'Remera Studio Marrón',color:'#4a2c2a',isBase:true},
+    {id:'3652',file:'../ropa/IMG_3652.jpeg',type:'top',name:'Remera Negra',color:'#1a1a18',isBase:true},
+    {id:'3653',file:'../ropa/IMG_3653.jpeg',type:'shirt',name:'Camisa Rayas Gris',color:'#a0a0a0',isBase:true},
+    {id:'3654',file:'../ropa/IMG_3654.jpeg',type:'shirt',name:'Camisa Cuadros Lacoste',color:'#c0392b',isBase:true},
+    {id:'3655',file:'../ropa/IMG_3655.jpeg',type:'shirt',name:'Camisa Rosa MC Lacoste',color:'#f4c2c2',isBase:true},
+    {id:'3656',file:'../ropa/IMG_3656.jpeg',type:'shirt',name:'Camisa Off-White Lacoste',color:'#faf0e6',isBase:true},
+    {id:'3657',file:'../ropa/IMG_3657.jpeg',type:'shirt',name:'Camisa Puntos Navy',color:'#e8e8f0',isBase:true},
+    {id:'3658',file:'../ropa/IMG_3658.jpeg',type:'shirt',name:'Camisa Rosa ML',color:'#f9c4d0',isBase:true},
+    {id:'3659',file:'../ropa/IMG_3659.jpeg',type:'shirt',name:'Camisa Navy ML',color:'#2c3e6e',isBase:true},
   ];
   const BASE_BELTS = [
-    {id:'belt-beige',file:'ropa/IMG_3660.jpeg',name:'Cinto Beige/Arena',color:'#c8b882',sub:'Hebilla plateada · Más versátil',isBase:true},
-    {id:'belt-black',file:'ropa/IMG_3660.jpeg',name:'Cinto Negro',color:'#1a1a18',sub:'Hebilla plateada · Formal/urban',isBase:true},
-    {id:'belt-brown',file:'ropa/IMG_3660.jpeg',name:'Cinto Marrón Cuero',color:'#7a4a28',sub:'Hebilla dorada · Clásico',isBase:true},
+    {id:'belt-beige',file:'../ropa/IMG_3660.jpeg',name:'Cinto Beige/Arena',color:'#c8b882',sub:'Hebilla plateada · Más versátil',isBase:true},
+    {id:'belt-black',file:'../ropa/IMG_3660.jpeg',name:'Cinto Negro',color:'#1a1a18',sub:'Hebilla plateada · Formal/urban',isBase:true},
+    {id:'belt-brown',file:'../ropa/IMG_3660.jpeg',name:'Cinto Marrón Cuero',color:'#7a4a28',sub:'Hebilla dorada · Clásico',isBase:true},
   ];
   const BASE_SHOES = [
-    {id:'shoe-lacoste',file:'ropa/IMG_3662.jpeg',name:'Zapatillas Lacoste',color:'#e8e0d0',sub:'Crema · Casual relajado',formality:1,isBase:true},
-    {id:'shoe-brooks-w',file:'ropa/IMG_3663.jpeg',name:'Zapatillas Brooks',color:'#f0f0f0',sub:'Blanco cuero · Casual-elegante',formality:2,isBase:true},
-    {id:'shoe-brooks-b',file:'ropa/IMG_3664.jpeg',name:'Zapatos Brooks Marrones',color:'#3a2418',sub:'Marrón oscuro · Smart casual',formality:3,isBase:true},
+    {id:'shoe-lacoste',file:'../ropa/IMG_3662.jpeg',name:'Zapatillas Lacoste',color:'#e8e0d0',sub:'Crema · Casual relajado',formality:1,isBase:true},
+    {id:'shoe-brooks-w',file:'../ropa/IMG_3663.jpeg',name:'Zapatillas Brooks',color:'#f0f0f0',sub:'Blanco cuero · Casual-elegante',formality:2,isBase:true},
+    {id:'shoe-brooks-b',file:'../ropa/IMG_3664.jpeg',name:'Zapatos Brooks Marrones',color:'#3a2418',sub:'Marrón oscuro · Smart casual',formality:3,isBase:true},
   ];
   const RULES = {
     '3643':{tops:['3656','3655','3654','3653','3649','3650','3651','3652','3657','3658'],belt:'belt-beige',shoe:'shoe-lacoste',tip:'El beige combina con todo. Camisas Lacoste rosa u off-white son su mejor pareja. Cinto beige y Lacoste crema para look veraniego.'},
