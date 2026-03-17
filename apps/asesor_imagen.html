@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asesor de Imagen</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f5f0e8; --warm-white: #faf8f4; --ink: #1a1a18; --muted: #6b6560;
+    --accent: #8b6f47; --accent-light: #c4a882; --border: #e2d9cc;
+    --selected: #3d2b1a; --card-bg: #ffffff; --tag-bg: #ede8e0; --danger: #8b3a3a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Mono', monospace; background: var(--cream); color: var(--ink); min-height: 100vh; }
+
+  header { background: var(--ink); color: var(--cream); padding: 22px 40px; display: flex; align-items: center; justify-content: space-between; }
+  .header-left { display: flex; align-items: baseline; gap: 18px; }
+  header h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.9rem; font-weight: 300; letter-spacing: 0.04em; }
+  .subtitle { font-size: 0.62rem; opacity: 0.4; letter-spacing: 0.14em; text-transform: uppercase; }
+  .header-add-btn {
+    font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 9px 18px; border: 1px solid rgba(255,255,255,0.25); background: transparent;
+    color: var(--cream); border-radius: 3px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+  }
+  .header-add-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
+  .header-add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  nav { background: var(--warm-white); border-bottom: 1px solid var(--border); display: flex; padding: 0 40px; }
+  nav button {
+    font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 14px 16px; border: none; background: none; cursor: pointer; color: var(--muted);
+    border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap;
+  }
+  nav button.active { color: var(--ink); border-bottom-color: var(--accent); }
+  nav button:hover { color: var(--ink); }
+
+  main { padding: 32px 40px; max-width: 1160px; margin: 0 auto; }
+  .section-title { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 300; margin-bottom: 5px; }
+  .section-sub { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 24px; }
+
+  .filter-row { display: flex; gap: 7px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .filter-btn {
+    font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 6px 12px; border: 1px solid var(--border); background: var(--warm-white);
+    color: var(--muted); border-radius: 2px; cursor: pointer; transition: all 0.15s;
+  }
+  .filter-btn.active, .filter-btn:hover { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+  .item-count { font-size: 0.6rem; color: var(--muted); margin-left: auto; }
+
+  .wardrobe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(152px, 1fr)); gap: 13px; }
+  .garment-card {
+    background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 4px;
+    overflow: hidden; position: relative; transition: all 0.2s;
+  }
+  .garment-card:hover { border-color: var(--accent-light); transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.07); }
+  .garment-card:hover .card-delete { opacity: 1; }
+  .card-delete {
+    position: absolute; top: 7px; right: 7px; width: 22px; height: 22px;
+    background: rgba(26,26,24,0.75); color: white; border: none; border-radius: 50%;
+    font-size: 11px; cursor: pointer; display: grid; place-items: center; opacity: 0; transition: opacity 0.2s; z-index: 2;
+  }
+  .card-delete:hover { background: var(--danger); }
+  .garment-card img { width: 100%; height: 168px; object-fit: cover; display: block; background: var(--tag-bg); }
+  .garment-info { padding: 9px 12px; border-top: 1px solid var(--border); }
+  .garment-type { font-size: 0.57rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); margin-bottom: 3px; }
+  .garment-name { font-size: 0.7rem; color: var(--ink); line-height: 1.3; }
+  .color-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; border: 1px solid rgba(0,0,0,0.1); vertical-align: middle; }
+  .new-badge { position: absolute; top: 8px; left: 8px; background: var(--accent); color: white; font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; }
+
+  .accessories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .acc-card { background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 4px; overflow: hidden; position: relative; }
+  .acc-card:hover .card-delete { opacity: 1; }
+  .acc-card img { width: 100%; height: 130px; object-fit: cover; display: block; background: var(--tag-bg); }
+  .acc-info { padding: 10px 14px; }
+  .acc-type { font-size: 0.57rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); margin-bottom: 3px; }
+  .acc-name { font-size: 0.73rem; color: var(--ink); }
+  .acc-sub { font-size: 0.6rem; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+
+  .builder-layout { display: grid; grid-template-columns: 1fr 308px; gap: 32px; align-items: start; }
+  .week-grid { display: grid; gap: 13px; }
+  .day-card { background: var(--warm-white); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .day-header { padding: 12px 18px; background: var(--card-bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .day-name { font-family: 'Cormorant Garamond', serif; font-size: 1rem; font-weight: 600; }
+  .day-date { font-size: 0.6rem; color: var(--muted); letter-spacing: 0.08em; }
+  .day-slots { padding: 13px 18px; display: flex; gap: 9px; align-items: flex-start; flex-wrap: wrap; }
+  .slot { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .slot-label { font-size: 0.52rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .slot-img { width: 62px; height: 72px; object-fit: cover; border: 1px solid var(--border); border-radius: 3px; background: var(--tag-bg); }
+  .slot-acc-img { width: 50px; height: 38px; object-fit: cover; border: 1px solid var(--border); border-radius: 3px; background: var(--tag-bg); }
+  .slot-name { font-size: 0.5rem; color: var(--muted); max-width: 64px; text-align: center; line-height: 1.3; }
+  .plus-sep { font-size: 1rem; color: var(--border); align-self: center; margin-top: 12px; }
+  .outfit-tip { padding: 8px 18px 12px; font-size: 0.64rem; color: var(--muted); border-top: 1px solid var(--border); line-height: 1.5; font-style: italic; }
+
+  .side-panel { position: sticky; top: 18px; }
+  .panel-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+  .panel-header { background: var(--ink); color: var(--cream); padding: 12px 16px; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; }
+  .panel-body { padding: 13px 16px; }
+  .avail-section { margin-bottom: 14px; }
+  .avail-title { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 7px; }
+  .avail-list { display: flex; flex-direction: column; gap: 5px; }
+  .avail-item {
+    display: flex; align-items: center; gap: 7px; padding: 6px 8px;
+    border: 1px solid var(--border); border-radius: 3px; cursor: pointer;
+    background: var(--warm-white); transition: all 0.15s; font-size: 0.63rem;
+  }
+  .avail-item.checked { background: var(--tag-bg); border-color: var(--accent-light); }
+  .avail-item img { width: 28px; height: 28px; object-fit: cover; border-radius: 2px; flex-shrink: 0; background: var(--tag-bg); }
+  .avail-check { width: 13px; height: 13px; border: 1.5px solid var(--border); border-radius: 2px; flex-shrink: 0; display: grid; place-items: center; font-size: 8px; margin-left: auto; }
+  .avail-item.checked .avail-check { background: var(--accent); border-color: var(--accent); color: white; }
+  .generate-btn {
+    width: 100%; padding: 14px; background: var(--accent); color: white; border: none;
+    font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.12em;
+    text-transform: uppercase; cursor: pointer; border-radius: 3px; transition: all 0.2s; margin-top: 4px;
+  }
+  .generate-btn:hover { background: var(--selected); }
+  .generate-btn:active { transform: scale(0.98); }
+
+  .rule-box { background: var(--card-bg); border: 1px solid var(--border); border-left: 3px solid var(--accent-light); padding: 11px 15px; margin-bottom: 9px; font-size: 0.67rem; line-height: 1.55; color: var(--muted); border-radius: 0 3px 3px 0; }
+  .rule-box strong { color: var(--ink); }
+  .tag { display: inline-block; background: var(--tag-bg); color: var(--muted); font-size: 0.57rem; padding: 2px 7px; border-radius: 2px; letter-spacing: 0.07em; text-transform: uppercase; margin: 2px; }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(10,9,8,0.6); z-index: 200; display: none; place-items: center; backdrop-filter: blur(3px); }
+  .modal-overlay.open { display: grid; }
+  .modal { background: var(--warm-white); width: 92vw; max-width: 540px; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.25); animation: slideUp 0.22s ease; }
+  @keyframes slideUp { from { transform: translateY(18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-header { background: var(--ink); color: var(--cream); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-weight: 300; }
+  .modal-close { background: none; border: none; color: var(--cream); font-size: 1.3rem; cursor: pointer; opacity: 0.6; padding: 0 4px; }
+  .modal-close:hover { opacity: 1; }
+  .modal-body { padding: 22px; overflow-y: auto; max-height: 65vh; }
+
+  .drop-zone { border: 2px dashed var(--border); border-radius: 5px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; margin-bottom: 18px; }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); background: rgba(139,111,71,0.04); }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-icon { font-size: 1.8rem; margin-bottom: 7px; opacity: 0.4; }
+  .drop-label { font-size: 0.7rem; color: var(--muted); }
+  .drop-label strong { color: var(--accent); }
+  .preview-img { width: 100%; max-height: 190px; object-fit: contain; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 16px; display: none; }
+
+  .form-row { margin-bottom: 13px; }
+  .form-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 5px; display: block; }
+  .form-input, .form-select { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 3px; font-family: 'DM Mono', monospace; font-size: 0.72rem; background: var(--card-bg); color: var(--ink); transition: border-color 0.15s; }
+  .form-input:focus, .form-select:focus { outline: none; border-color: var(--accent-light); }
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 13px; }
+  .color-row { display: flex; gap: 8px; align-items: center; }
+  .color-preview { width: 30px; height: 30px; border-radius: 3px; border: 1px solid var(--border); flex-shrink: 0; cursor: pointer; }
+
+  .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; background: var(--card-bg); }
+  .btn-cancel { font-family: 'DM Mono', monospace; font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; border: 1px solid var(--border); background: none; color: var(--muted); border-radius: 3px; cursor: pointer; }
+  .btn-cancel:hover { border-color: var(--ink); color: var(--ink); }
+  .btn-save { font-family: 'DM Mono', monospace; font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 20px; border: none; background: var(--accent); color: white; border-radius: 3px; cursor: pointer; transition: background 0.2s; }
+  .btn-save:hover { background: var(--selected); }
+  .btn-save:disabled { background: var(--muted); cursor: not-allowed; }
+
+  .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--ink); color: var(--cream); padding: 11px 22px; border-radius: 4px; font-size: 0.68rem; letter-spacing: 0.06em; opacity: 0; transition: all 0.3s; z-index: 300; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .hidden { display: none !important; }
+  @media (max-width: 800px) {
+    main { padding: 18px; } .builder-layout { grid-template-columns: 1fr; }
+    header { padding: 16px 18px; } nav { padding: 0 14px; overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Asesor de Imagen</h1>
+    <span class="subtitle">Guardarropa Personal</span>
+  </div>
+  <button class="header-add-btn" onclick="window.openAddModal()">
+    <span style="font-size:1.1rem;line-height:1">+</span> Agregar prenda
+  </button>
+</header>
+
+<nav>
+  <button class="active" onclick="window.showTab('guardarropa')">Guardarropa</button>
+  <button onclick="window.showTab('armador')">Armador Semanal</button>
+  <button onclick="window.showTab('reglas')">Reglas de Estilo</button>
+</nav>
+
+<main>
+  <div id="tab-guardarropa">
+    <p class="section-title">Mi Guardarropa</p>
+    <p class="section-sub" id="wardrobe-subtitle">Cargando...</p>
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="window.filterGarments('all',this)">Todas</button>
+      <button class="filter-btn" onclick="window.filterGarments('bottom',this)">Pantalones</button>
+      <button class="filter-btn" onclick="window.filterGarments('top',this)">Remeras</button>
+      <button class="filter-btn" onclick="window.filterGarments('shirt',this)">Camisas</button>
+      <button class="filter-btn" onclick="window.filterGarments('acc',this)">Accesorios</button>
+      <span class="item-count" id="item-count"></span>
+    </div>
+    <div id="wardrobe-section"><div class="wardrobe-grid" id="wardrobe-grid"></div></div>
+    <div id="acc-section" class="hidden">
+      <p class="section-title" style="font-size:1.1rem;margin-bottom:12px">Cintos</p>
+      <div class="accessories-grid" id="belts-grid"></div>
+      <p class="section-title" style="font-size:1.1rem;margin-bottom:12px;margin-top:22px">Calzado</p>
+      <div class="accessories-grid" id="shoes-grid"></div>
+    </div>
+  </div>
+
+  <div id="tab-armador" class="hidden">
+    <div class="builder-layout">
+      <div>
+        <p class="section-title">Semana de Outfits</p>
+        <p class="section-sub">Marcá qué tenés disponible y generá los 5 looks</p>
+        <div class="week-grid" id="week-grid">
+          <div style="padding:30px;text-align:center;color:var(--muted);font-size:0.7rem;border:1.5px dashed var(--border);border-radius:4px;">
+            Seleccioná prendas disponibles → "Generar semana"
+          </div>
+        </div>
+      </div>
+      <div class="side-panel">
+        <div class="panel-card">
+          <div class="panel-header">Prendas disponibles</div>
+          <div class="panel-body">
+            <div class="avail-section"><div class="avail-title">Pantalones</div><div class="avail-list" id="avail-bottoms"></div></div>
+            <div class="avail-section"><div class="avail-title">Partes de arriba</div><div class="avail-list" id="avail-tops"></div></div>
+          </div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-header">Accesorios disponibles</div>
+          <div class="panel-body">
+            <div class="avail-section"><div class="avail-title">Cintos</div><div class="avail-list" id="avail-belts"></div></div>
+            <div class="avail-section"><div class="avail-title">Calzado</div><div class="avail-list" id="avail-shoes"></div></div>
+            <button class="generate-btn" onclick="window.generateWeek()">✦ Generar semana</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-reglas" class="hidden">
+    <p class="section-title">Reglas de Estilo</p>
+    <p class="section-sub">Principios aplicados al armar cada outfit</p>
+    <div style="max-width:660px;display:grid;gap:9px">
+      <div class="rule-box"><strong>Neutrales primero.</strong> Tus pantalones beige, sage y negro son la base universal. Cuando el pantalón tiene carácter (olive, navy), la parte de arriba debe ser más contenida.</div>
+      <div class="rule-box"><strong>Regla del contraste.</strong> Pantalón oscuro → top claro. Pantalón claro → top oscuro o medio. Un look monocromático puede funcionar pero necesita variación de textura.</div>
+      <div class="rule-box"><strong>Paleta earthy es siempre segura.</strong> Marrón + beige, olive + marrón, navy + off-white, sage + negro: todos tus colores son análogos y se combinan solos.</div>
+      <div class="rule-box"><strong>Camisas con estampado = protagonista.</strong> La Lacoste cuadros y la camisa de rayas piden pantalón liso y neutro. Nunca dos estampados juntos.</div>
+      <div class="rule-box"><strong>Cinto coordina con calzado.</strong> Cinto marrón → zapatos Brooks marrones. Cinto negro → calzado oscuro. Cinto beige → zapatillas blancas o crema. El cinto beige es el más versátil.</div>
+      <div class="rule-box"><strong>Calzado según formalidad.</strong> Brooks marrones = smart casual. Zapatillas Brooks blancas = casual limpio. Lacoste crema = relajado/veraniego.</div>
+      <div class="rule-box"><strong>Camisas como outer layer.</strong> Manga corta abierta sobre remera neutra = look universitario logrado sin esfuerzo.</div>
+      <div class="rule-box"><strong>Tu paleta:</strong>
+        <span class="tag" style="background:#d4c5a9;color:#3d2b1a">Beige</span>
+        <span class="tag" style="background:#7a8c7e;color:white">Sage</span>
+        <span class="tag" style="background:#2c3e50;color:white">Navy</span>
+        <span class="tag" style="background:#5a6642;color:white">Olive</span>
+        <span class="tag" style="background:#1a1a18;color:white">Negro</span>
+        <span class="tag" style="background:#5c4033;color:white">Marrón</span>
+        <span class="tag" style="background:#f4c2c2">Rosa</span>
+        <span class="tag" style="background:#faf0e6;color:#3d2b1a">Off-white</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Agregar nueva prenda</h3>
+      <button class="modal-close" onclick="window.closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="drop-zone" id="drop-zone" ondragover="window.handleDragOver(event)" ondragleave="window.handleDragLeave()" ondrop="window.handleDrop(event)">
+        <input type="file" id="file-input" accept="image/*" onchange="window.handleFileSelect(event)">
+        <div class="drop-icon">📷</div>
+        <div class="drop-label">Arrastrá la foto o <strong>hacé click para elegir</strong></div>
+        <div style="font-size:0.57rem;color:var(--muted);margin-top:5px">JPG · PNG · HEIC desde tu cámara</div>
+      </div>
+      <img id="preview-img" class="preview-img" alt="Preview">
+      <div class="form-row">
+        <label class="form-label">Nombre *</label>
+        <input type="text" id="field-name" class="form-input" placeholder="Ej: Jean negro slim, Campera vaquera...">
+      </div>
+      <div class="form-row-2">
+        <div>
+          <label class="form-label">Categoría *</label>
+          <select id="field-type" class="form-select">
+            <option value="">— Elegir —</option>
+            <option value="top">Remera / Top</option>
+            <option value="shirt">Camisa</option>
+            <option value="bottom">Pantalón / Short</option>
+            <option value="outer">Campera / Outer</option>
+            <option value="belt">Cinto</option>
+            <option value="shoe">Calzado</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Color</label>
+          <div class="color-row">
+            <div class="color-preview" id="color-preview" style="background:#8b6f47" onclick="document.getElementById('color-picker').click()"></div>
+            <input type="color" id="color-picker" value="#8b6f47" style="position:absolute;opacity:0;pointer-events:none" oninput="window.updateColorPreview(this.value)">
+            <input type="text" id="field-colorname" class="form-input" placeholder="Ej: Azul marino" style="flex:1">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notas (opcional)</label>
+        <input type="text" id="field-notes" class="form-input" placeholder="Ej: Slim fit, Marca Zara, Con hebilla dorada...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="window.closeModal()">Cancelar</button>
+      <button class="btn-save" id="btn-save" onclick="window.saveGarment()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+  // 1. Configuración de Firebase
+  const firebaseConfig = {
+      apiKey: "AIzaSyCF7n8W4aKKEeK7T_mUhO5MJLuTeP-YQT8",
+      authDomain: "hub-universitario.firebaseapp.com",
+      projectId: "hub-universitario",
+      storageBucket: "hub-universitario.firebasestorage.app",
+      messagingSenderId: "734572060791",
+      appId: "1:734572060791:web:75bf6280970a60a9906672"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+  const COLLECTION_NAME = "sync-asesor"; // Tu nueva colección basada en tus reglas
+
+  // 2. Base Data (Prendas Iniciales Quemadas)
+  const BASE_GARMENTS = [
+    {id:'3643',file:'ropa/IMG_3643.jpg',type:'bottom',name:'Chino Beige',color:'#d4c5a9',isBase:true},
+    {id:'3644',file:'ropa/IMG_3644.jpg',type:'bottom',name:'Jean Sage',color:'#7a8c7e',isBase:true},
+    {id:'3645',file:'ropa/IMG_3645.jpg',type:'bottom',name:'Jean Azul Oscuro',color:'#2c3e50',isBase:true},
+    {id:'3646',file:'ropa/IMG_3646.jpg',type:'bottom',name:'Chino Navy',color:'#354255',isBase:true},
+    {id:'3647',file:'ropa/IMG_3647.jpg',type:'bottom',name:'Chino Olive',color:'#5a6642',isBase:true},
+    {id:'3648',file:'ropa/IMG_3648.jpg',type:'bottom',name:'Chino Negro',color:'#1a1a18',isBase:true},
+    {id:'3649',file:'ropa/IMG_3649.jpg',type:'top',name:'Remera Olive OS',color:'#4a5240',isBase:true},
+    {id:'3650',file:'ropa/IMG_3650.jpg',type:'top',name:'Remera ML Marrón',color:'#5c4033',isBase:true},
+    {id:'3651',file:'ropa/IMG_3651.jpg',type:'top',name:'Remera Studio Marrón',color:'#4a2c2a',isBase:true},
+    {id:'3652',file:'ropa/IMG_3652.jpg',type:'top',name:'Remera Negra',color:'#1a1a18',isBase:true},
+    {id:'3653',file:'ropa/IMG_3653.jpg',type:'shirt',name:'Camisa Rayas Gris',color:'#a0a0a0',isBase:true},
+    {id:'3654',file:'ropa/IMG_3654.jpg',type:'shirt',name:'Camisa Cuadros Lacoste',color:'#c0392b',isBase:true},
+    {id:'3655',file:'ropa/IMG_3655.jpg',type:'shirt',name:'Camisa Rosa MC Lacoste',color:'#f4c2c2',isBase:true},
+    {id:'3656',file:'ropa/IMG_3656.jpg',type:'shirt',name:'Camisa Off-White Lacoste',color:'#faf0e6',isBase:true},
+    {id:'3657',file:'ropa/IMG_3657.jpg',type:'shirt',name:'Camisa Puntos Navy',color:'#e8e8f0',isBase:true},
+    {id:'3658',file:'ropa/IMG_3658.jpg',type:'shirt',name:'Camisa Rosa ML',color:'#f9c4d0',isBase:true},
+    {id:'3659',file:'ropa/IMG_3659.jpg',type:'shirt',name:'Camisa Navy ML',color:'#2c3e6e',isBase:true},
+  ];
+  const BASE_BELTS = [
+    {id:'belt-beige',file:'ropa/IMG_3660.jpg',name:'Cinto Beige/Arena',color:'#c8b882',sub:'Hebilla plateada · Más versátil',isBase:true},
+    {id:'belt-black',file:'ropa/IMG_3660.jpg',name:'Cinto Negro',color:'#1a1a18',sub:'Hebilla plateada · Formal/urban',isBase:true},
+    {id:'belt-brown',file:'ropa/IMG_3660.jpg',name:'Cinto Marrón Cuero',color:'#7a4a28',sub:'Hebilla dorada · Clásico',isBase:true},
+  ];
+  const BASE_SHOES = [
+    {id:'shoe-lacoste',file:'ropa/IMG_3662.jpg',name:'Zapatillas Lacoste',color:'#e8e0d0',sub:'Crema · Casual relajado',formality:1,isBase:true},
+    {id:'shoe-brooks-w',file:'ropa/IMG_3663.jpg',name:'Zapatillas Brooks',color:'#f0f0f0',sub:'Blanco cuero · Casual-elegante',formality:2,isBase:true},
+    {id:'shoe-brooks-b',file:'ropa/IMG_3664.jpg',name:'Zapatos Brooks Marrones',color:'#3a2418',sub:'Marrón oscuro · Smart casual',formality:3,isBase:true},
+  ];
+  const RULES = {
+    '3643':{tops:['3656','3655','3654','3653','3649','3650','3651','3652','3657','3658'],belt:'belt-beige',shoe:'shoe-lacoste',tip:'El beige combina con todo. Camisas Lacoste rosa u off-white son su mejor pareja. Cinto beige y Lacoste crema para look veraniego.'},
+    '3644':{tops:['3652','3650','3651','3656','3657','3658','3653'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'El sage pide neutrales arriba. Negro o marrón dan look tonal muy actual. Brooks blancos complementan el tono mineral.'},
+    '3645':{tops:['3655','3656','3657','3658','3653','3649','3652'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Dark denim es el canvas perfecto. Cinto marrón y zapatillas blancas = combo universitario clásico e infalible.'},
+    '3646':{tops:['3656','3657','3655','3652','3658'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Navy oscuro pide claridad arriba. Off-white o puntos navy = look refinado. Zapatos Brooks marrones dan el nivel smart-casual.'},
+    '3647':{tops:['3650','3651','3652','3656','3653'],belt:'belt-brown',shoe:'shoe-brooks-b',tip:'Olive earthy pide paleta tierra. Marrón arriba = look tonal trendísimo. Zapatos marrones completan el mood.'},
+    '3648':{tops:['3655','3656','3657','3658','3649','3652'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Negro es el más smart de tus pantalones. Camisa rosa o blanca = smart-casual perfecto. Zapatos Brooks marrones.'},
+  };
+
+  // 3. Memoria Local Dinámica
+  let EXTRA_GARMENTS = [];
+  
+  function allGarments() { return [...BASE_GARMENTS, ...EXTRA_GARMENTS.filter(e=>e.type!=='belt'&&e.type!=='shoe')]; }
+  function allBelts()    { return [...BASE_BELTS,    ...EXTRA_GARMENTS.filter(e=>e.type==='belt')]; }
+  function allShoes()    { return [...BASE_SHOES,    ...EXTRA_GARMENTS.filter(e=>e.type==='shoe')]; }
+
+  // 4. Cargar desde Firebase
+  async function loadFromFirebase() {
+    try {
+      const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+      EXTRA_GARMENTS = [];
+      querySnapshot.forEach((doc) => {
+        EXTRA_GARMENTS.push({ id: doc.id, ...doc.data() });
+      });
+      renderWardrobe(currentFilter);
+    } catch (error) {
+      console.error("Error cargando prendas desde Firebase: ", error);
+      showToast("Error conectando a la nube");
+    }
+  }
+
+  // 5. Renderizado Visual
+  const TYPE_LABEL = {top:'Remera',bottom:'Pantalón',shirt:'Camisa',outer:'Outer/Campera',belt:'Cinto',shoe:'Calzado'};
+  let currentFilter = 'all';
+
+  function renderWardrobe(filter) {
+    if(filter) currentFilter = filter;
+    const ws = document.getElementById('wardrobe-section');
+    const as = document.getElementById('acc-section');
+    if(currentFilter==='acc'){
+      ws.classList.add('hidden'); as.classList.remove('hidden');
+      renderAccDisplay(); updateSubtitle(); return;
+    }
+    ws.classList.remove('hidden'); as.classList.add('hidden');
+    const list = currentFilter==='all' ? allGarments() : allGarments().filter(g=>g.type===currentFilter);
+    document.getElementById('item-count').textContent = list.length+' prendas';
+    document.getElementById('wardrobe-grid').innerHTML = list.map(g=>`
+      <div class="garment-card">
+        ${g.isNew?'<span class="new-badge">Nueva</span>':''}
+        ${!g.isBase?`<button class="card-delete" onclick="window.deleteItem('${g.id}', '${g.storagePath}', event)">✕</button>`:''}
+        <img src="${g.file}" alt="${g.name}">
+        <div class="garment-info">
+          <div class="garment-type">${TYPE_LABEL[g.type]||g.type}</div>
+          <div class="garment-name"><span class="color-dot" style="background:${g.color}"></span>${g.name}</div>
+        </div>
+      </div>`).join('');
+    updateSubtitle();
+  }
+
+  function renderAccDisplay(){
+    const mkCard = (items, isShoe) => items.map(x=>`
+      <div class="acc-card">
+        ${!x.isBase?`<button class="card-delete" onclick="window.deleteItem('${x.id}', '${x.storagePath}', event)">✕</button>`:''}
+        <img src="${x.file}" alt="${x.name}">
+        <div class="acc-info">
+          <div class="acc-type">${isShoe?'Calzado':'Cinto'}</div>
+          <div class="acc-name"><span class="color-dot" style="background:${x.color}"></span>${x.name}</div>
+          <div class="acc-sub">${x.sub||''}</div>
+        </div>
+      </div>`).join('');
+    document.getElementById('belts-grid').innerHTML = mkCard(allBelts(), false);
+    document.getElementById('shoes-grid').innerHTML = mkCard(allShoes(), true);
+    document.getElementById('item-count').textContent = `${allBelts().length} cintos · ${allShoes().length} calzados`;
+  }
+
+  function updateSubtitle(){
+    document.getElementById('wardrobe-subtitle').textContent =
+      `${allGarments().length} prendas · ${allBelts().length} cintos · ${allShoes().length} pares de calzado`;
+  }
+
+  window.filterGarments = function(type, btn){
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); renderWardrobe(type);
+  };
+
+  // 6. Eliminar Prenda (Firestore y Storage)
+  window.deleteItem = async function(id, storagePath, ev){
+    ev.stopPropagation();
+    if(!confirm('¿Eliminar esta prenda del guardarropa en la nube?')) return;
+    
+    try {
+      // Borrar de Firestore Database
+      await deleteDoc(doc(db, COLLECTION_NAME, id));
+      
+      // Borrar la imagen de Storage (si guardamos la ruta)
+      if(storagePath && storagePath !== 'undefined') {
+        const fileRef = ref(storage, storagePath);
+        await deleteObject(fileRef).catch(e => console.log("Archivo ya no existe en storage", e));
+      }
+
+      // Actualizar memoria visual
+      EXTRA_GARMENTS = EXTRA_GARMENTS.filter(e => e.id !== id);
+      renderWardrobe(); 
+      if(currentFilter==='acc') renderAccDisplay();
+      showToast('Prenda eliminada de la nube');
+    } catch (error) {
+      console.error("Error al eliminar: ", error);
+      alert("Hubo un error al eliminar. Revisa tu conexión.");
+    }
+  };
+
+  // 7. Lógica del Armador (Availability y Generador)
+  let available = new Set();
+  function renderAvailability(){
+    const mk = (items, cid, imgSt) => {
+      document.getElementById(cid).innerHTML = items.map(g=>`
+        <div class="avail-item ${available.has(g.id)?'checked':''}" onclick="window.toggleAvail('${g.id}',this)">
+          <img src="${g.file}" alt="${g.name}" ${imgSt?`style="${imgSt}"`:''}">
+          <span style="flex:1;font-size:0.63rem;line-height:1.3">${g.name}</span>
+          <span class="avail-check">${available.has(g.id)?'✓':''}</span>
+        </div>`).join('');
+    };
+    mk(allGarments().filter(g=>g.type==='bottom'),'avail-bottoms');
+    mk(allGarments().filter(g=>g.type!=='bottom'),'avail-tops');
+    mk(allBelts(),'avail-belts','width:36px;height:22px;object-fit:cover');
+    mk(allShoes(),'avail-shoes');
+  }
+
+  window.toggleAvail = function(id,el){
+    if(available.has(id)){available.delete(id);el.classList.remove('checked');el.querySelector('.avail-check').textContent='';}
+    else{available.add(id);el.classList.add('checked');el.querySelector('.avail-check').textContent='✓';}
+  };
+
+  window.generateWeek = function(){
+    const avB=allGarments().filter(g=>g.type==='bottom'&&available.has(g.id));
+    const avT=allGarments().filter(g=>g.type!=='bottom'&&available.has(g.id));
+    const avBt=allBelts().filter(b=>available.has(b.id));
+    const avSh=allShoes().filter(s=>available.has(s.id));
+    if(!avB.length||!avT.length){alert('Seleccioná al menos un pantalón y una parte de arriba.');return;}
+    const usedT=[];
+    const DAYS=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+    const outfits=DAYS.map((_,i)=>{
+      const bottom=avB[i%avB.length];
+      const rules=RULES[bottom.id]||{tops:allGarments().map(g=>g.id),belt:avBt[0]?.id,shoe:avSh[0]?.id,tip:'Aplicá contraste claro/oscuro y paleta earthy.'};
+      const compat=avT.filter(t=>rules.tops.includes(t.id));
+      const fresh=compat.filter(t=>!usedT.slice(-2).includes(t.id));
+      const pool=fresh.length?fresh:(compat.length?compat:avT);
+      const top=pool[i%pool.length]; usedT.push(top.id);
+      const belt=avBt.find(b=>b.id===rules.belt)||avBt[i%(avBt.length||1)]||null;
+      const shoe=avSh.find(s=>s.id===rules.shoe)||avSh[i%(avSh.length||1)]||null;
+      return{bottom,top,belt,shoe,tip:rules.tip};
+    });
+    const today=new Date(); const dow=today.getDay();
+    const toMon=dow===1?0:(8-dow)%7||7;
+    const monday=new Date(today); monday.setDate(today.getDate()+toMon);
+    const si=(file,w,h,cls)=>`<img class="${cls}" src="${file}" style="width:${w}px;height:${h}px">`;
+    document.getElementById('week-grid').innerHTML=DAYS.map((day,i)=>{
+      const o=outfits[i]; const d=new Date(monday); d.setDate(monday.getDate()+i);
+      const ds=d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
+      return`<div class="day-card">
+        <div class="day-header"><span class="day-name">${day}</span><span class="day-date">${ds}</span></div>
+        <div class="day-slots">
+          <div class="slot"><span class="slot-label">Arriba</span>${si(o.top.file,62,72,'slot-img')}<span class="slot-name">${o.top.name}</span></div>
+          <span class="plus-sep">+</span>
+          <div class="slot"><span class="slot-label">Abajo</span>${si(o.bottom.file,62,72,'slot-img')}<span class="slot-name">${o.bottom.name}</span></div>
+          ${o.belt?`<span class="plus-sep">+</span><div class="slot"><span class="slot-label">Cinto</span>${si(o.belt.file,50,38,'slot-acc-img')}<span class="slot-name">${o.belt.name}</span></div>`:''}
+          ${o.shoe?`<span class="plus-sep">+</span><div class="slot"><span class="slot-label">Calzado</span>${si(o.shoe.file,50,38,'slot-acc-img')}<span class="slot-name">${o.shoe.name}</span></div>`:''}
+        </div>
+        <div class="outfit-tip">💡 ${o.tip}</div>
+      </div>`;
+    }).join('');
+  };
+
+  // 8. Navegación por Tabs
+  window.showTab = function(tab){
+    ['guardarropa','armador','reglas'].forEach(t=>document.getElementById(`tab-${t}`).classList.add('hidden'));
+    document.getElementById(`tab-${tab}`).classList.remove('hidden');
+    document.querySelectorAll('nav button').forEach((b,i)=>b.classList.toggle('active',['guardarropa','armador','reglas'][i]===tab));
+    if(tab==='armador') renderAvailability();
+  };
+
+  // 9. Lógica del Modal y Subida a la Nube
+  let selectedFile = null;
+
+  window.openAddModal = function(){
+    selectedFile = null;
+    document.getElementById('preview-img').style.display='none';
+    document.getElementById('drop-zone').style.display='block';
+    ['field-name','field-colorname','field-notes'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('field-type').value='';
+    document.getElementById('color-picker').value='#8b6f47';
+    window.updateColorPreview('#8b6f47');
+    document.getElementById('modal-overlay').classList.add('open');
+  };
+
+  window.closeModal = function(){ document.getElementById('modal-overlay').classList.remove('open'); };
+  document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)window.closeModal();});
+
+  window.handleDragOver = function(e){e.preventDefault();document.getElementById('drop-zone').classList.add('drag-over');};
+  window.handleDragLeave = function(){document.getElementById('drop-zone').classList.remove('drag-over');};
+  
+  window.handleDrop = function(e){
+    e.preventDefault(); window.handleDragLeave();
+    const f=e.dataTransfer.files[0]; 
+    if(f) { selectedFile = f; loadImgPreview(f); }
+  };
+  
+  window.handleFileSelect = function(e){
+    const f=e.target.files[0]; 
+    if(f) { selectedFile = f; loadImgPreview(f); }
+  };
+
+  function loadImgPreview(file){
+    const r=new FileReader();
+    r.onload=ev=>{
+      const p=document.getElementById('preview-img');
+      p.src=ev.target.result; p.style.display='block';
+      document.getElementById('drop-zone').style.display='none';
+    };
+    r.readAsDataURL(file);
+  }
+
+  window.updateColorPreview = function(val){document.getElementById('color-preview').style.background=val;};
+
+  window.saveGarment = async function(){
+    const name=document.getElementById('field-name').value.trim();
+    const type=document.getElementById('field-type').value;
+    const color=document.getElementById('color-picker').value;
+    const colorName=document.getElementById('field-colorname').value.trim()||color;
+    const notes=document.getElementById('field-notes').value.trim();
+    
+    if(!name){alert('Ponele un nombre a la prenda.');return;}
+    if(!type){alert('Seleccioná la categoría.');return;}
+    if(!selectedFile){alert('Agregá una foto primero.');return;}
+
+    const btnSave = document.getElementById('btn-save');
+    btnSave.textContent = "Subiendo...";
+    btnSave.disabled = true;
+
+    try {
+      // A. Subir imagen a Firebase Storage
+      const fileName = `ropa/${Date.now()}_${selectedFile.name}`;
+      const storageReference = ref(storage, fileName);
+      await uploadBytes(storageReference, selectedFile);
+      const downloadURL = await getDownloadURL(storageReference);
+
+      // B. Preparar el documento
+      const itemData = {
+        file: downloadURL,
+        storagePath: fileName, // Guardamos la ruta para poder borrar la foto después
+        type, name, color, colorName, notes, 
+        sub: notes, isBase: false, isNew: true,
+        timestamp: Date.now()
+      };
+
+      // C. Guardar en Firestore Database
+      const docRef = await addDoc(collection(db, COLLECTION_NAME), itemData);
+      itemData.id = docRef.id;
+      
+      // D. Actualizar UI
+      EXTRA_GARMENTS.push(itemData);
+      window.closeModal();
+      
+      if(type==='belt'||type==='shoe'){
+        window.filterGarments('acc',document.querySelectorAll('.filter-btn')[4]);
+      } else {
+        renderWardrobe(currentFilter);
+      }
+      showToast(`"${name}" subida a la nube ✓`);
+
+    } catch (error) {
+      console.error("Error al guardar: ", error);
+      alert("Hubo un error al subir la prenda. Revisa tu conexión a internet.");
+    } finally {
+      btnSave.textContent = "Guardar";
+      btnSave.disabled = false;
+    }
+  };
+
+  // 10. Toasts y Arranque
+  function showToast(msg){
+    const t=document.getElementById('toast');
+    t.textContent=msg; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),2800);
+  }
+
+  // Cargar primero lo que está fijo, luego ir a buscar a la nube
+  renderWardrobe('all');
+  loadFromFirebase();
+
+</script>
+</body>
+</html>

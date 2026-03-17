@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   
-  <style>
+<style>
     /* ========== ESTILOS DEL HUB PRINCIPAL ========== */
     * {
       margin: 0;
@@ -42,6 +42,7 @@
       --todo-color: #a855f7;
       --metabolismo-color: #f43f5e;
       --gym-color: #3b82f6; /* Color naranja oscuro para el Gym */
+      --asesor-color: #8b6f47; /* Color extraído de asesor_imagen.html */
     }
     
     /* Modo oscuro para bienvenida */
@@ -189,10 +190,10 @@
       border-bottom-color: var(--metabolismo-color);
     }
 
-/* ESTILOS DEL NAVBAR PARA GYM */
+    /* ESTILOS DEL NAVBAR PARA GYM */
     .hub-nav.app-gym {
       border-bottom-color: var(--gym-color);
-      background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%); /* <-- CAMBIA EL DEGRADADO */
+      background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%);
     }
     
     .hub-nav.app-gym .hub-logo,
@@ -201,13 +202,34 @@
     }
     
     .hub-nav.app-gym .hub-tab:hover {
-      background: rgba(234, 88, 12, 0.1); /* <-- CAMBIA ESTE RGBA (Es el mismo color pero con 0.1 de opacidad) */
+      background: rgba(234, 88, 12, 0.1);
       color: var(--gym-color);
     }
     
     .hub-nav.app-gym .hub-tab.active {
       color: var(--gym-color);
       border-bottom-color: var(--gym-color);
+    }
+
+    /* ESTILOS DEL NAVBAR PARA EL ASESOR DE IMAGEN */
+    .hub-nav.app-asesor {
+      border-bottom-color: var(--asesor-color);
+      background: linear-gradient(135deg, #1a1a18 0%, #3d2b1a 100%);
+    }
+
+    .hub-nav.app-asesor .hub-logo,
+    .hub-nav.app-asesor .hub-tab {
+      color: #f5f0e8;
+    }
+
+    .hub-nav.app-asesor .hub-tab:hover {
+      background: rgba(139, 111, 71, 0.15);
+      color: #c4a882;
+    }
+
+    .hub-nav.app-asesor .hub-tab.active {
+      color: #c4a882;
+      border-bottom-color: var(--asesor-color);
     }
     
     .hub-nav-content {
@@ -440,6 +462,7 @@
       <div class="hub-logo">📚 Inicio</div>
       <div class="hub-tabs">
         <button class="hub-tab" data-app="agenda">📅 Agenda</button>
+        <button class="hub-tab" data-app="asesor">👔 Asesor</button>
         <button class="hub-tab" data-app="gastos">💰 Gastos</button>
         <button class="hub-tab" data-app="ayuno">⏱️ Ayuno</button>
         <button class="hub-tab" data-app="metabolismo">🧬 Metabolismo</button>
@@ -456,6 +479,10 @@
   <div id="app-agenda" class="app-container">
     <iframe class="app-frame" src="apps/agenda.html"></iframe>
   </div>
+  
+  <div id="app-asesor" class="app-container">
+  <iframe class="app-frame" src="apps/asesor_imagen.html"></iframe>
+</div>
 
   <div id="app-gastos" class="app-container">
     <iframe class="app-frame" src="apps/gastos.html"></iframe>
@@ -527,6 +554,13 @@
         <div class="app-card-title">ToDo Live</div>
         <div class="app-card-desc">Tareas compartidas en tiempo real</div>
       </div>
+
+      <div class="app-card" data-app="asesor">
+        <div class="app-card-icon">👔</div>
+        <div class="app-card-title">Asesor de Imagen</div>
+        <div class="app-card-desc">Armario cápsula y combinaciones de ropa</div>
+      </div>
+      </div>
     </div>
   </div>
 
@@ -561,7 +595,7 @@
       document.body.classList.remove('home');
       
       // Cambiar color del navbar según la app
-      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo', 'app-metabolismo', 'app-gym');
+      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo', 'app-metabolismo', 'app-gym', 'app-asesor');
       navbar.classList.add(`app-${appName}`);
       
       // Mostrar app seleccionada
@@ -581,8 +615,7 @@
       tabs.forEach(tab => tab.classList.remove('active'));
       
       // Restaurar color original del navbar
-      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo', 'app-metabolismo', 'app-gym');
-      
+      navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo', 'app-metabolismo', 'app-gym', 'app-asesor');
       // Agregar clase home al body
       document.body.classList.add('home');
       
