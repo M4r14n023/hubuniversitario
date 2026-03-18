@@ -41,8 +41,8 @@
       --ayuno-color: #06b6d4;
       --todo-color: #a855f7;
       --metabolismo-color: #f43f5e;
-      --gym-color: #3b82f6; /* Color naranja oscuro para el Gym */
-      --asesor-color: #8b6f47; /* Color extraído de asesor_imagen.html */
+      --gym-color: #3b82f6; 
+      --asesor-color: #8b6f47; 
     }
     
     /* Modo oscuro para bienvenida */
@@ -560,12 +560,10 @@
         <div class="app-card-title">Asesor de Imagen</div>
         <div class="app-card-desc">Armario cápsula y combinaciones de ropa</div>
       </div>
-      </div>
     </div>
   </div>
 
   <script>
-    // Sistema de navegación del hub
     const tabs = document.querySelectorAll('.hub-tab');
     const appCards = document.querySelectorAll('.app-card');
     const appContainers = document.querySelectorAll('.app-container');
@@ -575,30 +573,24 @@
     const themeToggle = document.getElementById('theme-toggle');
     const themeIcon = document.querySelector('.theme-icon');
     
-    // Recordar última app abierta y tema
     const lastApp = localStorage.getItem('hub_lastApp');
     const savedTheme = localStorage.getItem('hub_theme') || 'light';
     
-    // Aplicar tema guardado
     if (savedTheme === 'dark') {
       document.body.classList.add('dark-mode');
       themeIcon.textContent = '☀️';
     }
     
     function showApp(appName) {
-      // Ocultar todo
       appContainers.forEach(container => container.classList.remove('active'));
       tabs.forEach(tab => tab.classList.remove('active'));
       welcome.style.display = 'none';
       
-      // Quitar clase home del body
       document.body.classList.remove('home');
       
-      // Cambiar color del navbar según la app
       navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo', 'app-metabolismo', 'app-gym', 'app-asesor');
       navbar.classList.add(`app-${appName}`);
       
-      // Mostrar app seleccionada
       const container = document.getElementById(`app-${appName}`);
       const tab = document.querySelector(`.hub-tab[data-app="${appName}"]`);
       
@@ -610,19 +602,14 @@
     }
     
     function showHome() {
-      // Ocultar todas las apps
       appContainers.forEach(container => container.classList.remove('active'));
       tabs.forEach(tab => tab.classList.remove('active'));
       
-      // Restaurar color original del navbar
       navbar.classList.remove('app-agenda', 'app-gastos', 'app-ayuno', 'app-mispass', 'app-todo', 'app-metabolismo', 'app-gym', 'app-asesor');
-      // Agregar clase home al body
       document.body.classList.add('home');
       
-      // Mostrar bienvenida
       welcome.style.display = 'block';
       
-      // Limpiar última app guardada
       localStorage.removeItem('hub_lastApp');
     }
     
@@ -630,20 +617,15 @@
       document.body.classList.toggle('dark-mode');
       const isDark = document.body.classList.contains('dark-mode');
       
-      // Cambiar icono
       themeIcon.textContent = isDark ? '☀️' : '🌙';
       
-      // Guardar preferencia
       localStorage.setItem('hub_theme', isDark ? 'dark' : 'light');
     }
     
-    // Event listener para el logo (volver al inicio)
     logo.addEventListener('click', showHome);
     
-    // Event listener para toggle de tema
     themeToggle.addEventListener('click', toggleTheme);
     
-    // Event listeners para tabs
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         const appName = tab.dataset.app;
@@ -651,7 +633,6 @@
       });
     });
     
-    // Event listeners para cards
     appCards.forEach(card => {
       card.addEventListener('click', () => {
         const appName = card.dataset.app;
@@ -659,7 +640,6 @@
       });
     });
     
-    // Cargar última app o mostrar bienvenida
     if (lastApp) {
       showApp(lastApp);
     } else {
