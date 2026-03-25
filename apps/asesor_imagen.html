@@ -523,8 +523,11 @@
     }
   };
 
-  // 7. Lógica del Armador (Availability y Generador)
-  let available = new Set();
+ // 7. Lógica del Armador (Availability y Generador con Persistencia)
+  
+  // 1. Cargamos lo que tenías guardado de antes (en vez de empezar vacío)
+  let available = new Set(JSON.parse(localStorage.getItem('asesor_available') || '[]'));
+
   function renderAvailability(){
     const mk = (items, cid, imgSt) => {
       document.getElementById(cid).innerHTML = items.map(g=>`
@@ -540,11 +543,26 @@
     mk(allShoes(),'avail-shoes');
   }
 
+  // 2. Modificamos el toggle para que guarde cada vez que haces clic
+  window.toggleAvail = function(id,el){
+    if(available.has(id)){
+      available.delete(id);
+      el.classList.remove('checked');
+      el.querySelector('.avail-check').textContent='';
+    } else {
+      available.add(id);
+      el.classList.add('checked');
+      el.querySelector('.avail-check').textContent='✓';
+    }
+    // Guardamos la selección actualizada en la memoria del navegador
+    localStorage.setItem('asesor_available', JSON.stringify([...available]));
+  };
+
   window.toggleAvail = function(id,el){
     if(available.has(id)){available.delete(id);el.classList.remove('checked');el.querySelector('.avail-check').textContent='';}
     else{available.add(id);el.classList.add('checked');el.querySelector('.avail-check').textContent='✓';}
   };
-
+// ── GENERATE ──────────────────────────────────────────────────────
   window.generateWeek = function(){
     const avB=allGarments().filter(g=>g.type==='bottom'&&available.has(g.id));
     const avT=allGarments().filter(g=>g.type!=='bottom'&&available.has(g.id));
@@ -583,6 +601,9 @@
         <div class="outfit-tip">💡 ${o.tip}</div>
       </div>`;
     }).join('');
+
+    // --- NUEVO: Guardamos la semana generada en la memoria del navegador ---
+    localStorage.setItem('asesor_week_html', document.getElementById('week-grid').innerHTML);
   };
   // --- NUEVA LÓGICA: LOOK DEL DÍA ---
 
@@ -804,9 +825,18 @@
     setTimeout(()=>t.classList.remove('show'),2800);
   }
 
-  // Cargar primero lo que está fijo, luego ir a buscar a la nube
+  // --- PASO 3: RESTAURACIÓN AL INICIAR ---
+  // Cargar primero lo que está fijo
   renderWardrobe('all');
+  
+  // Luego, ir a buscar a la nube (Firebase)
   loadFromFirebase();
+
+  // Finalmente, restaurar la semana generada desde el almacenamiento local si existe
+  const savedWeek = localStorage.getItem('asesor_week_html');
+  if (savedWeek) {
+    document.getElementById('week-grid').innerHTML = savedWeek;
+  }
 
 </script>
 </body>
