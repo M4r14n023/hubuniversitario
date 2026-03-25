@@ -34,9 +34,13 @@
 
     <div class="w-full max-w-md mx-auto bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
         
-        <header class="text-center">
+        <header class="text-center relative">
             <h1 class="text-2xl md:text-3xl font-bold text-cyan-400">Ayuno Sincronizado</h1>
             <p class="text-gray-400 mt-1">Multi-dispositivo en tiempo real.</p>
+    
+            <button id="refresh-cloud-btn" class="absolute top-0 right-0 p-2 text-cyan-500 hover:text-cyan-400 transition-transform active:rotate-180" title="Actualizar desde la nube">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+            </button>
         </header>
 
         <div class="flex justify-center">
@@ -151,10 +155,10 @@
         </div>
      </div>
      
-    <script>
+   <script>
         document.addEventListener('DOMContentLoaded', () => {
             
-            // 👇 TUS DATOS DE JSONBIN YA CONFIGURADOS 👇
+            // 👇 TUS DATOS DE JSONBIN CONFIGURADOS 👇
             const JSONBIN_ID = '69b81709c3097a1dd52dc4b4'; 
             const JSONBIN_KEY = '$2a$10$19OclHQasOKZ1EXNb1Gx/uLuBLdrvYG0cO54UQP.eDvMi4EKgpBWO';
             // 👆 ------------------------------------- 👆
@@ -170,7 +174,8 @@
             const planSelectorContainer = document.getElementById('plan-selector-container');
             const manualStartSection = document.getElementById('manual-start-section');
             const syncOverlay = document.getElementById('cloud-sync-overlay');
-            
+            const refreshBtn = document.getElementById('refresh-cloud-btn'); // <-- Nuevo botón
+
             const btnMariano = document.getElementById('btn-user-mariano');
             const btnGordito = document.getElementById('btn-user-gordito');
 
@@ -258,6 +263,7 @@
                     if (state.isFasting && userData.startTime) {
                         state.startTime = userData.startTime;
                         state.endTime = state.startTime + (state.planHours * 60 * 60 * 1000);
+                        if (state.timerInterval) clearInterval(state.timerInterval);
                         state.timerInterval = setInterval(updateTimer, 1000);
                     } else {
                         state.startTime = null;
@@ -274,12 +280,10 @@
             const pushStateToCloud = async () => {
                 syncOverlay.style.display = 'flex';
                 try {
-                    // 1. Traer todo el buzón para no pisar al otro usuario
                     const resGet = await fetch(JSONBIN_URL, { headers: { 'X-Master-Key': JSONBIN_KEY } });
                     const dataGet = await resGet.json();
                     let globalData = dataGet.record;
 
-                    // 2. Modificar solo la parte del usuario activo
                     globalData[activeUser] = {
                         isFasting: state.isFasting,
                         startTime: state.startTime,
@@ -287,7 +291,6 @@
                         history: state.history
                     };
 
-                    // 3. Volver a guardar el buzón
                     await fetch(JSONBIN_URL, {
                         method: 'PUT',
                         headers: {
@@ -357,6 +360,7 @@
                 
                 await pushStateToCloud();
                 
+                if (state.timerInterval) clearInterval(state.timerInterval);
                 state.timerInterval = setInterval(updateTimer, 1000);
                 updateUI();
             };
@@ -366,7 +370,6 @@
                     const now = new Date().getTime();
                     const duration = now - state.startTime;
                     
-                    // Agregar al historial local
                     state.history.unshift({
                         id: now,
                         startTime: state.startTime,
@@ -378,7 +381,7 @@
                     if (state.history.length > 20) state.history.pop();
                 }
 
-                clearInterval(state.timerInterval);
+                if (state.timerInterval) clearInterval(state.timerInterval);
                 state.isFasting = false;
                 state.startTime = null;
                 state.endTime = null;
@@ -394,6 +397,11 @@
             planSelector.addEventListener('change', async (e) => {
                 state.planHours = parseInt(e.target.value);
                 if(!state.isFasting) await pushStateToCloud();
+            });
+
+            // Listener para el botón de actualización manual
+            refreshBtn.addEventListener('click', () => {
+                loadStateFromCloud();
             });
 
             const deleteHistoryItem = async (id) => {
@@ -457,7 +465,7 @@
                     const bgClass = isReached ? 'bg-green-900/40 border-green-500/50' : 'bg-gray-800/80 border-gray-700';
                     const textClass = isReached ? 'text-green-400' : 'text-gray-400';
                     const timeClass = isReached ? 'text-white' : 'text-gray-500';
-                    const icon = isReached ? `<svg class="w-4 h-4 text-green-400 inline-block mb-0.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>` : '';
+                    const icon = isReached ? `<svg class=\"w-4 h-4 text-green-400 inline-block mb-0.5 ml-1\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"3\" d=\"M5 13l4 4L19 7\"></path></svg>` : '';
                     return `
                         <div class="${bgClass} border rounded-lg p-3 text-center transition-colors flex flex-col items-center justify-center">
                             <p class="text-xs ${textClass} font-bold uppercase tracking-wide mb-1">${hours} Horas ${icon}</p>

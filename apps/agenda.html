@@ -11,8 +11,7 @@
       }
     </script>-->
 
-    <!-- Firebase SDK -->
-    <script type="module">
+<script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
       import {
         getAuth,
@@ -27,6 +26,7 @@
         setDoc,
         getDoc,
         onSnapshot,
+        enableIndexedDbPersistence // 1. AGREGAMOS LA FUNCIÓN ACÁ
       } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
       const firebaseConfig = {
@@ -41,6 +41,16 @@
       const app = initializeApp(firebaseConfig);
       window.firebaseAuth = getAuth(app);
       window.firebaseDb = getFirestore(app);
+
+      // 2. ACTIVAMOS LA PERSISTENCIA OFFLINE ACÁ
+      enableIndexedDbPersistence(window.firebaseDb).catch((err) => {
+        if (err.code == 'failed-precondition') {
+          console.warn('Persistencia falló: Múltiples pestañas de la app abiertas.');
+        } else if (err.code == 'unimplemented') {
+          console.warn('El navegador no soporta persistencia offline.');
+        }
+      });
+
       window.firebaseAuthFunctions = {
         signInWithEmailAndPassword,
         createUserWithEmailAndPassword,
@@ -2676,11 +2686,6 @@
           setHasUnsavedChanges(true);
         }, [data]);
 
-        // Guardar automáticamente en LocalStorage
-        useEffect(() => {
-          saveToStorage(data);
-        }, [data]);
-
         // Radar de Firebase (Nube)
         useEffect(() => {
           const savedPin = localStorage.getItem("agendaSyncPin");
@@ -2711,6 +2716,7 @@
           );
           return () => unsubscribe();
         }, []);
+
         // Manejo de tema (Dark Mode)
         useEffect(() => {
           if (isDarkMode) {
@@ -2741,6 +2747,23 @@
           }));
         }, [weeklySessions, courses]);
 
+        // ==========================================
+        // NUEVO: CONTROL DE MODO OFFLINE
+        // ==========================================
+        const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+        useEffect(() => {
+          const handleOnline = () => setIsOffline(false);
+          const handleOffline = () => setIsOffline(true);
+
+          window.addEventListener('online', handleOnline);
+          window.addEventListener('offline', handleOffline);
+
+          return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+          };
+        }, []);
         // 2. Filtramos para el cartel SOLO los que NO marcaste como "Entendidos"
         const activeConflicts = useMemo(() => {
           return conflicts.filter((c) => !dismissedConflicts.includes(c.id));
@@ -2857,6 +2880,14 @@
 
         return (
           <div className="app-container">
+            
+            {/* ACÁ VA EL CARTEL OFFLINE */}
+            {isOffline && (
+              <div style={{ background: '#ff4757', color: 'white', textAlign: 'center', padding: '8px', fontSize: '0.9rem', fontWeight: 'bold', zIndex: 9999, position: 'relative' }}>
+                ⚠️ Estás en modo offline. Los cambios se guardarán localmente y se sincronizarán al volver a tener conexión.
+              </div>
+            )}
+
             <header className="app-header">
               <div className="header-content">
                 <h1 className="app-title">Mi agenda Universitaria</h1>
@@ -6589,6 +6620,16 @@
       // ============ RENDER ============
 
       ReactDOM.render(<App />, document.getElementById("root"));
+    </script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('Modo Offline Activo', reg))
+            .catch(err => console.log('Error en SW', err));
+        });
+      }
     </script>
   </body>
 </html>
