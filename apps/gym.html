@@ -11,8 +11,7 @@
         
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type="number"] { -moz-appearance: textfield;
-                                appearance: textfield }
+        input[type="number"] { -moz-appearance: textfield; appearance: textfield }
         
         .checkbox-custom:checked + div { background-color: #ea580c; border-color: #ea580c; }
         .checkbox-custom:checked + div svg { display: block; }
@@ -56,7 +55,6 @@
         const db = getFirestore(app);
         const SYNC_DOC_ID = "rutina-mariano-v2-pro"; 
 
-        // --- 1. RUTINA PDF ---
         const defaultRoutine = {
             push: {
                 id: 'push', name: 'DÍA 1 - PUSH', color: 'text-blue-400', border: 'border-blue-500',
@@ -96,13 +94,24 @@
                 ]
             }
         };
-        const getPausa = (focus) => {
-  if (focus === 'Fuerza') return '2-3 min';
-  if (focus === 'Hipertrofia') return '60-90 seg';
-  return '60 seg'; // Por defecto para otros como 'Pecho/Tríceps'
-};
 
-        // --- ESTADO ---
+        const getPausa = (focus) => {
+            if (focus === 'Fuerza') return '2-3 min';
+            if (focus === 'Hipertrofia') return '60-90 seg';
+            return '60 seg';
+        };
+
+        window.redondearPesoReal = function(peso, tipoEquipo) {
+            if (peso <= 0) return 0;
+            if (tipoEquipo === 'mancuerna') {
+                const rack = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30];
+                return rack.reduce((prev, curr) => Math.abs(curr - peso) < Math.abs(prev - peso) ? curr : prev);
+            }
+            if (tipoEquipo === 'maquina') return Math.round(peso / 5) * 5;
+            if (tipoEquipo === 'polea') return Math.round(peso / 2.5) * 2.5;
+            return Math.round(peso / 2.5) * 2.5; // Barras (basado en discos de 2.5)
+        }
+
         window.appState = JSON.parse(localStorage.getItem('gymTrackrState_v2')) || {
             isInitialized: false,
             baselineSets: {}, 
@@ -118,10 +127,8 @@
         window.saveState = function() {
             window.appState.lastUpdated = Date.now();
             localStorage.setItem('gymTrackrState_v2', JSON.stringify(window.appState));
-            
             syncIcon.innerHTML = '⏳ Sync';
             syncIcon.classList.add('syncing');
-            
             setDoc(doc(db, "sync-gym", SYNC_DOC_ID), window.appState)
                 .then(() => { syncIcon.innerHTML = '🟢 Sync'; syncIcon.classList.remove('syncing'); })
                 .catch(() => { syncIcon.innerHTML = '🔴 Error'; syncIcon.classList.remove('syncing'); });
@@ -139,242 +146,127 @@
             }
         });
 
-        // --- SETUP MULTI-SERIE ---
         window.renderSetup = function() {
-            let html = `
-                <div class="mb-6">
-                    <h2 class="text-2xl font-bold text-white mb-2 text-center">Calibración de Series</h2>
-                    <p class="text-gray-400 text-xs text-center mb-2">Ingresa peso y repeticiones logradas. La IA ajustará el peso óptimo.</p>
-                    <p class="text-orange-400 text-[10px] text-center bg-orange-950/30 p-2 rounded-lg border border-orange-900/50">💡 Tip: Para ejercicios con peso corporal (Dominadas, Flexiones), deja el peso en 0.</p>
-                </div>
-            `;
-
+            let html = `<div class="mb-6"><h2 class="text-2xl font-bold text-white mb-2 text-center">Calibración</h2></div>`;
             Object.values(window.appState.routine).forEach(block => {
-                html += `<div class="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-800">
-                            <h3 class="font-bold mb-4 ${block.color}">${block.name}</h3>
-                            <div class="space-y-6">`;
-                
+                html += `<div class="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-800"><h3 class="font-bold mb-4 ${block.color}">${block.name}</h3><div class="space-y-6">`;
                 block.exercises.forEach(ex => {
-                    html += `
-                        <div class="bg-gray-950 p-3 rounded-lg border border-gray-800">
-                            <div class="mb-3 border-b border-gray-800 pb-2">
-                                <p class="text-sm font-semibold text-gray-200">${ex.name}</p>
-                                <p class="text-[10px] text-orange-400 uppercase tracking-wider">${ex.focus} • Objetivo: ${ex.minReps}-${ex.maxReps} reps</p>
-                            </div>
-                            <div class="grid grid-cols-1 gap-2">
-                    `;
-                    
+                    html += `<div class="bg-gray-950 p-3 rounded-lg border border-gray-800"><div class="mb-3 border-b border-gray-800 pb-2"><p class="text-sm font-semibold text-gray-200">${ex.name}</p></div><div class="grid grid-cols-1 gap-2">`;
                     for(let i=0; i<ex.sets; i++) {
-                        html += `
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-gray-500 font-bold w-6">S${i+1}</span>
-                                <input type="number" step="0.5" id="set-w-${ex.id}-${i}" placeholder="0" class="w-1/2 bg-gray-800 text-white text-center rounded p-2 text-sm border border-gray-700 focus:border-orange-500">
-                                <span class="text-gray-500 text-xs">kg</span>
-                                <span class="text-gray-500 text-xs">x</span>
-                                <input type="number" id="set-r-${ex.id}-${i}" placeholder="reps" class="w-1/2 bg-gray-800 text-white text-center rounded p-2 text-sm border border-gray-700 focus:border-orange-500">
-                            </div>
-                        `;
+                        html += `<div class="flex items-center gap-2"><span class="text-xs text-gray-500 font-bold w-6">S${i+1}</span><input type="number" step="0.5" id="set-w-${ex.id}-${i}" placeholder="0" class="w-1/2 bg-gray-800 text-white text-center rounded p-2 text-sm border border-gray-700 focus:border-orange-500"><input type="number" id="set-r-${ex.id}-${i}" placeholder="reps" class="w-1/2 bg-gray-800 text-white text-center rounded p-2 text-sm border border-gray-700 focus:border-orange-500"></div>`;
                     }
                     html += `</div></div>`;
                 });
                 html += `</div></div>`;
             });
-
-            html += `<button onclick="window.finishSetup()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 rounded-xl mt-4 shadow-lg shadow-orange-900/50">Optimizar y Guardar</button>`;
+            html += `<button onclick="window.finishSetup()" class="w-full bg-orange-600 text-white font-bold py-4 rounded-xl mt-4">Guardar</button>`;
             container.innerHTML = html;
         }
 
         window.finishSetup = function() {
             let baselineSets = {};
-            
             Object.values(window.appState.routine).forEach(block => {
                 block.exercises.forEach(ex => {
                     let optimizedSeries = [];
-                    let targetReps = Math.floor((ex.minReps + ex.maxReps) / 2);
-                    
                     for(let i=0; i<ex.sets; i++) {
-                        let w = parseFloat(document.getElementById(`set-w-${ex.id}-${i}`).value) || 0;
-                        let r = parseFloat(document.getElementById(`set-r-${ex.id}-${i}`).value) || 0;
-                        
-                        let optimalW = w;
-                        // Si no es peso corporal, aplicar Epley
-                        if(w > 0 && r > 0) {
-                            let oneRM = w * (1 + r / 30);
-                            optimalW = oneRM / (1 + targetReps / 30);
-                            optimalW = Math.round(optimalW * 2) / 2; // Redondear a 0.5kg
-                        }
-                        
                         optimizedSeries.push({ 
-                            weight: optimalW, 
-                            reps: ex.maxReps 
+                            weight: parseFloat(document.getElementById(`set-w-${ex.id}-${i}`).value) || 0, 
+                            reps: parseFloat(document.getElementById(`set-r-${ex.id}-${i}`).value) || ex.maxReps 
                         });
                     }
                     baselineSets[ex.id] = optimizedSeries;
                 });
             });
-            
             window.appState.baselineSets = baselineSets;
             window.appState.isInitialized = true;
             window.saveState();
             window.renderDashboard();
         }
 
-        // --- DASHBOARD ---
         window.renderDashboard = function() {
             if(!window.appState.isInitialized) return window.renderSetup();
             document.getElementById('header-stats').classList.remove('hidden');
             document.getElementById('week-counter').innerText = Math.floor(window.appState.history.length / 3) + 1;
-
-            let html = `<div class="bg-gradient-to-br from-gray-900 to-gray-950 p-6 rounded-2xl border border-gray-800 shadow-xl mb-8 text-center"><h2 class="text-lg font-bold text-gray-300 mb-6">¿Qué toca entrenar hoy?</h2><div class="grid grid-cols-1 gap-4">`;
-
+            let html = `<div class="bg-gradient-to-br from-gray-900 to-gray-950 p-6 rounded-2xl border border-gray-800 mb-8"><h2 class="text-lg font-bold text-gray-300 mb-6 text-center">¿Qué toca hoy?</h2><div class="grid grid-cols-1 gap-4">`;
             Object.values(window.appState.routine).forEach(block => {
                 const lastLog = [...window.appState.history].reverse().find(h => h.blockId === block.id);
                 const lastDateStr = lastLog ? new Date(lastLog.date).toLocaleDateString('es-ES', {weekday: 'short', day: 'numeric'}) : 'Nunca';
-                html += `
-                    <button onclick="window.startWorkout('${block.id}')" class="relative overflow-hidden group bg-gray-800 hover:bg-gray-700 border-l-4 ${block.border} p-4 rounded-xl flex items-center justify-between transition-all">
-                        <div class="text-left z-10"><h3 class="font-bold text-lg text-white">${block.name}</h3><p class="text-xs text-gray-400 mt-1">Última: ${lastDateStr}</p></div>
-                        <div class="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-gray-400 group-hover:text-white transition z-10">▶</div>
-                    </button>`;
+                html += `<button onclick="window.startWorkout('${block.id}')" class="bg-gray-800 hover:bg-gray-700 border-l-4 ${block.border} p-4 rounded-xl flex items-center justify-between"><div class="text-left"><h3 class="font-bold text-lg text-white">${block.name}</h3><p class="text-xs text-gray-400">Última: ${lastDateStr}</p></div><span>▶</span></button>`;
             });
-
             html += `</div></div><div><h3 class="text-sm font-bold text-gray-500 mb-4">Historial Reciente</h3><div class="space-y-3">`;
-
-            if(window.appState.history.length === 0) html += `<p class="text-center text-gray-600 text-sm italic">Sin entrenos.</p>`;
+            if(window.appState.history.length === 0) html += `<p class="text-center text-gray-600 text-sm">Sin entrenos.</p>`;
             else {
                 [...window.appState.history].reverse().slice(0, 5).forEach(log => {
-                    const block = window.appState.routine[log.blockId] || { name: 'Archivada', color: 'text-gray-500' };
-                    html += `
-                        <div class="bg-gray-900 p-3 rounded-lg border border-gray-800 flex justify-between items-center opacity-80">
-                            <div><p class="text-sm font-bold ${block.color}">${block.name}</p></div>
-                            <span class="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300">✓ Listo</span>
-                        </div>`;
+                    const block = window.appState.routine[log.blockId] || { name: 'Rutina', color: 'text-gray-500' };
+                    html += `<div class="bg-gray-900 p-3 rounded-lg border border-gray-800 flex justify-between items-center"><p class="text-sm font-bold ${block.color}">${block.name}</p><span class="text-xs text-gray-500">${new Date(log.date).toLocaleDateString()}</span></div>`;
                 });
             }
             container.innerHTML = html + `</div></div>`;
         }
 
-        // --- ENTRENO ACTIVO ---
         window.startWorkout = function(blockId) {
             const block = window.appState.routine[blockId];
-            let workout = { blockId: blockId, date: new Date().toISOString(), logs: {} };
-
+            let workout = { blockId: blockId, date: new Date().toISOString(), logs: {}, rpe: {} };
             block.exercises.forEach(ex => {
                 workout.logs[ex.id] = [];
                 const lastLog = [...window.appState.history].reverse().find(h => h.blockId === blockId);
                 
-                let shouldIncrease = false;
+                let equipo = 'barra';
+                if (ex.name.toLowerCase().includes('mancuerna')) equipo = 'mancuerna';
+                else if (ex.name.toLowerCase().includes('polea')) equipo = 'polea';
+                else if (ex.name.toLowerCase().includes('sillón') || ex.name.toLowerCase().includes('prensa')) equipo = 'maquina';
+
                 if (lastLog && lastLog.logs[ex.id]) {
                     const prevSets = lastLog.logs[ex.id];
-                    shouldIncrease = prevSets.every(s => s.reps >= ex.maxReps && s.done);
-                    
-                    for(let i=0; i<ex.sets; i++) {
-                        let prevW = prevSets[i]?.weight || 0;
-                        let nextW = prevW;
-                        let isBWProgression = false;
+                    let lastWeight = prevSets[prevSets.length - 1].weight;
+                    let baseWeight = lastWeight > 0 ? window.redondearPesoReal(lastWeight * 0.5, equipo) : 0;
+                    let currentSetWeight = baseWeight;
 
-                        if (shouldIncrease) {
-                            if (prevW === 0) {
-                                isBWProgression = true; // Dominó peso corporal
-                            } else {
-                                // Aumento mínimo de 0.5kg garantizado
-                                let increase = Math.max(0.5, prevW * 0.025);
-                                nextW = Math.round((prevW + increase) * 2) / 2;
+                    for(let i=0; i<ex.sets; i++) {
+                        if (i > 0 && currentSetWeight > 0) {
+                            currentSetWeight = window.redondearPesoReal(currentSetWeight * 1.03, equipo);
+                            if (currentSetWeight === workout.logs[ex.id][i-1].weight && equipo === 'mancuerna') {
+                                currentSetWeight = window.redondearPesoReal(currentSetWeight + 1, equipo);
                             }
                         }
-
-                        workout.logs[ex.id].push({ 
-                            reps: ex.maxReps, 
-                            weight: nextW, 
-                            done: false, 
-                            shouldIncrease: shouldIncrease && i===0,
-                            isBWProgression: isBWProgression && i===0
-                        });
+                        workout.logs[ex.id].push({ reps: ex.maxReps, weight: currentSetWeight, done: false });
                     }
                 } else {
                     const baseSets = window.appState.baselineSets[ex.id] || Array(ex.sets).fill({weight: 0, reps: ex.maxReps});
-                    for(let i=0; i<ex.sets; i++) {
-                        workout.logs[ex.id].push({ reps: ex.maxReps, weight: baseSets[i].weight, done: false, shouldIncrease: false, isBWProgression: false });
-                    }
+                    baseSets.forEach(s => workout.logs[ex.id].push({ reps: s.reps, weight: s.weight, done: false }));
                 }
             });
-
             window.appState.currentWorkout = workout;
             window.saveState();
             window.renderActiveWorkout();
         }
 
         window.renderActiveWorkout = function() {
-            const block = window.appState.routine[window.appState.currentWorkout.blockId];
-            let html = `
-                <div class="flex justify-between items-center mb-6">
-                    <button onclick="window.cancelWorkout()" class="text-xs text-gray-500 hover:text-white">← Cancelar</button>
-                    <button onclick="window.finishWorkout()" class="bg-orange-600 text-white text-sm font-bold px-4 py-2 rounded-lg">Finalizar</button>
-                </div>
-            `;
-
+            const workout = window.appState.currentWorkout;
+            const block = window.appState.routine[workout.blockId];
+            let html = `<div class="flex justify-between items-center mb-6"><button onclick="window.cancelWorkout()" class="text-xs text-gray-500">← Cancelar</button><button onclick="window.finishWorkout()" class="bg-orange-600 text-white text-sm font-bold px-4 py-2 rounded-lg">Finalizar</button></div>`;
             block.exercises.forEach(ex => {
-                const logs = window.appState.currentWorkout.logs[ex.id];
-                // Determinamos el color y la letra según el focus
-                const focusChar = ex.focus === 'Fuerza' ? 'F' : 'H';
-                const focusColor = ex.focus === 'Fuerza' ? 'text-orange-500 bg-orange-500/10 border-orange-500/20' : 'text-purple-400 bg-purple-500/10 border-purple-500/20';
-
-                html += `
-                    <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden mb-6 shadow-lg">
-                        <div class="bg-gray-800/50 p-3 border-b border-gray-800">
-                            <div class="flex items-center gap-2 mb-1">
-                                <h3 class="font-bold text-gray-100">${ex.name}</h3>
-                                <span class="text-[9px] font-black px-1.5 py-0.5 rounded border ${focusColor}">${focusChar}</span>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <p class="text-[10px] text-gray-400">${ex.minReps}-${ex.maxReps} reps</p>
-                                <p class="text-[10px] text-cyan-400 font-mono flex items-center gap-1 bg-cyan-950/30 px-2 py-0.5 rounded-full border border-cyan-900/50">
-                                    ⏱️ ${getPausa(ex.focus)}
-                                </p>
-                            </div>
-                        </div>
-                `;
-
-                if(logs[0].shouldIncrease) {
-                    if (logs[0].isBWProgression) {
-                        html += `<div class="bg-emerald-950/50 border-b border-emerald-900/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center">📈 ¡Dominado! Agrega lastre (kg) si lo deseas.</div>`;
-                    } else {
-                        html += `<div class="bg-emerald-950/50 border-b border-emerald-900/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center">📈 Carga aumentada (+2.5%)</div>`;
-                    }
-                }
-
-                html += `<div class="p-3 space-y-2">`;
+                const logs = workout.logs[ex.id];
+                const focusColor = ex.focus === 'Fuerza' ? 'text-orange-500 border-orange-500/20' : 'text-purple-400 border-purple-500/20';
+                html += `<div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden mb-6"><div class="bg-gray-800/50 p-3 border-b border-gray-800"><div class="flex items-center gap-2 mb-1"><h3 class="font-bold text-gray-100">${ex.name}</h3><span class="text-[9px] font-black px-1.5 py-0.5 rounded border ${focusColor}">${ex.focus[0]}</span></div><div class="flex items-center gap-3"><p class="text-[10px] text-gray-400">${ex.minReps}-${ex.maxReps} reps</p><p class="text-[10px] text-cyan-400 font-mono italic">⏱️ ${getPausa(ex.focus)}</p></div></div><div class="p-3 space-y-2">`;
                 logs.forEach((set, index) => {
-                    const isDone = set.done;
-                    const isBodyweight = set.weight === 0;
-
-                    html += `
-                        <div class="flex items-center gap-2 ${isDone ? 'opacity-50' : ''} transition-opacity">
-                            <div class="w-6 text-center text-xs font-bold text-gray-500">${index + 1}</div>
-                            
-                            <div class="flex-1 relative">
-                                ${isBodyweight ? `<span class="absolute -top-2 left-2 bg-gray-900 text-orange-400 text-[8px] px-1 rounded border border-orange-900/50 z-10 font-bold">Corporal</span>` : ''}
-                                <input type="number" step="0.5" id="w-${ex.id}-${index}" value="${set.weight}" onchange="window.updateSet('${ex.id}', ${index}, 'weight', this.value)" class="w-full bg-gray-950 ${isBodyweight ? 'text-orange-300' : 'text-white'} text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-orange-500">
-                                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">kg</span>
-                            </div>
-                            
-                            <span class="text-gray-600">x</span>
-                            
-                            <div class="flex-1 relative">
-                                <input type="number" id="r-${ex.id}-${index}" value="${set.reps}" onchange="window.updateSet('${ex.id}', ${index}, 'reps', this.value)" class="w-full bg-gray-950 text-white text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-orange-500">
-                                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">reps</span>
-                            </div>
-                            
-                            <label class="relative flex items-center justify-center cursor-pointer w-12 h-10">
-                                <input type="checkbox" class="sr-only checkbox-custom" ${isDone ? 'checked' : ''} onchange="window.toggleSet('${ex.id}', ${index})">
-                                <div class="w-8 h-8 rounded-lg border-2 border-gray-600 bg-gray-800 flex items-center justify-center transition-colors">
-                                    <svg class="w-5 h-5 text-white hidden pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                                </div>
-                            </label>
-                        </div>`;
+                    html += `<div class="flex items-center gap-2 ${set.done ? 'opacity-40' : ''}"><div class="w-6 text-center text-xs font-bold text-gray-500">${index + 1}</div><div class="flex-1 relative"><input type="number" step="0.1" value="${set.weight}" onchange="window.updateSet('${ex.id}', ${index}, 'weight', this.value)" class="w-full bg-gray-950 text-white text-center text-lg font-bold rounded-lg py-2 border border-gray-700"><span class="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] text-gray-600">kg</span></div><span class="text-gray-600">x</span><div class="flex-1 relative"><input type="number" value="${set.reps}" onchange="window.updateSet('${ex.id}', ${index}, 'reps', this.value)" class="w-full bg-gray-950 text-white text-center text-lg font-bold rounded-lg py-2 border border-gray-700"></div><label class="w-10 h-10 flex items-center justify-center cursor-pointer"><input type="checkbox" class="sr-only checkbox-custom" ${set.done ? 'checked' : ''} onchange="window.toggleSet('${ex.id}', ${index})"><div class="w-8 h-8 rounded-lg border-2 border-gray-600 bg-gray-800 flex items-center justify-center"><svg class="w-5 h-5 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div></label></div>`;
                 });
-                html += `</div></div>`;
+                // SELECTOR RPE
+                const currentRPE = workout.rpe[ex.id] || '';
+                html += `</div><div class="px-3 pb-3 mt-2"><div class="grid grid-cols-3 gap-2">
+                    <button onclick="window.setEsfuerzo('${ex.id}', 'fallo')" class="py-2 rounded-lg text-[9px] font-bold border ${currentRPE === 'fallo' ? 'bg-red-500 text-white border-red-400' : 'bg-gray-800 text-red-500 border-red-900/30'}">🥵 FALLO</button>
+                    <button onclick="window.setEsfuerzo('${ex.id}', '-1')" class="py-2 rounded-lg text-[9px] font-bold border ${currentRPE === '-1' ? 'bg-blue-500 text-white border-blue-400' : 'bg-gray-800 text-blue-500 border-blue-900/30'}">😮‍💨 -1</button>
+                    <button onclick="window.setEsfuerzo('${ex.id}', '-2')" class="py-2 rounded-lg text-[9px] font-bold border ${currentRPE === '-2' ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-gray-800 text-emerald-500 border-emerald-900/30'}">😊 -2</button>
+                </div></div></div>`;
             });
             container.innerHTML = html;
+        }
+
+        window.setEsfuerzo = function(exId, valor) {
+            window.appState.currentWorkout.rpe[exId] = valor;
+            window.saveState();
+            window.renderActiveWorkout();
         }
 
         window.updateSet = function(exId, setIndex, field, value) {
@@ -389,136 +281,46 @@
         }
 
         window.cancelWorkout = function() {
-            if(confirm('¿Cancelar este entreno?')) {
-                window.appState.currentWorkout = null;
-                window.saveState();
-                window.renderDashboard();
-            }
+            if(confirm('¿Cancelar?')) { window.appState.currentWorkout = null; window.saveState(); window.renderDashboard(); }
         }
 
         window.finishWorkout = function() {
-            if(!confirm('¿Finalizar y guardar este entrenamiento en el historial?')) return;
-            
-            // Creamos el registro del entrenamiento terminado
-            const completedWorkout = {
-                ...window.appState.currentWorkout,
-                date: new Date().toISOString(), // Fecha y hora exacta
-                workoutName: window.appState.routine[window.appState.currentWorkout.blockId].name
-            };
-
-            // Lo guardamos en el array de historial
-            window.appState.history.push(completedWorkout);
-            
-            // Limpiamos el entrenamiento activo
+            if(!confirm('¿Guardar entrenamiento?')) return;
+            const completed = { ...window.appState.currentWorkout, date: new Date().toISOString(), workoutName: window.appState.routine[window.appState.currentWorkout.blockId].name };
+            window.appState.history.push(completed);
             window.appState.currentWorkout = null;
-            
-            // Guardamos en Firebase y LocalStorage automáticamente
             window.saveState();
             window.renderDashboard();
-            
-            alert('✅ Entrenamiento guardado en el historial');
+            alert('✅ Guardado');
         }
 
-        // --- SETTINGS ---
         window.renderSettings = function() {
-            document.getElementById('header-stats').classList.add('hidden');
-            let html = `
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-white">⚙️ Configuración</h2>
-                    <button onclick="window.renderDashboard()" class="text-sm text-gray-400 hover:text-white">Cerrar</button>
-                </div>
-                <div class="bg-orange-950/20 border border-orange-900/50 rounded-xl p-4 mt-8">
-                    <h3 class="font-bold text-orange-500 mb-2">📥 Importar Nueva Rutina</h3>
-                    <textarea id="import-code" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-xs text-gray-400 h-24 mb-3 focus:outline-none focus:border-orange-500" placeholder='Pegar código...'></textarea>
-                    <button onclick="window.importRoutine()" class="w-full bg-gray-800 hover:bg-gray-700 text-orange-400 font-bold py-3 rounded-lg border border-gray-700 transition">Cargar Nueva Rutina</button>
-                </div>
-                <div class="mt-8 pt-8 border-t border-gray-800">
-                    <h3 class="font-bold text-gray-300 mb-4 text-left">Exportar Datos</h3>
-                    <button onclick="window.downloadPDF()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg shadow-lg flex items-center justify-center gap-2 transition">
-                        📄 Descargar Historial PDF
-                    </button>
-                </div>
-                <div class="mt-8 text-center"><button onclick="if(confirm('¿Reiniciar TODO? (Se perderá el historial)')) { localStorage.clear(); location.reload(); }" class="text-xs text-red-500 underline">Peligro: Resetear App</button></div>
-            `;
+            let html = `<div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold text-white">⚙️ Ajustes</h2><button onclick="window.renderDashboard()" class="text-sm text-gray-400 underline">Volver</button></div><div class="bg-orange-950/20 border border-orange-900/50 rounded-xl p-4 mt-8"><h3 class="font-bold text-orange-500 mb-2">📥 Importar Rutina</h3><textarea id="import-code" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-xs text-gray-400 h-24 mb-3" placeholder='Pegar JSON...'></textarea><button onclick="window.importRoutine()" class="w-full bg-gray-800 text-orange-400 font-bold py-3 rounded-lg border border-gray-700">Cargar</button></div><div class="mt-8 pt-8 border-t border-gray-800"><button onclick="window.downloadPDF()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg shadow-lg">📄 Descargar Historial PDF</button></div><div class="mt-8 text-center"><button onclick="if(confirm('¿Resetear?')) { localStorage.clear(); location.reload(); }" class="text-xs text-red-500 underline text-center">Resetear Aplicación</button></div>`;
             container.innerHTML = html;
         }
 
-window.importRoutine = function() {
-            try {
-                window.appState.routine = JSON.parse(document.getElementById('import-code').value);
-                window.appState.baselineSets = {};
-                window.appState.isInitialized = false; 
-                window.saveState();
-                window.renderSetup();
-            } catch(e) { alert('Código inválido.'); }
+        window.importRoutine = function() {
+            try { window.appState.routine = JSON.parse(document.getElementById('import-code').value); window.appState.baselineSets = {}; window.appState.isInitialized = false; window.saveState(); window.renderSetup(); } catch(e) { alert('JSON inválido'); }
         }
 
-        // --- FUNCIÓN PARA EL PDF (VERSIÓN 100% SEGURA) ---
         window.downloadPDF = function() {
             const history = window.appState.history;
-            if(!history || history.length === 0) return alert('No hay entrenamientos en el historial para exportar.');
-
+            if(!history || history.length === 0) return alert('Sin historial');
             const printWindow = window.open('', '_blank');
-            
-            // 1. Apertura del HTML fragmentada para evitar errores del editor
-            let html = '<ht' + 'ml><he' + 'ad><ti' + 'tle>Reporte Gym Trackr</ti' + 'tle>';
-            html += '<scr' + 'ipt src="https://cdn.tailwindcss.com"></scr' + 'ipt>';
-            html += '</he' + 'ad><bo' + 'dy class="p-10 bg-white text-black">';
-            
-            // 2. Encabezado del reporte
-            html += `
-                <h1 class="text-3xl font-bold border-b-4 border-orange-500 pb-2">Historial de Entrenamiento</h1>
-                <p class="text-gray-500 mb-8 italic">Reporte generado el: ${new Date().toLocaleDateString()}</p>
-            `;
-
-            // 3. Recorremos el historial guardado
-            history.forEach((workout) => {
-                html += `
-                    <div class="mb-10 p-4 border border-gray-200 rounded-xl shadow-sm break-inside-avoid">
-                        <div class="flex justify-between items-center bg-gray-50 p-3 rounded-t-lg border-b border-gray-200">
-                            <h2 class="text-lg font-bold text-orange-600">${workout.workoutName || 'Entrenamiento'}</h2>
-                            <span class="text-sm font-mono text-gray-500">${new Date(workout.date).toLocaleDateString()}</span>
-                        </div>
-                        <table class="w-full mt-4 text-left border-collapse">
-                            <thead>
-                                <tr class="border-b-2 border-gray-100">
-                                    <th class="py-2 text-xs uppercase text-gray-400">Ejercicio</th>
-                                    <th class="py-2 text-xs uppercase text-gray-400 text-right">Peso x Reps</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-
-                Object.entries(workout.logs).forEach(([exId, sets]) => {
-                    let exName = "Ejercicio";
-                    Object.values(window.appState.routine).forEach(b => {
-                        const found = b.exercises.find(e => e.id === exId);
-                        if(found) exName = found.name;
-                    });
-
-                    html += `
-                        <tr class="border-b border-gray-50">
-                            <td class="py-3 text-sm font-semibold text-gray-700">${exName}</td>
-                            <td class="py-3 text-sm text-right font-mono">
-                                ${sets.map((s, i) => `<span class="ml-2 bg-gray-100 px-1 rounded text-black font-bold border border-gray-300">S${i+1}: ${s.weight}kg x ${s.reps}</span>`).join('')}
-                            </td>
-                        </tr>
-                    `;
+            let html = '<ht' + 'ml><he' + 'ad><ti' + 'tle>Gym Report</ti' + 'tle><scr' + 'ipt src="https://cdn.tailwindcss.com"></scr' + 'ipt></he' + 'ad><bo' + 'dy class="p-10 bg-white text-black"><h1 class="text-3xl font-bold border-b-4 border-orange-500 pb-2">Reporte de Entrenos</h1>';
+            history.forEach((w) => {
+                html += `<div class="mb-10 p-4 border rounded-xl shadow-sm"><div class="flex justify-between bg-gray-50 p-3 rounded-t-lg"><strong>${w.workoutName}</strong><span>${new Date(w.date).toLocaleDateString()}</span></div><table class="w-full mt-4">`;
+                Object.entries(w.logs).forEach(([id, s]) => {
+                    let name = "Ejercicio";
+                    Object.values(window.appState.routine).forEach(b => { const f = b.exercises.find(e => e.id === id); if(f) name = f.name; });
+                    html += `<tr class="border-b"><td class="py-2 font-semibold">${name}</td><td class="py-2 text-right">${s.map((set, i) => `[S${i+1}: ${set.weight}kg x ${set.reps}]`).join(' ')}</td></tr>`;
                 });
-
-                html += `</tbody></table></div>`;
+                html += `</table></div>`;
             });
-
-            // 4. Cierre del HTML fragmentado
             html += '</bo' + 'dy></ht' + 'ml>';
-            
-            // 5. Escribimos y lanzamos la impresión
             printWindow.document.write(html);
             printWindow.document.close();
-            
-            setTimeout(() => {
-                printWindow.print();
-            }, 1000);
+            setTimeout(() => { printWindow.print(); }, 1000);
         };
 
         window.init = function() {
@@ -526,9 +328,7 @@ window.importRoutine = function() {
             else if (window.appState.currentWorkout) window.renderActiveWorkout();
             else window.renderDashboard();
         }
-        
         window.init();
-        
     </script>
 </body>
 </html>
