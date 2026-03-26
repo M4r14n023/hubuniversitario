@@ -101,6 +101,32 @@
           if (focus === 'Hipertrofia') return '60-90 seg';
           return '60 seg'; 
         };
+        const getRack = (equipo) => {
+            let rack = [];
+            if (equipo === 'mancuerna') {
+                rack = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35];
+            } else if (equipo === 'polea') {
+                for (let i = 2.5; i <= 150; i += 0.5) {
+                    if (i % 2.5 === 0 || i % 3 === 0) rack.push(i);
+                }
+            } else if (equipo === 'prensa') {
+                // Combinando 10, 15 y 20 se puede lograr cualquier múltiplo de 5 a partir de 10
+                for (let i = 10; i <= 400; i += 5) rack.push(i);
+            } else if (equipo === 'curl_femoral' || equipo === 'maquina') {
+                // Ladrillos estrictos de 5kg
+                for (let i = 5; i <= 200; i += 5) rack.push(i);
+            } else {
+                // Barras y Sillón de cuádriceps (Discos de 2.5 en adelante)
+                for (let i = 2.5; i <= 200; i += 2.5) rack.push(i);
+            }
+            return rack;
+        };
+
+        const redondearPeso = (peso, equipo) => {
+            if (peso <= 0) return 0;
+            const rack = getRack(equipo);
+            return rack.reduce((prev, curr) => Math.abs(curr - peso) < Math.abs(prev - peso) ? curr : prev);
+        };
 
         // --- ESTADO ---
         window.appState = JSON.parse(localStorage.getItem('gymTrackrState_v2')) || {
@@ -253,15 +279,26 @@
             container.innerHTML = html + `</div></div>`;
         }
 
-        // --- ENTRENO ACTIVO (AHORA CON CONDICIONES RPE) ---
+        // --- ENTRENO ACTIVO (CON REDONDEO INTELIGENTE E INTRA-SERIES) ---
         window.startWorkout = function(blockId) {
             const block = window.appState.routine[blockId];
-            let workout = { blockId: blockId, date: new Date().toISOString(), logs: {}, rpe: {} }; // <-- Agregamos rpe
+            let workout = { blockId: blockId, date: new Date().toISOString(), logs: {}, rpe: {} }; 
 
             block.exercises.forEach(ex => {
                 workout.logs[ex.id] = [];
                 const lastLog = [...window.appState.history].reverse().find(h => h.blockId === blockId);
                 
+                // 1. DETECCIÓN AUTOMÁTICA DEL EQUIPO PARA ESE EJERCICIO
+                let equipo = 'barra'; // Por defecto usa múltiplos de 2.5
+                const nom = ex.name.toLowerCase();
+                
+                // Filtros específicos por nombre
+                if (nom.includes('curl femoral')) equipo = 'curl_femoral';
+                else if (nom.includes('prensa')) equipo = 'prensa';
+                else if (nom.includes('sillón') || nom.includes('sillon')) equipo = 'barra'; // Usa discos de 2.5
+                else if (nom.includes('estocadas') || nom.includes('gemelos') || nom.includes('mancuerna') || nom.includes('laterales') || nom.includes('martillo')) equipo = 'mancuerna';
+                else if (nom.includes('polea') || nom.includes('jalón') || nom.includes('tríceps')) equipo = 'polea';
+
                 let shouldIncrease = false;
                 let rpeAccion = 0; // 0 = Normal, 1 = Subir Agresivo, -1 = Bajar peso
 
@@ -269,47 +306,58 @@
                     const prevSets = lastLog.logs[ex.id];
                     shouldIncrease = prevSets.every(s => s.reps >= ex.maxReps && s.done);
                     
-                    // --- LÓGICA DE ESFUERZO (RPE) DE LA SEMANA PASADA ---
                     const prevRPE = lastLog.rpe ? lastLog.rpe[ex.id] : null;
                     if (prevRPE) {
                         if (ex.maxReps <= 8) { 
-                            // RANGO DE FUERZA: Debe sobrar
-                            if (prevRPE === 'fallo') rpeAccion = -1; // Falló cuando debía sobrar -> Bajar/Mantener peso
+                            if (prevRPE === 'fallo') rpeAccion = -1; 
                         } else if (ex.maxReps >= 10) { 
-                            // RANGO HIPERTROFIA: Debe fallar
-                            if (prevRPE === '-1' || prevRPE === '-2') rpeAccion = 1; // Sobró cuando debía fallar -> Subir agresivo
+                            if (prevRPE === '-1' || prevRPE === '-2') rpeAccion = 1; 
                         }
                     }
 
+                    // ARRAY Y MEMORIA PARA EL REDONDEO DE LAS SERIES
+                    let calculosPesos = [];
+                    let deficitDePeso = 0; 
+
                     for(let i=0; i<ex.sets; i++) {
                         let prevW = prevSets[i]?.weight || 0;
-                        let nextW = prevW;
-                        let isBWProgression = false;
+                        let targetTeorico = prevW;
 
-                        if (prevW === 0 && shouldIncrease) {
-                            isBWProgression = true; // Dominó peso corporal
-                        } else if (prevW > 0) {
+                        if (prevW > 0) {
                             let increaseNormal = Math.max(0.5, prevW * 0.025);
-
-                            if (rpeAccion === 1) {
-                                // Subida porque sobró mucho
-                                let increaseAgresivo = Math.max(1, prevW * 0.05); // 5%
-                                nextW = Math.round((prevW + increaseAgresivo) * 2) / 2;
-                            } else if (rpeAccion === -1) {
-                                // Bajada porque falló en fuerza (riesgo)
-                                nextW = Math.max(0, Math.round((prevW - increaseNormal) * 2) / 2);
-                            } else if (shouldIncrease) {
-                                // Progresión normal
-                                nextW = Math.round((prevW + increaseNormal) * 2) / 2;
-                            }
+                            if (rpeAccion === 1) targetTeorico += Math.max(1, prevW * 0.05);
+                            else if (rpeAccion === -1) targetTeorico = Math.max(0, targetTeorico - increaseNormal);
+                            else if (shouldIncrease) targetTeorico += increaseNormal;
                         }
 
+                        if (targetTeorico > 0) {
+                            // Sumamos el déficit de la serie anterior
+                            let targetConDeficit = targetTeorico + deficitDePeso;
+                            
+                            // Redondeamos al equipamiento real
+                            let pesoReal = redondearPeso(targetConDeficit, equipo);
+                            
+                            // Guardamos lo que sobró o faltó para la próxima serie
+                            deficitDePeso = targetConDeficit - pesoReal;
+                            
+                            calculosPesos.push(pesoReal);
+                        } else {
+                            calculosPesos.push(0);
+                        }
+                    }
+
+                    // Ordenamos de menor a mayor (Ej: 15, 15, 17.5, 17.5) para que el salto quede al final
+                    calculosPesos.sort((a, b) => a - b);
+
+                    // Insertamos las series ya calculadas
+                    for(let i=0; i<ex.sets; i++) {
+                        let prevW = prevSets[i]?.weight || 0;
                         workout.logs[ex.id].push({ 
                             reps: ex.maxReps, 
-                            weight: nextW, 
+                            weight: calculosPesos[i], 
                             done: false, 
                             shouldIncrease: (shouldIncrease || rpeAccion === 1) && i===0 && rpeAccion !== -1,
-                            isBWProgression: isBWProgression && i===0
+                            isBWProgression: prevW === 0 && shouldIncrease && i===0
                         });
                     }
                 } else {
