@@ -208,7 +208,7 @@
     <div class="builder-layout">
       <div>
         <p class="section-title">Semana de Outfits</p>
-        <p class="section-sub">Marcá qué tenés disponible y generá los 5 looks</p>
+        <p class="section-sub">Marcá qué tenés disponible y generá tus looks</p>
         <div class="week-grid" id="week-grid">
           <div style="padding:30px;text-align:center;color:var(--muted);font-size:0.7rem;border:1.5px dashed var(--border);border-radius:4px;">
             Seleccioná prendas disponibles → "Generar semana"
@@ -228,55 +228,18 @@
           <div class="panel-body">
             <div class="avail-section"><div class="avail-title">Cintos</div><div class="avail-list" id="avail-belts"></div></div>
             <div class="avail-section"><div class="avail-title">Calzado</div><div class="avail-list" id="avail-shoes"></div></div>
-            <button class="generate-btn" onclick="window.generateWeek()">✦ Generar semana</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div id="tab-evento" class="hidden">
-    <div class="builder-layout">
-      <div>
-        <p class="section-title">Look del Día</p>
-        <p class="section-sub">Armá tu outfit basado en una prenda protagonista o nivel de formalidad</p>
-        <div class="week-grid" id="event-grid">
-          <div style="padding:30px;text-align:center;color:var(--muted);font-size:0.7rem;border:1.5px dashed var(--border);border-radius:4px;">
-            Configurá tu salida en el panel derecho → "Generar Look"
-          </div>
-        </div>
-      </div>
-      <div class="side-panel">
-        <div class="panel-card">
-          <div class="panel-header">Configuración del Evento</div>
-          <div class="panel-body">
             
-            <div class="form-row">
-              <label class="form-label">Prenda Obligatoria (Ancla)</label>
-              <select id="event-anchor" class="form-select" onclick="window.populateAnchorSelect()">
-                <option value="">Ninguna (Libre)</option>
-                </select>
-            </div>
-
-            <div class="form-row">
-              <label class="form-label">Nivel de Formalidad</label>
-              <select id="event-formality" class="form-select">
-                <option value="0">Cualquiera</option>
-                <option value="1">Casual Relajado (Zapatillas Crema)</option>
-                <option value="2">Smart Casual (Zapatillas Cuero Blancas)</option>
-                <option value="3">Elegante Sport (Zapatos Marrones)</option>
+            <div class="avail-section" style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px;">
+              <div class="avail-title">Duración de la semana</div>
+              <select id="week-days-count" class="form-select" style="width: 100%; padding: 7px; font-size: 0.65rem;">
+                <option value="5">Completa (Lun a Vie)</option>
+                <option value="4">Parcial (4 días)</option>
+                <option value="3">Parcial (3 días)</option>
+                <option value="2">Parcial (2 días)</option>
               </select>
             </div>
 
-            <div class="form-row">
-              <label class="form-label">Cantidad de Opciones</label>
-              <select id="event-num" class="form-select">
-                <option value="1">1 Look Exacto</option>
-                <option value="2">2 Opciones</option>
-                <option value="3" selected>3 Opciones</option>
-              </select>
-            </div>
-
-            <button class="generate-btn" style="margin-top:10px" onclick="window.generateEventLook()">✦ Generar Look</button>
+            <button class="generate-btn" onclick="window.generateWeek()">✦ Generar semana</button>
           </div>
         </div>
       </div>
@@ -568,9 +531,16 @@
     const avT=allGarments().filter(g=>g.type!=='bottom'&&available.has(g.id));
     const avBt=allBelts().filter(b=>available.has(b.id));
     const avSh=allShoes().filter(s=>available.has(s.id));
+    
     if(!avB.length||!avT.length){alert('Seleccioná al menos un pantalón y una parte de arriba.');return;}
+    
+    // --- NUEVO: Leer cantidad de días y armar etiquetas ---
+    const numDaysElement = document.getElementById('week-days-count');
+    const numDays = numDaysElement ? parseInt(numDaysElement.value) : 5;
+    const isFullWeek = numDays === 5;
+    const DAYS = isFullWeek ? ['Lunes','Martes','Miércoles','Jueves','Viernes'] : Array.from({length: numDays}, (_, i) => `Día ${i + 1}`);
+    
     const usedT=[];
-    const DAYS=['Lunes','Martes','Miércoles','Jueves','Viernes'];
     const outfits=DAYS.map((_,i)=>{
       const bottom=avB[i%avB.length];
       const rules=RULES[bottom.id]||{tops:allGarments().map(g=>g.id),belt:avBt[0]?.id,shoe:avSh[0]?.id,tip:'Aplicá contraste claro/oscuro y paleta earthy.'};
@@ -582,15 +552,37 @@
       const shoe=avSh.find(s=>s.id===rules.shoe)||avSh[i%(avSh.length||1)]||null;
       return{bottom,top,belt,shoe,tip:rules.tip};
     });
-    const today=new Date(); const dow=today.getDay();
-    const toMon=dow===1?0:(8-dow)%7||7;
-    const monday=new Date(today); monday.setDate(today.getDate()+toMon);
+    
+    // Configuración de fechas
+    const today=new Date(); 
+    let startDate = new Date(today);
+    
+    if (isFullWeek) {
+      // Si es semana completa, busca el próximo lunes (o el actual si es lunes)
+      const dow = today.getDay();
+      const toMon = dow === 1 ? 0 : (8 - dow) % 7 || 7;
+      startDate.setDate(today.getDate() + toMon);
+    }
+
     const si=(file,w,h,cls)=>`<img class="${cls}" src="${file}" style="width:${w}px;height:${h}px">`;
-    document.getElementById('week-grid').innerHTML=DAYS.map((day,i)=>{
-      const o=outfits[i]; const d=new Date(monday); d.setDate(monday.getDate()+i);
-      const ds=d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
+    
+    document.getElementById('week-grid').innerHTML=DAYS.map((dayName,i)=>{
+      const o=outfits[i]; 
+      const d=new Date(startDate); 
+      d.setDate(startDate.getDate()+i);
+      
+      // Si es parcial, la fecha mostrada arranca desde hoy. Si es completa, muestra la fecha normal.
+      let ds = '';
+      if (isFullWeek) {
+         ds = d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
+      } else {
+         if (i === 0) ds = 'Hoy';
+         else if (i === 1) ds = 'Mañana';
+         else ds = d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
+      }
+
       return`<div class="day-card">
-        <div class="day-header"><span class="day-name">${day}</span><span class="day-date">${ds}</span></div>
+        <div class="day-header"><span class="day-name">${dayName}</span><span class="day-date">${ds}</span></div>
         <div class="day-slots">
           <div class="slot"><span class="slot-label">Arriba</span>${si(o.top.file,62,72,'slot-img')}<span class="slot-name">${o.top.name}</span></div>
           <span class="plus-sep">+</span>
@@ -602,7 +594,7 @@
       </div>`;
     }).join('');
 
-    // --- NUEVO: Guardamos la semana generada en la memoria del navegador ---
+    // Guardamos la semana generada en la memoria del navegador
     localStorage.setItem('asesor_week_html', document.getElementById('week-grid').innerHTML);
   };
   // --- NUEVA LÓGICA: LOOK DEL DÍA ---
