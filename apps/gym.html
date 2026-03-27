@@ -415,6 +415,11 @@
                 logs.forEach((set, index) => {
                     const isDone = set.done;
                     const isBodyweight = set.weight === 0;
+                    
+                    // Detectamos si es de barra para cambiar la etiqueta visual
+                    const nom = ex.name.toLowerCase();
+                    const esBarra = nom.includes('barra') || nom.includes('sentadilla') || nom.includes('peso muerto rumano');
+                    const etiquetaPeso = esBarra ? 'kg/lado' : 'kg';
 
                     html += `
                         <div class="flex items-center gap-2 ${isDone ? 'opacity-50' : ''} transition-opacity">
@@ -423,7 +428,7 @@
                             <div class="flex-1 relative">
                                 ${isBodyweight ? `<span class="absolute -top-2 left-2 bg-gray-900 text-orange-400 text-[8px] px-1 rounded border border-orange-900/50 z-10 font-bold">Corporal</span>` : ''}
                                 <input type="number" step="0.5" id="w-${ex.id}-${index}" value="${set.weight}" onchange="window.updateSet('${ex.id}', ${index}, 'weight', this.value)" class="w-full bg-gray-950 ${isBodyweight ? 'text-orange-300' : 'text-white'} text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-orange-500">
-                                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">kg</span>
+                                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-gray-500">${etiquetaPeso}</span>
                             </div>
                             
                             <span class="text-gray-600">x</span>
