@@ -326,8 +326,9 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
+  // --- PASO 1: IMPORTAMOS LAS FUNCIONES DE FIREBASE QUE NECESITAMOS ---
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
   import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
   // 1. Configuración de Firebase
@@ -343,9 +344,9 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const storage = getStorage(app);
-  const COLLECTION_NAME = "sync-asesor"; // Tu nueva colección basada en tus reglas
+  const COLLECTION_NAME = "sync-asesor"; 
 
-// 2. Base Data (Prendas Iniciales Quemadas)
+  // 2. Base Data (Prendas Iniciales Quemadas)
   const BASE_GARMENTS = [
     {id:'3643',file:'ropa/IMG_3643.jpeg',type:'bottom',name:'Chino Beige',color:'#d4c5a9',isBase:true},
     {id:'3644',file:'ropa/IMG_3644.jpeg',type:'bottom',name:'Jean Sage',color:'#7a8c7e',isBase:true},
@@ -466,16 +467,11 @@
     if(!confirm('¿Eliminar esta prenda del guardarropa en la nube?')) return;
     
     try {
-      // Borrar de Firestore Database
       await deleteDoc(doc(db, COLLECTION_NAME, id));
-      
-      // Borrar la imagen de Storage (si guardamos la ruta)
       if(storagePath && storagePath !== 'undefined') {
         const fileRef = ref(storage, storagePath);
         await deleteObject(fileRef).catch(e => console.log("Archivo ya no existe en storage", e));
       }
-
-      // Actualizar memoria visual
       EXTRA_GARMENTS = EXTRA_GARMENTS.filter(e => e.id !== id);
       renderWardrobe(); 
       if(currentFilter==='acc') renderAccDisplay();
@@ -486,9 +482,7 @@
     }
   };
 
- // 7. Lógica del Armador (Availability y Generador con Persistencia)
-  
-  // 1. Cargamos lo que tenías guardado de antes (en vez de empezar vacío)
+  // 7. Lógica del Armador (Availability con Persistencia)
   let available = new Set(JSON.parse(localStorage.getItem('asesor_available') || '[]'));
 
   function renderAvailability(){
@@ -506,7 +500,6 @@
     mk(allShoes(),'avail-shoes');
   }
 
-  // 2. Modificamos el toggle para que guarde cada vez que haces clic
   window.toggleAvail = function(id,el){
     if(available.has(id)){
       available.delete(id);
@@ -517,15 +510,10 @@
       el.classList.add('checked');
       el.querySelector('.avail-check').textContent='✓';
     }
-    // Guardamos la selección actualizada en la memoria del navegador
     localStorage.setItem('asesor_available', JSON.stringify([...available]));
   };
 
-  window.toggleAvail = function(id,el){
-    if(available.has(id)){available.delete(id);el.classList.remove('checked');el.querySelector('.avail-check').textContent='';}
-    else{available.add(id);el.classList.add('checked');el.querySelector('.avail-check').textContent='✓';}
-  };
-// ── GENERATE ──────────────────────────────────────────────────────
+  // ── GENERATE WEEK (Y SINCRONIZACIÓN EN LA NUBE) ───────────────────
   window.generateWeek = function(){
     const avB=allGarments().filter(g=>g.type==='bottom'&&available.has(g.id));
     const avT=allGarments().filter(g=>g.type!=='bottom'&&available.has(g.id));
@@ -534,7 +522,6 @@
     
     if(!avB.length||!avT.length){alert('Seleccioná al menos un pantalón y una parte de arriba.');return;}
     
-    // --- NUEVO: Leer cantidad de días y armar etiquetas ---
     const numDaysElement = document.getElementById('week-days-count');
     const numDays = numDaysElement ? parseInt(numDaysElement.value) : 5;
     const isFullWeek = numDays === 5;
@@ -553,12 +540,10 @@
       return{bottom,top,belt,shoe,tip:rules.tip};
     });
     
-    // Configuración de fechas
     const today=new Date(); 
     let startDate = new Date(today);
     
     if (isFullWeek) {
-      // Si es semana completa, busca el próximo lunes (o el actual si es lunes)
       const dow = today.getDay();
       const toMon = dow === 1 ? 0 : (8 - dow) % 7 || 7;
       startDate.setDate(today.getDate() + toMon);
@@ -571,7 +556,6 @@
       const d=new Date(startDate); 
       d.setDate(startDate.getDate()+i);
       
-      // Si es parcial, la fecha mostrada arranca desde hoy. Si es completa, muestra la fecha normal.
       let ds = '';
       if (isFullWeek) {
          ds = d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
@@ -594,15 +578,22 @@
       </div>`;
     }).join('');
 
-    // Guardamos la semana generada en la memoria del navegador
-    localStorage.setItem('asesor_week_html', document.getElementById('week-grid').innerHTML);
+    // --- NUEVO PASO 2: Sincronización en la Nube ---
+    const weekHtml = document.getElementById('week-grid').innerHTML;
+    localStorage.setItem('asesor_week_html', weekHtml);
+    
+    setDoc(doc(db, COLLECTION_NAME, "semana-guardada"), {
+      html: weekHtml,
+      actualizado: Date.now()
+    }).then(() => {
+      showToast('Semana sincronizada en todos tus dispositivos ☁️');
+    }).catch(error => console.error("Error sincronizando:", error));
   };
-  // --- NUEVA LÓGICA: LOOK DEL DÍA ---
 
-  // Llenar el select con toda tu ropa disponible
+  // --- LÓGICA: LOOK DEL DÍA ---
   window.populateAnchorSelect = function() {
     const select = document.getElementById('event-anchor');
-    if(select.options.length > 1) return; // Ya está lleno
+    if(select.options.length > 1) return;
     
     const addGroup = (label, items) => {
       if(!items.length) return;
@@ -633,33 +624,21 @@
     const belts = allBelts();
     const shoes = allShoes();
 
-    // 1. Generar todas las combinaciones que cumplen las reglas de color
     bottoms.forEach(b => {
       const rules = RULES[b.id] || { tops: tops.map(t=>t.id), belt: belts[0]?.id, shoe: shoes[0]?.id, tip: 'Aplicá contraste claro/oscuro.' };
-      
       tops.forEach(t => {
         if (rules.tops.includes(t.id)) {
           shoes.forEach(s => {
-            // Filtro de formalidad (basado en el calzado)
             if (reqFormality === 0 || (s.formality || 2) === reqFormality) {
               belts.forEach(blt => {
                 let outfit = { bottom: b, top: t, belt: blt, shoe: s, tip: rules.tip };
-                
-                // 2. Filtro de Prenda Ancla: ¿El outfit tiene la prenda que pediste?
                 if (!anchorId || [b.id, t.id, blt.id, s.id].includes(anchorId)) {
-                  
-                  // 3. Coherencia: Intentar respetar el cinto/calzado sugerido por las reglas
-                  // a menos que la prenda ancla nos obligue a romper la regla
                   let isCoherent = true;
                   if (anchorId !== blt.id && rules.belt && blt.id !== rules.belt) isCoherent = false;
                   if (anchorId !== s.id && rules.shoe && s.id !== rules.shoe) isCoherent = false;
 
-                  if (isCoherent) {
-                    validOutfits.push(outfit);
-                  } else if (anchorId) {
-                    // Si fuimos muy estrictos y forzaste una prenda, lo agregamos igual pero con menos prioridad
-                    validOutfits.push({...outfit, tip: "💡 Outfit forzado por tu elección de prenda."});
-                  }
+                  if (isCoherent) validOutfits.push(outfit);
+                  else if (anchorId) validOutfits.push({...outfit, tip: "💡 Outfit forzado por tu elección de prenda."});
                 }
               });
             }
@@ -668,7 +647,6 @@
       });
     });
 
-    // Limpiar duplicados visuales (mismo pantalón y remera)
     const uniqueOutfits = [];
     const seen = new Set();
     for (let o of validOutfits) {
@@ -676,7 +654,6 @@
       if (!seen.has(key)) { seen.add(key); uniqueOutfits.push(o); }
     }
 
-    // Mezclar aleatoriamente y tomar N opciones
     const shuffled = uniqueOutfits.sort(() => 0.5 - Math.random());
     const finalSelection = shuffled.slice(0, numOptions);
 
@@ -685,7 +662,6 @@
       return;
     }
 
-    // Renderizar
     const si = (file,w,h,cls) => `<img class="${cls}" src="${file}" style="width:${w}px;height:${h}px">`;
     document.getElementById('event-grid').innerHTML = finalSelection.map((o, i) => `
       <div class="day-card">
@@ -704,17 +680,23 @@
     `).join('');
   };
 
-  // 8. Navegación por Tabs
+  // 8. Navegación por Tabs (Corrección de errores)
   window.showTab = function(tab){
-    ['guardarropa','armador','evento','reglas'].forEach(t=>document.getElementById(`tab-${t}`).classList.add('hidden'));
-    document.getElementById(`tab-${tab}`).classList.remove('hidden');
-    document.querySelectorAll('nav button').forEach((b,i)=>b.classList.toggle('active',['guardarropa','armador','evento','reglas'][i]===tab));
-    if(tab==='armador') renderAvailability();
+    ['guardarropa','armador','evento','reglas'].forEach(t => {
+      const panel = document.getElementById(`tab-${t}`);
+      if (panel) panel.classList.add('hidden');
+    });
+    const activePanel = document.getElementById(`tab-${tab}`);
+    if (activePanel) activePanel.classList.remove('hidden');
+    
+    document.querySelectorAll('nav button').forEach((b,i) => {
+      b.classList.toggle('active', ['guardarropa','armador','evento','reglas'][i] === tab);
+    });
+    if(tab === 'armador') renderAvailability();
   };
 
   // 9. Lógica del Modal y Subida a la Nube
   let selectedFile = null;
-
   window.openAddModal = function(){
     selectedFile = null;
     document.getElementById('preview-img').style.display='none';
@@ -725,34 +707,13 @@
     window.updateColorPreview('#8b6f47');
     document.getElementById('modal-overlay').classList.add('open');
   };
-
   window.closeModal = function(){ document.getElementById('modal-overlay').classList.remove('open'); };
   document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)window.closeModal();});
-
   window.handleDragOver = function(e){e.preventDefault();document.getElementById('drop-zone').classList.add('drag-over');};
   window.handleDragLeave = function(){document.getElementById('drop-zone').classList.remove('drag-over');};
-  
-  window.handleDrop = function(e){
-    e.preventDefault(); window.handleDragLeave();
-    const f=e.dataTransfer.files[0]; 
-    if(f) { selectedFile = f; loadImgPreview(f); }
-  };
-  
-  window.handleFileSelect = function(e){
-    const f=e.target.files[0]; 
-    if(f) { selectedFile = f; loadImgPreview(f); }
-  };
-
-  function loadImgPreview(file){
-    const r=new FileReader();
-    r.onload=ev=>{
-      const p=document.getElementById('preview-img');
-      p.src=ev.target.result; p.style.display='block';
-      document.getElementById('drop-zone').style.display='none';
-    };
-    r.readAsDataURL(file);
-  }
-
+  window.handleDrop = function(e){e.preventDefault(); window.handleDragLeave(); const f=e.dataTransfer.files[0]; if(f) { selectedFile = f; loadImgPreview(f); }};
+  window.handleFileSelect = function(e){const f=e.target.files[0]; if(f) { selectedFile = f; loadImgPreview(f); }};
+  function loadImgPreview(file){const r=new FileReader();r.onload=ev=>{const p=document.getElementById('preview-img');p.src=ev.target.result; p.style.display='block';document.getElementById('drop-zone').style.display='none';};r.readAsDataURL(file);}
   window.updateColorPreview = function(val){document.getElementById('color-preview').style.background=val;};
 
   window.saveGarment = async function(){
@@ -771,36 +732,21 @@
     btnSave.disabled = true;
 
     try {
-      // A. Subir imagen a Firebase Storage
       const fileName = `ropa/${Date.now()}_${selectedFile.name}`;
       const storageReference = ref(storage, fileName);
       await uploadBytes(storageReference, selectedFile);
       const downloadURL = await getDownloadURL(storageReference);
 
-      // B. Preparar el documento
-      const itemData = {
-        file: downloadURL,
-        storagePath: fileName, // Guardamos la ruta para poder borrar la foto después
-        type, name, color, colorName, notes, 
-        sub: notes, isBase: false, isNew: true,
-        timestamp: Date.now()
-      };
-
-      // C. Guardar en Firestore Database
+      const itemData = {file: downloadURL, storagePath: fileName, type, name, color, colorName, notes, sub: notes, isBase: false, isNew: true, timestamp: Date.now()};
       const docRef = await addDoc(collection(db, COLLECTION_NAME), itemData);
       itemData.id = docRef.id;
       
-      // D. Actualizar UI
       EXTRA_GARMENTS.push(itemData);
       window.closeModal();
       
-      if(type==='belt'||type==='shoe'){
-        window.filterGarments('acc',document.querySelectorAll('.filter-btn')[4]);
-      } else {
-        renderWardrobe(currentFilter);
-      }
+      if(type==='belt'||type==='shoe'){ window.filterGarments('acc',document.querySelectorAll('.filter-btn')[4]); } 
+      else { renderWardrobe(currentFilter); }
       showToast(`"${name}" subida a la nube ✓`);
-
     } catch (error) {
       console.error("Error al guardar: ", error);
       alert("Hubo un error al subir la prenda. Revisa tu conexión a internet.");
@@ -810,26 +756,37 @@
     }
   };
 
-  // 10. Toasts y Arranque
+  // 10. Toasts
   function showToast(msg){
     const t=document.getElementById('toast');
     t.textContent=msg; t.classList.add('show');
     setTimeout(()=>t.classList.remove('show'),2800);
   }
 
-  // --- PASO 3: RESTAURACIÓN AL INICIAR ---
-  // Cargar primero lo que está fijo
+  // --- PASO 3: RESTAURACIÓN Y SINCRONIZACIÓN AL INICIAR ---
   renderWardrobe('all');
-  
-  // Luego, ir a buscar a la nube (Firebase)
   loadFromFirebase();
 
-  // Finalmente, restaurar la semana generada desde el almacenamiento local si existe
-  const savedWeek = localStorage.getItem('asesor_week_html');
-  if (savedWeek) {
-    document.getElementById('week-grid').innerHTML = savedWeek;
+  async function syncWeekFromCloud() {
+    const savedLocal = localStorage.getItem('asesor_week_html');
+    if (savedLocal) {
+      document.getElementById('week-grid').innerHTML = savedLocal;
+    }
+
+    try {
+      const docSnap = await getDoc(doc(db, COLLECTION_NAME, "semana-guardada"));
+      if (docSnap.exists()) {
+        const cloudHtml = docSnap.data().html;
+        if (cloudHtml !== savedLocal) {
+          document.getElementById('week-grid').innerHTML = cloudHtml;
+          localStorage.setItem('asesor_week_html', cloudHtml);
+        }
+      }
+    } catch (error) {
+      console.log("No se pudo sincronizar la semana desde la nube", error);
+    }
   }
 
+  syncWeekFromCloud();
 </script>
-</body>
 </html>
