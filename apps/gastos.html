@@ -1288,6 +1288,71 @@
     </div>
   </div>
 
+  <!-- Edit Fixed Expense Modal -->
+  <div class="modal" id="editFixedExpenseModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>✏️ Editar Gasto Fijo</h3>
+        <button class="modal-close" onclick="closeEditFixedExpenseModal()">×</button>
+      </div>
+      <form id="editFixedExpenseForm">
+        <input type="hidden" id="editFixedExpenseId">
+        
+        <div class="form-group">
+          <label>Descripción</label>
+          <input type="text" id="editFixedDescription" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Monto</label>
+            <input type="number" id="editFixedAmount" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label>Cuenta</label>
+            <select id="editFixedAccount" required>
+              <option value="">Seleccionar...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Día de Vencimiento</label>
+            <input type="number" id="editFixedDay" min="1" max="31" required>
+          </div>
+          <div class="form-group">
+            <label>Mes de Vencimiento</label>
+            <select id="editFixedMonth" required>
+              <option value="">Seleccionar...</option>
+              <option value="1">Enero</option>
+              <option value="2">Febrero</option>
+              <option value="3">Marzo</option>
+              <option value="4">Abril</option>
+              <option value="5">Mayo</option>
+              <option value="6">Junio</option>
+              <option value="7">Julio</option>
+              <option value="8">Agosto</option>
+              <option value="9">Septiembre</option>
+              <option value="10">Octubre</option>
+              <option value="11">Noviembre</option>
+              <option value="12">Diciembre</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">
+            Guardar Cambios
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="closeEditFixedExpenseModal()" style="flex: 1;">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     // Storage Manager
     const Storage = {
@@ -1561,6 +1626,9 @@
                     💰 Pagar
                   </button>
                 ` : ''}
+                <button class="btn btn-small btn-secondary" onclick="editFixedExpense(${exp.id})">
+                  ✏️ Editar
+                </button>
                 <button class="btn btn-small btn-danger" onclick="deleteFixedExpense(${exp.id})">
                   🗑️ Eliminar
                 </button>
@@ -1877,6 +1945,61 @@
       updateDashboard();
       showToast('Gasto fijo eliminado', 'success');
     }
+
+    function editFixedExpense(expenseId) {
+      const expense = fixedExpenses.find(e => e.id === expenseId);
+      if (!expense) return;
+
+      // Populate the edit form
+      document.getElementById('editFixedExpenseId').value = expense.id;
+      document.getElementById('editFixedDescription').value = expense.description;
+      document.getElementById('editFixedAmount').value = expense.amount;
+      document.getElementById('editFixedAccount').value = expense.accountId;
+      document.getElementById('editFixedDay').value = expense.day;
+      document.getElementById('editFixedMonth').value = expense.month || '';
+
+      // Populate account select
+      const editAccountSelect = document.getElementById('editFixedAccount');
+      editAccountSelect.innerHTML = '<option value="">Seleccionar...</option>' +
+        accounts.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
+      editAccountSelect.value = expense.accountId;
+
+      // Show modal
+      document.getElementById('editFixedExpenseModal').classList.add('active');
+    }
+
+    function closeEditFixedExpenseModal() {
+      document.getElementById('editFixedExpenseModal').classList.remove('active');
+      document.getElementById('editFixedExpenseForm').reset();
+    }
+
+    // Handle edit fixed expense form submission
+    document.getElementById('editFixedExpenseForm')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const expenseId = parseInt(document.getElementById('editFixedExpenseId').value);
+      const expense = fixedExpenses.find(e => e.id === expenseId);
+      
+      if (!expense) {
+        showToast('Error: Gasto no encontrado', 'error');
+        return;
+      }
+
+      // Update expense
+      expense.description = document.getElementById('editFixedDescription').value;
+      expense.amount = parseFloat(document.getElementById('editFixedAmount').value);
+      expense.accountId = parseInt(document.getElementById('editFixedAccount').value);
+      expense.day = parseInt(document.getElementById('editFixedDay').value);
+      expense.month = parseInt(document.getElementById('editFixedMonth').value);
+
+      Storage.set('fixedExpenses', fixedExpenses);
+      
+      renderFixedExpenses();
+      renderSchedule();
+      updateDashboard();
+      closeEditFixedExpenseModal();
+      showToast('Gasto fijo actualizado', 'success');
+    });
 
     // Export/Import Functions
     function initializeSettings() {
