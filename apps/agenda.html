@@ -3285,6 +3285,7 @@
                   courses={courses}
                   term={term}
                   attendanceStats={attendanceStats}
+                  attendanceData={data.attendance} /* NUEVO: Pasamos los datos crudos */
                 />
               )}
 
@@ -4222,22 +4223,20 @@
 
       // ============ VISTA ESTADÍSTICAS ============
 
-      function StatsView({ sessions, events, courses, term, attendanceStats }) {
+      // ============ VISTA ESTADÍSTICAS ============
+
+      function StatsView({ sessions, events, courses, term, attendanceStats, attendanceData }) {
         const stats = useMemo(() => {
           const totalCourses = courses.length;
 
-          // Calcular total de clases
           let totalClasses = 0;
           sessions.forEach((session) => {
             const occurrences = generateSessionOccurrences(session, term);
             totalClasses += occurrences.length;
           });
 
-          // Estadísticas por materia
           const courseStats = courses.map((course) => {
-            const courseSessions = sessions.filter(
-              (s) => s.courseId === course.id,
-            );
+            const courseSessions = sessions.filter((s) => s.courseId === course.id);
             const courseEvents = events.filter((e) => e.courseId === course.id);
 
             let totalSessionOccurrences = 0;
@@ -4245,6 +4244,24 @@
               const occurrences = generateSessionOccurrences(session, term);
               totalSessionOccurrences += occurrences.length;
             });
+
+            // NUEVO: Calcular asistencia específica de esta materia
+            const courseAttendance = { presentes: 0, ausentes: 0, feriados: 0, paros: 0 };
+            const courseSessionIds = courseSessions.map(s => s.id);
+
+            Object.values(attendanceData || {}).forEach(dayRecord => {
+              Object.entries(dayRecord).forEach(([sessionId, status]) => {
+                if (courseSessionIds.includes(sessionId)) {
+                  if (status === 'presente') courseAttendance.presentes++;
+                  if (status === 'ausente') courseAttendance.ausentes++;
+                  if (status === 'feriado') courseAttendance.feriados++;
+                  if (status === 'paro') courseAttendance.paros++;
+                }
+              });
+            });
+
+            const totalAttended = courseAttendance.presentes + courseAttendance.ausentes;
+            courseAttendance.porcentaje = totalAttended > 0 ? Math.round((courseAttendance.presentes / totalAttended) * 100) : 0;
 
             return {
               course,
@@ -4254,15 +4271,12 @@
                 count: generateSessionOccurrences(s, term).length,
               })),
               events: courseEvents.length,
+              attendance: courseAttendance // Pasamos los datos calculados
             };
           });
 
-          return {
-            totalCourses,
-            totalClasses,
-            courseStats,
-          };
-        }, [sessions, events, courses, term]);
+          return { totalCourses, totalClasses, courseStats };
+        }, [sessions, events, courses, term, attendanceData]);
 
         return (
           <div className="stats-view">
@@ -4282,7 +4296,7 @@
             </div>
 
             <div className="stat-card">
-              <div className="stat-title">Asistencia Real</div>
+              <div className="stat-title">Presentismo Global</div>
               <div className="stat-value" style={{ color: attendanceStats.porcentaje >= 75 ? 'var(--success)' : attendanceStats.porcentaje >= 50 ? 'var(--warning)' : 'var(--error)' }}>
                 {attendanceStats.porcentaje}%
               </div>
@@ -4298,28 +4312,37 @@
               <div className="stat-title">Detalle por Materia</div>
               <div className="stat-list">
                 {stats.courseStats.map(
-                  ({ course, totalSessions, sessionTypes, events }) => (
-                    <div key={course.id} className="stat-list-item">
-                      <div>
-                        <strong>{course.nombre}</strong>
-                        <div
-                          style={{
-                            fontSize: "0.85rem",
-                            color: "var(--text-muted)",
-                            marginTop: "0.25rem",
-                          }}
-                        >
-                          {sessionTypes.map((st, i) => (
-                            <span key={i}>
-                              {st.modalidad}: {st.count} clases
-                              {i < sessionTypes.length - 1 ? " • " : ""}
-                            </span>
-                          ))}
-                          {events > 0 && ` • ${events} exámenes/entregas`}
+                  ({ course, totalSessions, sessionTypes, events, attendance }) => (
+                    <div key={course.id} className="stat-list-item" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'stretch' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <strong>{course.nombre}</strong>
+                          <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+                            {sessionTypes.map((st, i) => (
+                              <span key={i}>
+                                {st.modalidad}: {st.count} clases
+                                {i < sessionTypes.length - 1 ? " • " : ""}
+                              </span>
+                            ))}
+                            {events > 0 && ` • ${events} exámenes`}
+                          </div>
+                        </div>
+                        <div style={{ fontWeight: 600, color: "var(--primary)" }}>
+                          {totalSessions} proj.
                         </div>
                       </div>
-                      <div style={{ fontWeight: 600, color: "var(--primary)" }}>
-                        {totalSessions} clases
+
+                      {/* NUEVO: BARRA DE ASISTENCIA INDIVIDUAL */}
+                      <div style={{ background: 'var(--background)', padding: '0.5rem 0.75rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                           <span title="Presentes">✅ {attendance.presentes}</span>
+                           <span title="Ausentes">❌ {attendance.ausentes}</span>
+                           <span title="Paros">🛑 {attendance.paros}</span>
+                           <span title="Feriados">🌴 {attendance.feriados}</span>
+                        </div>
+                        <div style={{ fontWeight: 'bold', color: attendance.porcentaje >= 75 ? 'var(--success)' : attendance.porcentaje >= 50 ? 'var(--warning)' : 'var(--error)' }}>
+                          {attendance.porcentaje}%
+                        </div>
                       </div>
                     </div>
                   ),
@@ -4338,34 +4361,47 @@
           return today.toISOString().split('T')[0];
         });
         
-        // Obtener día de la semana de la fecha seleccionada
         const dayOfWeek = useMemo(() => {
-          const date = new Date(selectedDate + 'T12:00:00'); // Mediodía para evitar problemas de zona horaria
+          const date = new Date(selectedDate + 'T12:00:00');
           const day = date.getDay();
-          return day === 0 ? 7 : day; // Convertir domingo de 0 a 7
+          return day === 0 ? 7 : day;
         }, [selectedDate]);
         
         // Filtrar sesiones del día
         const sessionsForDay = useMemo(() => {
-          return [...weeklySessions, ...(extracurricularSessions || [])]
-            .filter(s => s.dayOfWeek === dayOfWeek)
+          const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+
+          return weeklySessions // SOLO clases de la facultad, eliminamos extracurricularSessions
+            .filter(s => {
+              if (s.dayOfWeek !== dayOfWeek) return false;
+
+              // FILTRO DE FECHA DE INICIO: Verificar si la materia ya empezó para esta fecha
+              const course = courses.find(c => c.id === s.courseId);
+              if (!course) return true;
+
+              // Buscar la fecha de inicio según si es teórico o práctico
+              const baseDateStr = s.modalidad === 'teoria' ? course.inicioTeoricos : course.inicioPracticos;
+              const startDateStr = baseDateStr || course.startDate || data.term?.startDate;
+
+              if (startDateStr) {
+                const startDateObj = new Date(startDateStr + 'T00:00:00');
+                if (selectedDateObj < startDateObj) return false; // Si la fecha elegida es anterior al inicio, se oculta
+              }
+
+              return true;
+            })
             .sort((a, b) => {
               const timeA = parseTime(a.startTime);
               const timeB = parseTime(b.startTime);
               return timeA - timeB;
             });
-        }, [weeklySessions, extracurricularSessions, dayOfWeek]);
+        }, [weeklySessions, dayOfWeek, selectedDate, courses, data.term]);
         
-        // Función para actualizar asistencia
         const handleAttendanceToggle = (sessionId, newStatus) => {
           setData(prevData => {
             const attendance = { ...(prevData.attendance || {}) };
+            if (!attendance[selectedDate]) attendance[selectedDate] = {};
             
-            if (!attendance[selectedDate]) {
-              attendance[selectedDate] = {};
-            }
-            
-            // Toggle: si ya está seleccionado el mismo estado, lo quitamos
             if (attendance[selectedDate][sessionId] === newStatus) {
               attendance[selectedDate][sessionId] = null;
             } else {
@@ -4376,7 +4412,6 @@
           });
         };
         
-        // Obtener estado actual de una sesión
         const getSessionStatus = (sessionId) => {
           return data.attendance?.[selectedDate]?.[sessionId] || null;
         };
@@ -4394,174 +4429,50 @@
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  style={{
-                    padding: '0.75rem',
-                    border: '2px solid var(--border)',
-                    borderRadius: '6px',
-                    fontSize: '1rem',
-                    fontFamily: 'var(--sans)',
-                    background: 'var(--surface)',
-                    color: 'var(--text)'
-                  }}
+                  style={{ padding: '0.75rem', border: '2px solid var(--border)', borderRadius: '6px', fontSize: '1rem', fontFamily: 'var(--sans)', background: 'var(--surface)', color: 'var(--text)' }}
                 />
                 <span style={{ color: 'var(--text-muted)' }}>
-                  {new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-AR', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
+                  {new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </span>
               </div>
             </div>
             
             {sessionsForDay.length === 0 ? (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '3rem', 
-                background: 'var(--surface)',
-                borderRadius: '12px',
-                color: 'var(--text-muted)'
-              }}>
+              <div style={{ textAlign: 'center', padding: '3rem', background: 'var(--surface)', borderRadius: '12px', color: 'var(--text-muted)' }}>
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌴</div>
-                <p style={{ fontSize: '1.2rem' }}>No hay clases programadas para este día</p>
+                <p style={{ fontSize: '1.2rem' }}>No hay clases programadas para este día, o aún no han comenzado.</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {sessionsForDay.map(session => {
-                  const course = session.courseId 
-                    ? courses.find(c => c.id === session.courseId)
-                    : null;
-                  
-                  const sessionName = course 
-                    ? `${course.nombre} (${session.modalidad === 'teoria' ? 'T' : 'P'})`
-                    : getActivityTitle(session);
-                  
+                  const course = courses.find(c => c.id === session.courseId);
+                  const sessionName = course ? `${course.nombre} (${session.modalidad === 'teoria' ? 'T' : 'P'})` : "Actividad";
                   const status = getSessionStatus(session.id);
                   
-                  // Determinar color del borde según estado
                   let borderColor = 'var(--border)';
                   let bgColor = 'var(--surface)';
-                  
-                  if (status === 'presente') {
-                    borderColor = '#4ade80';
-                    bgColor = 'rgba(74, 222, 128, 0.1)';
-                  } else if (status === 'ausente') {
-                    borderColor = '#f87171';
-                    bgColor = 'rgba(248, 113, 113, 0.1)';
-                  } else if (status === 'paro') {
-                    borderColor = '#f59e0b';
-                    bgColor = 'rgba(245, 158, 11, 0.1)';
-                  } else if (status === 'feriado') {
-                    borderColor = '#60a5fa';
-                    bgColor = 'rgba(96, 165, 250, 0.1)';
-                  }
+                  if (status === 'presente') { borderColor = '#4ade80'; bgColor = 'rgba(74, 222, 128, 0.1)'; } 
+                  else if (status === 'ausente') { borderColor = '#f87171'; bgColor = 'rgba(248, 113, 113, 0.1)'; } 
+                  else if (status === 'paro') { borderColor = '#f59e0b'; bgColor = 'rgba(245, 158, 11, 0.1)'; } 
+                  else if (status === 'feriado') { borderColor = '#60a5fa'; bgColor = 'rgba(96, 165, 250, 0.1)'; }
                   
                   return (
-                    <div
-                      key={session.id}
-                      style={{
-                        padding: '1.5rem',
-                        background: bgColor,
-                        border: `3px solid ${borderColor}`,
-                        borderRadius: '12px',
-                        transition: 'all 0.2s'
-                      }}
-                    >
+                    <div key={session.id} style={{ padding: '1.5rem', background: bgColor, border: `3px solid ${borderColor}`, borderRadius: '12px', transition: 'all 0.2s' }}>
                       <div style={{ marginBottom: '1rem' }}>
-                        <h3 style={{ 
-                          fontSize: '1.2rem', 
-                          fontWeight: 600, 
-                          marginBottom: '0.5rem',
-                          color: 'var(--text)'
-                        }}>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text)' }}>
                           {sessionName}
                         </h3>
-                        <div style={{ 
-                          display: 'flex', 
-                          gap: '1.5rem', 
-                          fontSize: '0.9rem', 
-                          color: 'var(--text-muted)',
-                          flexWrap: 'wrap'
-                        }}>
+                        <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.9rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
                           <span>🕐 {formatTime(session.startTime)} - {formatTime(session.endTime)}</span>
                           {session.aula && <span>📍 {session.aula}</span>}
-                          {session.docente && <span>👤 {session.docente}</span>}
                         </div>
                       </div>
                       
-                      <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                        gap: '0.75rem'
-                      }}>
-                        <button
-                          onClick={() => handleAttendanceToggle(session.id, 'presente')}
-                          style={{
-                            padding: '0.75rem 1rem',
-                            border: status === 'presente' ? '3px solid #4ade80' : '2px solid var(--border)',
-                            borderRadius: '8px',
-                            background: status === 'presente' ? '#4ade80' : 'var(--surface)',
-                            color: status === 'presente' ? 'white' : 'var(--text)',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            fontSize: '0.95rem'
-                          }}
-                        >
-                          ✅ Presente
-                        </button>
-                        
-                        <button
-                          onClick={() => handleAttendanceToggle(session.id, 'ausente')}
-                          style={{
-                            padding: '0.75rem 1rem',
-                            border: status === 'ausente' ? '3px solid #f87171' : '2px solid var(--border)',
-                            borderRadius: '8px',
-                            background: status === 'ausente' ? '#f87171' : 'var(--surface)',
-                            color: status === 'ausente' ? 'white' : 'var(--text)',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            fontSize: '0.95rem'
-                          }}
-                        >
-                          ❌ Ausente
-                        </button>
-                        
-                        <button
-                          onClick={() => handleAttendanceToggle(session.id, 'paro')}
-                          style={{
-                            padding: '0.75rem 1rem',
-                            border: status === 'paro' ? '3px solid #f59e0b' : '2px solid var(--border)',
-                            borderRadius: '8px',
-                            background: status === 'paro' ? '#f59e0b' : 'var(--surface)',
-                            color: status === 'paro' ? 'white' : 'var(--text)',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            fontSize: '0.95rem'
-                          }}
-                        >
-                          🛑 Paro
-                        </button>
-                        
-                        <button
-                          onClick={() => handleAttendanceToggle(session.id, 'feriado')}
-                          style={{
-                            padding: '0.75rem 1rem',
-                            border: status === 'feriado' ? '3px solid #60a5fa' : '2px solid var(--border)',
-                            borderRadius: '8px',
-                            background: status === 'feriado' ? '#60a5fa' : 'var(--surface)',
-                            color: status === 'feriado' ? 'white' : 'var(--text)',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            fontSize: '0.95rem'
-                          }}
-                        >
-                          🌴 Feriado
-                        </button>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.75rem' }}>
+                        <button onClick={() => handleAttendanceToggle(session.id, 'presente')} style={{ padding: '0.75rem 1rem', border: status === 'presente' ? '3px solid #4ade80' : '2px solid var(--border)', borderRadius: '8px', background: status === 'presente' ? '#4ade80' : 'var(--surface)', color: status === 'presente' ? 'white' : 'var(--text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.95rem' }}>✅ Presente</button>
+                        <button onClick={() => handleAttendanceToggle(session.id, 'ausente')} style={{ padding: '0.75rem 1rem', border: status === 'ausente' ? '3px solid #f87171' : '2px solid var(--border)', borderRadius: '8px', background: status === 'ausente' ? '#f87171' : 'var(--surface)', color: status === 'ausente' ? 'white' : 'var(--text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.95rem' }}>❌ Ausente</button>
+                        <button onClick={() => handleAttendanceToggle(session.id, 'paro')} style={{ padding: '0.75rem 1rem', border: status === 'paro' ? '3px solid #f59e0b' : '2px solid var(--border)', borderRadius: '8px', background: status === 'paro' ? '#f59e0b' : 'var(--surface)', color: status === 'paro' ? 'white' : 'var(--text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.95rem' }}>🛑 Paro</button>
+                        <button onClick={() => handleAttendanceToggle(session.id, 'feriado')} style={{ padding: '0.75rem 1rem', border: status === 'feriado' ? '3px solid #60a5fa' : '2px solid var(--border)', borderRadius: '8px', background: status === 'feriado' ? '#60a5fa' : 'var(--surface)', color: status === 'feriado' ? 'white' : 'var(--text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.95rem' }}>🌴 Feriado</button>
                       </div>
                     </div>
                   );
