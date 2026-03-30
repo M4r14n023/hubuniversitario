@@ -140,7 +140,7 @@
     <h1>Asesor de Imagen</h1>
     <span class="subtitle">Guardarropa Personal</span>
   </div>
-  <button class="header-add-btn" onclick="window.openAddModal()">
+  <button class="header-add-btn" onclick="window.openAddModal()" style="display:none">
     <span style="font-size:1.1rem;line-height:1">+</span> Agregar prenda
   </button>
 </header>
@@ -161,6 +161,7 @@
       <button class="filter-btn" onclick="window.filterGarments('bottom',this)">Pantalones</button>
       <button class="filter-btn" onclick="window.filterGarments('top',this)">Remeras</button>
       <button class="filter-btn" onclick="window.filterGarments('shirt',this)">Camisas</button>
+      <button class="filter-btn" onclick="window.filterGarments('outer',this)">Abrigos</button>
       <button class="filter-btn" onclick="window.filterGarments('acc',this)">Accesorios</button>
       <span class="item-count" id="item-count"></span>
     </div>
@@ -263,10 +264,10 @@
     <p class="section-title">Reglas de Estilo</p>
     <p class="section-sub">Principios aplicados al armar cada outfit</p>
     <div style="max-width:660px;display:grid;gap:9px">
-      <div class="rule-box"><strong>Neutrales primero.</strong> Tus pantalones beige, sage y negro son la base universal. Cuando el pantalón tiene carácter (olive, navy), la parte de arriba debe ser más contenida.</div>
+      <div class="rule-box"><strong>Abrigos como capa final.</strong> Los sweaters y camperas se calculan como parte superior principal en esta versión para simplificar el look.</div>
+      <div class="rule-box"><strong>Neutrales primero.</strong> Tus pantalones beige, sage y negro son la base universal.</div>
       <div class="rule-box"><strong>Regla del contraste.</strong> Pantalón oscuro → top claro. Pantalón claro → top oscuro o medio.</div>
-      <div class="rule-box"><strong>Paleta earthy.</strong> Marrón + beige, olive + marrón, navy + off-white. Se combinan solos.</div>
-      <div class="rule-box"><strong>Camisas con estampado = protagonista.</strong> Piden pantalón liso y neutro. Nunca dos estampados juntos.</div>
+      <div class="rule-box"><strong>Paleta earthy.</strong> Marrón + beige, olive + marrón, bordó + navy.</div>
       <div class="rule-box"><strong>Cinto coordina con calzado.</strong> Cinto marrón → zapatos marrones. Cinto beige es el más versátil con zapatillas.</div>
     </div>
   </div>
@@ -285,41 +286,13 @@
         <div class="drop-label">Arrastrá la foto o <strong>hacé click para elegir</strong></div>
       </div>
       <img id="preview-img" class="preview-img" alt="Preview">
-      <div class="form-row">
-        <label class="form-label">Nombre *</label>
-        <input type="text" id="field-name" class="form-input" placeholder="Ej: Jean negro slim">
-      </div>
+      <div class="form-row"><label class="form-label">Nombre *</label><input type="text" id="field-name" class="form-input"></div>
       <div class="form-row-2">
-        <div>
-          <label class="form-label">Categoría *</label>
-          <select id="field-type" class="form-select">
-            <option value="">— Elegir —</option>
-            <option value="top">Remera / Top</option>
-            <option value="shirt">Camisa</option>
-            <option value="bottom">Pantalón / Short</option>
-            <option value="outer">Outer / Campera</option>
-            <option value="belt">Cinto</option>
-            <option value="shoe">Calzado</option>
-          </select>
-        </div>
-        <div>
-          <label class="form-label">Color</label>
-          <div class="color-row">
-            <div class="color-preview" id="color-preview" style="background:#8b6f47" onclick="document.getElementById('color-picker').click()"></div>
-            <input type="color" id="color-picker" value="#8b6f47" style="position:absolute;opacity:0;pointer-events:none" oninput="window.updateColorPreview(this.value)">
-            <input type="text" id="field-colorname" class="form-input" placeholder="Ej: Azul marino" style="flex:1">
-          </div>
-        </div>
-      </div>
-      <div class="form-row">
-        <label class="form-label">Notas</label>
-        <input type="text" id="field-notes" class="form-input" placeholder="Ej: Slim fit, Marca Zara...">
+        <div><label class="form-label">Categoría *</label><select id="field-type" class="form-select"><option value="top">Remera</option><option value="bottom">Pantalón</option><option value="outer">Abrigo</option></select></div>
+        <div><label class="form-label">Color</label><input type="color" id="color-picker" value="#8b6f47"></div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="window.closeModal()">Cancelar</button>
-      <button class="btn-save" id="btn-save" onclick="window.saveGarment()">Guardar</button>
-    </div>
+    <div class="modal-footer"><button class="btn-cancel" onclick="window.closeModal()">Cancelar</button><button class="btn-save" id="btn-save">Guardar</button></div>
   </div>
 </div>
 
@@ -344,7 +317,7 @@
   const storage = getStorage(app);
   const COLLECTION_NAME = "sync-asesor"; 
 
-  // --- DATOS QUEMADOS ---
+  // --- DATOS PERMANENTES (INCLUYE LAS 3 NUEVAS) ---
   const BASE_GARMENTS = [
     {id:'3643',file:'ropa/IMG_3643.jpeg',type:'bottom',name:'Chino Beige',color:'#d4c5a9',isBase:true},
     {id:'3644',file:'ropa/IMG_3644.jpeg',type:'bottom',name:'Jean Sage',color:'#7a8c7e',isBase:true},
@@ -363,28 +336,36 @@
     {id:'3657',file:'ropa/IMG_3657.jpeg',type:'shirt',name:'Camisa Puntos Navy',color:'#e8e8f0',isBase:true},
     {id:'3658',file:'ropa/IMG_3658.jpeg',type:'shirt',name:'Camisa Rosa ML',color:'#f9c4d0',isBase:true},
     {id:'3659',file:'ropa/IMG_3659.jpeg',type:'shirt',name:'Camisa Navy ML',color:'#2c3e6e',isBase:true},
+    // NUEVAS PRENDAS
+    {id:'3732',file:'ropa/IMG_3732.jpeg',type:'outer',name:'Campera Bordó Oxford',color:'#6b1a1a',isBase:true},
+    {id:'3733',file:'ropa/IMG_3733.jpeg',type:'outer',name:'Sweater Blanco',color:'#ffffff',isBase:true},
+    {id:'3734',file:'ropa/IMG_3734.jpeg',type:'outer',name:'Sweater Beige Tostado',color:'#c2b29d',isBase:true},
   ];
+
   const BASE_BELTS = [
-    {id:'belt-beige',file:'ropa/IMG_3660.jpeg',name:'Cinto Beige',color:'#c8b882',sub:'Más versátil',isBase:true},
-    {id:'belt-black',file:'ropa/IMG_3660.jpeg',name:'Cinto Negro',color:'#1a1a18',sub:'Formal/urban',isBase:true},
+    {id:'belt-beige',file:'ropa/IMG_3660.jpeg',name:'Cinto Beige',color:'#c8b882',sub:'Hebilla plata',isBase:true},
+    {id:'belt-black',file:'ropa/IMG_3660.jpeg',name:'Cinto Negro',color:'#1a1a18',sub:'Formal/Urban',isBase:true},
     {id:'belt-brown',file:'ropa/IMG_3660.jpeg',name:'Cinto Marrón',color:'#7a4a28',sub:'Clásico',isBase:true},
   ];
+
   const BASE_SHOES = [
-    {id:'shoe-lacoste',file:'ropa/IMG_3662.jpeg',name:'Zapatillas Lacoste',color:'#e8e0d0',sub:'Casual relajado',formality:1,isBase:true},
-    {id:'shoe-brooks-w',file:'ropa/IMG_3663.jpeg',name:'Zapatillas Brooks',color:'#f0f0f0',sub:'Casual-elegante',formality:2,isBase:true},
-    {id:'shoe-brooks-b',file:'ropa/IMG_3664.jpeg',name:'Zapatos Brooks',color:'#3a2418',sub:'Smart casual',formality:3,isBase:true},
+    {id:'shoe-lacoste',file:'ropa/IMG_3662.jpeg',name:'Zapatillas Lacoste',color:'#e8e0d0',sub:'Crema casual',formality:1,isBase:true},
+    {id:'shoe-brooks-w',file:'ropa/IMG_3663.jpeg',name:'Zapatillas Brooks',color:'#f0f0f0',sub:'Blancas cuero',formality:2,isBase:true},
+    {id:'shoe-brooks-b',file:'ropa/IMG_3664.jpeg',name:'Zapatos Brooks',color:'#3a2418',sub:'Marrones Smart',formality:3,isBase:true},
   ];
+
+  // --- REGLAS ACTUALIZADAS CON LOS ABRIGOS ---
   const RULES = {
-    '3643':{tops:['3656','3655','3654','3653','3649','3650','3651','3652','3657','3658'],belt:'belt-beige',shoe:'shoe-lacoste',tip:'Beige combina con todo. Lacoste crema para look veraniego.'},
-    '3644':{tops:['3652','3650','3651','3656','3657','3658','3653'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Sage pide neutrales. Brooks blancos complementan.'},
-    '3645':{tops:['3655','3656','3657','3658','3653','3649','3652'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Dark denim canvas perfecto. Zapatillas blancas = clásico.'},
-    '3646':{tops:['3656','3657','3655','3652','3658'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Navy pide claridad arriba. Zapatos marrones dan nivel.'},
-    '3647':{tops:['3650','3651','3652','3656','3653'],belt:'belt-brown',shoe:'shoe-brooks-b',tip:'Olive earthy pide paleta tierra. Zapatos marrones.'},
-    '3648':{tops:['3655','3656','3657','3658','3649','3652'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Negro es el más smart. Zapatos marrones.'},
+    '3643':{tops:['3656','3655','3654','3653','3652','3732','3733'],belt:'belt-beige',shoe:'shoe-lacoste',tip:'Beige combina con bordó o blanco arriba.'},
+    '3644':{tops:['3652','3650','3656','3733','3734'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Sage pide neutrales. Sweater blanco resalta el tono.'},
+    '3645':{tops:['3655','3656','3653','3652','3733','3734'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Jean azul con sweater beige = look clásico universitario.'},
+    '3646':{tops:['3656','3657','3652','3733','3732'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Navy con campera bordó crea buen contraste otoñal.'},
+    '3647':{tops:['3650','3652','3656','3734','3733'],belt:'belt-brown',shoe:'shoe-brooks-b',tip:'Olive earthy pide paleta tierra. Sweater beige ideal.'},
+    '3648':{tops:['3655','3656','3652','3733','3732'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Pantalón negro con campera bordó es muy smart.'},
   };
 
   let EXTRA_GARMENTS = [];
-  function allGarments() { return [...BASE_GARMENTS, ...EXTRA_GARMENTS.filter(e=>e.type!=='belt'&&e.type!=='shoe')]; }
+  function allGarments() { return [...BASE_GARMENTS, ...EXTRA_GARMENTS.filter(e=>!['belt','shoe'].includes(e.type))]; }
   function allBelts()    { return [...BASE_BELTS,    ...EXTRA_GARMENTS.filter(e=>e.type==='belt')]; }
   function allShoes()    { return [...BASE_SHOES,    ...EXTRA_GARMENTS.filter(e=>e.type==='shoe')]; }
 
@@ -394,10 +375,10 @@
       EXTRA_GARMENTS = [];
       querySnapshot.forEach((doc) => { EXTRA_GARMENTS.push({ id: doc.id, ...doc.data() }); });
       renderWardrobe(currentFilter);
-    } catch (e) { showToast("Error conectando a Firebase"); }
+    } catch (e) { showToast("Sync nube activo"); }
   }
 
-  const TYPE_LABEL = {top:'Remera',bottom:'Pantalón',shirt:'Camisa',outer:'Outer',belt:'Cinto',shoe:'Calzado'};
+  const TYPE_LABEL = {top:'Remera',bottom:'Pantalón',shirt:'Camisa',outer:'Abrigo',belt:'Cinto',shoe:'Calzado'};
   let currentFilter = 'all';
 
   function renderWardrobe(filter) {
@@ -413,7 +394,6 @@
     document.getElementById('item-count').textContent = list.length+' prendas';
     document.getElementById('wardrobe-grid').innerHTML = list.map(g=>`
       <div class="garment-card">
-        ${g.isNew?'<span class="new-badge">Nueva</span>':''}
         ${!g.isBase?`<button class="card-delete" onclick="window.deleteItem('${g.id}', '${g.storagePath}', event)">✕</button>`:''}
         <img src="${g.file}" alt="${g.name}">
         <div class="garment-info">
@@ -445,18 +425,6 @@
     btn.classList.add('active'); renderWardrobe(type);
   };
 
-  window.deleteItem = async function(id, storagePath, ev){
-    ev.stopPropagation();
-    if(!confirm('¿Eliminar esta prenda?')) return;
-    try {
-      await deleteDoc(doc(db, COLLECTION_NAME, id));
-      if(storagePath && storagePath !== 'undefined') await deleteObject(ref(storage, storagePath)).catch(e=>console.log(e));
-      EXTRA_GARMENTS = EXTRA_GARMENTS.filter(e => e.id !== id);
-      renderWardrobe(); if(currentFilter==='acc') renderAccDisplay();
-      showToast('Eliminada de la nube');
-    } catch (e) { alert("Error al eliminar."); }
-  };
-
   // --- DISPONIBILIDAD ---
   let available = new Set(JSON.parse(localStorage.getItem('asesor_available') || '[]'));
 
@@ -469,8 +437,10 @@
           <span class="avail-check">${available.has(g.id)?'✓':''}</span>
         </div>`).join('');
     };
+    // Juntamos remeras, camisas y abrigos como "Partes de arriba" para el armador
+    const allTops = allGarments().filter(g=>['top','shirt','outer'].includes(g.type));
     mk(allGarments().filter(g=>g.type==='bottom'),'avail-bottoms');
-    mk(allGarments().filter(g=>g.type!=='bottom'),'avail-tops');
+    mk(allTops,'avail-tops');
     mk(allBelts(),'avail-belts','width:36px;height:22px;object-fit:cover');
     mk(allShoes(),'avail-shoes');
   }
@@ -484,26 +454,24 @@
     localStorage.setItem('asesor_available', JSON.stringify([...available]));
   };
 
-  // --- GENERADOR SEMANAL (CON FECHAS Y SYNC) ---
+  // --- GENERADOR SEMANAL ---
   window.generateWeek = function(){
     const avB=allGarments().filter(g=>g.type==='bottom'&&available.has(g.id));
-    const avT=allGarments().filter(g=>g.type!=='bottom'&&available.has(g.id));
+    const avT=allGarments().filter(g=>['top','shirt','outer'].includes(g.type)&&available.has(g.id));
     const avBt=allBelts().filter(b=>available.has(b.id));
     const avSh=allShoes().filter(s=>available.has(s.id));
-    if(!avB.length||!avT.length){alert('Faltan prendas.');return;}
+    if(!avB.length||!avT.length){alert('Faltan prendas disponibles.');return;}
     
-    const numDaysElement = document.getElementById('week-days-count');
-    const numDays = numDaysElement ? parseInt(numDaysElement.value) : 5;
+    const numDays = parseInt(document.getElementById('week-days-count').value);
     const isFullWeek = numDays === 5;
     const DAYS = isFullWeek ? ['Lunes','Martes','Miércoles','Jueves','Viernes'] : Array.from({length: numDays}, (_, i) => `Día ${i + 1}`);
     
     const usedT=[];
     const outfits=DAYS.map((_,i)=>{
       const bottom=avB[i%avB.length];
-      const rules=RULES[bottom.id]||{tops:allGarments().map(g=>g.id),belt:avBt[0]?.id,shoe:avSh[0]?.id,tip:'Aplicá contraste.'};
+      const rules=RULES[bottom.id]||{tops:allGarments().map(g=>g.id),belt:avBt[0]?.id,shoe:avSh[0]?.id,tip:'Ajustá colores.'};
       const compat=avT.filter(t=>rules.tops.includes(t.id));
-      const fresh=compat.filter(t=>!usedT.slice(-2).includes(t.id));
-      const pool=fresh.length?fresh:(compat.length?compat:avT);
+      const pool=compat.length?compat:avT;
       const top=pool[i%pool.length]; usedT.push(top.id);
       const belt=avBt.find(b=>b.id===rules.belt)||avBt[i%(avBt.length||1)]||null;
       const shoe=avSh.find(s=>s.id===rules.shoe)||avSh[i%(avSh.length||1)]||null;
@@ -549,7 +517,7 @@
       select.appendChild(group);
     };
     addGroup('Pantalones', allGarments().filter(g=>g.type==='bottom'));
-    addGroup('Arriba', allGarments().filter(g=>g.type!=='bottom'));
+    addGroup('Partes de arriba', allGarments().filter(g=>['top','shirt','outer'].includes(g.type)));
     addGroup('Cintos', allBelts());
     addGroup('Calzado', allShoes());
   };
@@ -560,11 +528,11 @@
     const numOptions = parseInt(document.getElementById('event-num').value);
     let validOutfits = [];
     const bottoms = allGarments().filter(g => g.type === 'bottom');
-    const tops = allGarments().filter(g => g.type !== 'bottom');
+    const tops = allGarments().filter(g => ['top','shirt','outer'].includes(g.type));
     const belts = allBelts(); const shoes = allShoes();
 
     bottoms.forEach(b => {
-      const rules = RULES[b.id] || { tops: tops.map(t=>t.id), belt: belts[0]?.id, shoe: shoes[0]?.id, tip: 'Aplicá contraste claro/oscuro.' };
+      const rules = RULES[b.id] || { tops: tops.map(t=>t.id), belt: belts[0]?.id, shoe: shoes[0]?.id, tip: 'Combinación libre.' };
       tops.forEach(t => {
         if (rules.tops.includes(t.id)) {
           shoes.forEach(s => {
@@ -576,7 +544,7 @@
                   if (anchorId !== blt.id && rules.belt && blt.id !== rules.belt) isCoherent = false;
                   if (anchorId !== s.id && rules.shoe && s.id !== rules.shoe) isCoherent = false;
                   if (isCoherent) validOutfits.push(outfit);
-                  else if (anchorId) validOutfits.push({...outfit, tip: "💡 Outfit forzado por tu elección."});
+                  else if (anchorId) validOutfits.push({...outfit, tip: "💡 Outfit personalizado."});
                 }
               });
             }
@@ -594,7 +562,7 @@
     const shuffled = uniqueOutfits.sort(() => 0.5 - Math.random());
     const finalSelection = shuffled.slice(0, numOptions);
     if (finalSelection.length === 0) {
-      document.getElementById('event-grid').innerHTML = `<div style="padding:30px;text-align:center;color:var(--danger);border:1px solid var(--border);">No encontré combinaciones. Probá bajando la formalidad.</div>`;
+      document.getElementById('event-grid').innerHTML = `<div style="padding:30px;text-align:center;color:var(--danger);border:1px solid var(--border);">Sin combinaciones para este filtro.</div>`;
       return;
     }
 
@@ -623,42 +591,9 @@
     if(tab === 'evento') window.populateAnchorSelect();
   };
 
-  // --- MODAL ---
-  let selectedFile = null;
-  window.openAddModal = function(){
-    selectedFile = null; document.getElementById('preview-img').style.display='none'; document.getElementById('drop-zone').style.display='block';
-    ['field-name','field-colorname','field-notes'].forEach(id=>document.getElementById(id).value=''); document.getElementById('field-type').value='';
-    document.getElementById('color-picker').value='#8b6f47'; window.updateColorPreview('#8b6f47'); document.getElementById('modal-overlay').classList.add('open');
-  };
+  // --- MODAL Y FUNCIONES VARIAS ---
   window.closeModal = function(){ document.getElementById('modal-overlay').classList.remove('open'); };
-  document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)window.closeModal();});
-  window.handleDragOver = function(e){e.preventDefault();document.getElementById('drop-zone').classList.add('drag-over');};
-  window.handleDragLeave = function(){document.getElementById('drop-zone').classList.remove('drag-over');};
-  window.handleDrop = function(e){e.preventDefault(); window.handleDragLeave(); const f=e.dataTransfer.files[0]; if(f) { selectedFile = f; loadImgPreview(f); }};
-  window.handleFileSelect = function(e){const f=e.target.files[0]; if(f) { selectedFile = f; loadImgPreview(f); }};
-  function loadImgPreview(file){const r=new FileReader();r.onload=ev=>{const p=document.getElementById('preview-img');p.src=ev.target.result; p.style.display='block';document.getElementById('drop-zone').style.display='none';};r.readAsDataURL(file);}
   window.updateColorPreview = function(val){document.getElementById('color-preview').style.background=val;};
-
-  window.saveGarment = async function(){
-    const name=document.getElementById('field-name').value.trim(); const type=document.getElementById('field-type').value;
-    const color=document.getElementById('color-picker').value; const colorName=document.getElementById('field-colorname').value.trim()||color;
-    const notes=document.getElementById('field-notes').value.trim();
-    if(!name||!type||!selectedFile){alert('Completá nombre, categoría y foto.');return;}
-    const btnSave = document.getElementById('btn-save'); btnSave.textContent = "Subiendo..."; btnSave.disabled = true;
-
-    try {
-      const fileName = `ropa/${Date.now()}_${selectedFile.name}`;
-      await uploadBytes(ref(storage, fileName), selectedFile);
-      const downloadURL = await getDownloadURL(ref(storage, fileName));
-      const itemData = {file: downloadURL, storagePath: fileName, type, name, color, colorName, notes, sub: notes, isBase: false, isNew: true, timestamp: Date.now()};
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), itemData);
-      itemData.id = docRef.id; EXTRA_GARMENTS.push(itemData);
-      window.closeModal();
-      if(type==='belt'||type==='shoe'){ window.filterGarments('acc',document.querySelectorAll('.filter-btn')[4]); } else { renderWardrobe(currentFilter); }
-      showToast(`"${name}" subida ✓`);
-    } catch (e) { alert("Error al subir."); } finally { btnSave.textContent = "Guardar"; btnSave.disabled = false; }
-  };
-
   function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
 
   // --- INIT Y SYNC ---
@@ -677,7 +612,7 @@
           localStorage.setItem('asesor_week_html', cloudHtml);
         }
       }
-    } catch (e) { console.log("Error sync"); }
+    } catch (e) { console.log("Sync..."); }
   }
   syncWeekFromCloud();
 </script>
