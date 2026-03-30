@@ -18,13 +18,7 @@
   .header-left { display: flex; align-items: baseline; gap: 18px; }
   header h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.9rem; font-weight: 300; letter-spacing: 0.04em; }
   .subtitle { font-size: 0.62rem; opacity: 0.4; letter-spacing: 0.14em; text-transform: uppercase; }
-  .header-add-btn {
-    font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 9px 18px; border: 1px solid rgba(255,255,255,0.25); background: transparent;
-    color: var(--cream); border-radius: 3px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;
-  }
-  .header-add-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
-
+  
   nav { background: var(--warm-white); border-bottom: 1px solid var(--border); display: flex; padding: 0 40px; }
   nav button {
     font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
@@ -35,7 +29,7 @@
   nav button:hover { color: var(--ink); }
 
   main { padding: 32px 40px; max-width: 1160px; margin: 0 auto; }
-  .section-title { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 300; margin-bottom: 5px; }
+  .section-title { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 300; margin-bottom: 5px; display: flex; align-items: center; }
   .section-sub { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 24px; }
 
   .filter-row { display: flex; gap: 7px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
@@ -50,19 +44,14 @@
   .wardrobe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(152px, 1fr)); gap: 13px; }
   .garment-card { background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 4px; overflow: hidden; position: relative; transition: all 0.2s; }
   .garment-card:hover { border-color: var(--accent-light); transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.07); }
-  .garment-card:hover .card-delete { opacity: 1; }
-  .card-delete { position: absolute; top: 7px; right: 7px; width: 22px; height: 22px; background: rgba(26,26,24,0.75); color: white; border: none; border-radius: 50%; font-size: 11px; cursor: pointer; display: grid; place-items: center; opacity: 0; transition: opacity 0.2s; z-index: 2; }
-  .card-delete:hover { background: var(--danger); }
   .garment-card img { width: 100%; height: 168px; object-fit: cover; display: block; background: var(--tag-bg); }
   .garment-info { padding: 9px 12px; border-top: 1px solid var(--border); }
   .garment-type { font-size: 0.57rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); margin-bottom: 3px; }
   .garment-name { font-size: 0.7rem; color: var(--ink); line-height: 1.3; }
   .color-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; border: 1px solid rgba(0,0,0,0.1); vertical-align: middle; }
-  .new-badge { position: absolute; top: 8px; left: 8px; background: var(--accent); color: white; font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; }
 
   .accessories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 28px; }
   .acc-card { background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 4px; overflow: hidden; position: relative; }
-  .acc-card:hover .card-delete { opacity: 1; }
   .acc-card img { width: 100%; height: 130px; object-fit: cover; display: block; background: var(--tag-bg); }
   .acc-info { padding: 10px 14px; }
   .acc-type { font-size: 0.57rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); margin-bottom: 3px; }
@@ -102,34 +91,13 @@
   .rule-box { background: var(--card-bg); border: 1px solid var(--border); border-left: 3px solid var(--accent-light); padding: 11px 15px; margin-bottom: 9px; font-size: 0.67rem; line-height: 1.55; color: var(--muted); border-radius: 0 3px 3px 0; }
   .tag { display: inline-block; background: var(--tag-bg); color: var(--muted); font-size: 0.57rem; padding: 2px 7px; border-radius: 2px; letter-spacing: 0.07em; text-transform: uppercase; margin: 2px; }
 
-  /* MODAL */
-  .modal-overlay { position: fixed; inset: 0; background: rgba(10,9,8,0.6); z-index: 200; display: none; place-items: center; backdrop-filter: blur(3px); }
-  .modal-overlay.open { display: grid; }
-  .modal { background: var(--warm-white); width: 92vw; max-width: 540px; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.25); animation: slideUp 0.22s ease; }
-  @keyframes slideUp { from { transform: translateY(18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  .modal-header { background: var(--ink); color: var(--cream); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; }
-  .modal-header h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-weight: 300; }
-  .modal-close { background: none; border: none; color: var(--cream); font-size: 1.3rem; cursor: pointer; opacity: 0.6; padding: 0 4px; }
-  .modal-body { padding: 22px; overflow-y: auto; max-height: 65vh; }
-  .drop-zone { border: 2px dashed var(--border); border-radius: 5px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; margin-bottom: 18px; }
-  .drop-zone:hover { border-color: var(--accent); background: rgba(139,111,71,0.04); }
-  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-  .drop-icon { font-size: 1.8rem; margin-bottom: 7px; opacity: 0.4; }
-  .drop-label { font-size: 0.7rem; color: var(--muted); }
-  .preview-img { width: 100%; max-height: 190px; object-fit: contain; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 16px; display: none; }
-  .form-row { margin-bottom: 13px; }
-  .form-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 5px; display: block; }
-  .form-input, .form-select { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 3px; font-family: 'DM Mono', monospace; font-size: 0.72rem; background: var(--card-bg); color: var(--ink); }
-  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 13px; }
-  .color-row { display: flex; gap: 8px; align-items: center; }
-  .color-preview { width: 30px; height: 30px; border-radius: 3px; border: 1px solid var(--border); flex-shrink: 0; cursor: pointer; }
-  .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; background: var(--card-bg); }
-  .btn-cancel { font-family: 'DM Mono', monospace; font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; border: 1px solid var(--border); background: none; color: var(--muted); border-radius: 3px; cursor: pointer; }
-  .btn-save { font-family: 'DM Mono', monospace; font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 20px; border: none; background: var(--accent); color: white; border-radius: 3px; cursor: pointer; }
-
   .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--ink); color: var(--cream); padding: 11px 22px; border-radius: 4px; font-size: 0.68rem; letter-spacing: 0.06em; opacity: 0; transition: all 0.3s; z-index: 300; white-space: nowrap; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .hidden { display: none !important; }
+  
+  .clear-btn { background: none; border: none; cursor: pointer; font-size: 0.9rem; margin-left: 12px; color: var(--danger); transition: transform 0.2s; }
+  .clear-btn:hover { transform: scale(1.2); }
+
   @media (max-width: 800px) { main { padding: 18px; } .builder-layout { grid-template-columns: 1fr; } nav { padding: 0 14px; overflow-x: auto; } }
 </style>
 </head>
@@ -140,9 +108,6 @@
     <h1>Asesor de Imagen</h1>
     <span class="subtitle">Guardarropa Personal</span>
   </div>
-  <button class="header-add-btn" onclick="window.openAddModal()" style="display:none">
-    <span style="font-size:1.1rem;line-height:1">+</span> Agregar prenda
-  </button>
 </header>
 
 <nav>
@@ -177,7 +142,10 @@
   <div id="tab-armador" class="hidden">
     <div class="builder-layout">
       <div>
-        <p class="section-title">Semana de Outfits</p>
+        <p class="section-title">
+          Semana de Outfits 
+          <button class="clear-btn" onclick="window.clearWeek()" title="Limpiar semana">🗑️</button>
+        </p>
         <p class="section-sub">Marcá qué tenés disponible y generá tus looks</p>
         <div class="week-grid" id="week-grid">
           <div style="padding:30px;text-align:center;color:var(--muted);font-size:0.7rem;border:1.5px dashed var(--border);border-radius:4px;">
@@ -201,7 +169,7 @@
             
             <div class="avail-section" style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px;">
               <div class="avail-title">Duración de la semana</div>
-              <select id="week-days-count" class="form-select" style="width: 100%; padding: 7px; font-size: 0.65rem;">
+              <select id="week-days-count" class="form-select" style="width: 100%; padding: 7px; font-size: 0.7rem; border:1px solid var(--border); font-family: 'DM Mono';">
                 <option value="5">Completa (Lun a Vie)</option>
                 <option value="4">Parcial (4 días)</option>
                 <option value="3">Parcial (3 días)</option>
@@ -231,29 +199,21 @@
           <div class="panel-header">Configuración del Evento</div>
           <div class="panel-body">
             <div class="form-row">
-              <label class="form-label">Prenda Obligatoria (Ancla)</label>
-              <select id="event-anchor" class="form-select">
+              <label class="form-label" style="font-size: 0.55rem; color:var(--muted); text-transform: uppercase;">Prenda Obligatoria (Ancla)</label>
+              <select id="event-anchor" class="form-select" style="width:100%; padding:8px; font-family:'DM Mono'; border:1px solid var(--border);">
                 <option value="">Ninguna (Libre)</option>
               </select>
             </div>
-            <div class="form-row">
-              <label class="form-label">Nivel de Formalidad</label>
-              <select id="event-formality" class="form-select">
+            <div class="form-row" style="margin-top:12px;">
+              <label class="form-label" style="font-size: 0.55rem; color:var(--muted); text-transform: uppercase;">Nivel de Formalidad</label>
+              <select id="event-formality" class="form-select" style="width:100%; padding:8px; font-family:'DM Mono'; border:1px solid var(--border);">
                 <option value="0">Cualquiera</option>
-                <option value="1">Casual Relajado (Zapatillas Crema)</option>
-                <option value="2">Smart Casual (Zapatillas Blancas)</option>
-                <option value="3">Elegante Sport (Zapatos Marrones)</option>
+                <option value="1">Casual Relajado</option>
+                <option value="2">Smart Casual</option>
+                <option value="3">Elegante Sport</option>
               </select>
             </div>
-            <div class="form-row">
-              <label class="form-label">Cantidad de Opciones</label>
-              <select id="event-num" class="form-select">
-                <option value="1">1 Look Exacto</option>
-                <option value="2">2 Opciones</option>
-                <option value="3" selected>3 Opciones</option>
-              </select>
-            </div>
-            <button class="generate-btn" style="margin-top:10px" onclick="window.generateEventLook()">✦ Generar Look</button>
+            <button class="generate-btn" style="margin-top:15px" onclick="window.generateEventLook()">✦ Generar Look</button>
           </div>
         </div>
       </div>
@@ -264,44 +224,19 @@
     <p class="section-title">Reglas de Estilo</p>
     <p class="section-sub">Principios aplicados al armar cada outfit</p>
     <div style="max-width:660px;display:grid;gap:9px">
-      <div class="rule-box"><strong>Abrigos como capa final.</strong> Los sweaters y camperas se calculan como parte superior principal en esta versión para simplificar el look.</div>
-      <div class="rule-box"><strong>Neutrales primero.</strong> Tus pantalones beige, sage y negro son la base universal.</div>
+      <div class="rule-box"><strong>Neutrales primero.</strong> Pantalones beige, sage y negro son la base universal.</div>
       <div class="rule-box"><strong>Regla del contraste.</strong> Pantalón oscuro → top claro. Pantalón claro → top oscuro o medio.</div>
       <div class="rule-box"><strong>Paleta earthy.</strong> Marrón + beige, olive + marrón, bordó + navy.</div>
-      <div class="rule-box"><strong>Cinto coordina con calzado.</strong> Cinto marrón → zapatos marrones. Cinto beige es el más versátil con zapatillas.</div>
+      <div class="rule-box"><strong>Calzado coordina.</strong> Cinto marrón → zapatos marrones. Cinto beige → zapatillas blancas/crema.</div>
     </div>
   </div>
 </main>
-
-<div class="modal-overlay" id="modal-overlay">
-  <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <h3>Agregar nueva prenda</h3>
-      <button class="modal-close" onclick="window.closeModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="drop-zone" id="drop-zone" ondragover="window.handleDragOver(event)" ondragleave="window.handleDragLeave()" ondrop="window.handleDrop(event)">
-        <input type="file" id="file-input" accept="image/*" onchange="window.handleFileSelect(event)">
-        <div class="drop-icon">📷</div>
-        <div class="drop-label">Arrastrá la foto o <strong>hacé click para elegir</strong></div>
-      </div>
-      <img id="preview-img" class="preview-img" alt="Preview">
-      <div class="form-row"><label class="form-label">Nombre *</label><input type="text" id="field-name" class="form-input"></div>
-      <div class="form-row-2">
-        <div><label class="form-label">Categoría *</label><select id="field-type" class="form-select"><option value="top">Remera</option><option value="bottom">Pantalón</option><option value="outer">Abrigo</option></select></div>
-        <div><label class="form-label">Color</label><input type="color" id="color-picker" value="#8b6f47"></div>
-      </div>
-    </div>
-    <div class="modal-footer"><button class="btn-cancel" onclick="window.closeModal()">Cancelar</button><button class="btn-save" id="btn-save">Guardar</button></div>
-  </div>
-</div>
 
 <div class="toast" id="toast"></div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
   const firebaseConfig = {
       apiKey: "AIzaSyCF7n8W4aKKEeK7T_mUhO5MJLuTeP-YQT8",
@@ -314,10 +249,9 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-  const storage = getStorage(app);
   const COLLECTION_NAME = "sync-asesor"; 
 
-  // --- DATOS PERMANENTES (INCLUYE LAS 3 NUEVAS) ---
+  // --- DATOS PERMANENTES ---
   const BASE_GARMENTS = [
     {id:'3643',file:'ropa/IMG_3643.jpeg',type:'bottom',name:'Chino Beige',color:'#d4c5a9',isBase:true},
     {id:'3644',file:'ropa/IMG_3644.jpeg',type:'bottom',name:'Jean Sage',color:'#7a8c7e',isBase:true},
@@ -336,46 +270,51 @@
     {id:'3657',file:'ropa/IMG_3657.jpeg',type:'shirt',name:'Camisa Puntos Navy',color:'#e8e8f0',isBase:true},
     {id:'3658',file:'ropa/IMG_3658.jpeg',type:'shirt',name:'Camisa Rosa ML',color:'#f9c4d0',isBase:true},
     {id:'3659',file:'ropa/IMG_3659.jpeg',type:'shirt',name:'Camisa Navy ML',color:'#2c3e6e',isBase:true},
-    // NUEVAS PRENDAS
     {id:'3732',file:'ropa/IMG_3732.jpeg',type:'outer',name:'Campera Bordó Oxford',color:'#6b1a1a',isBase:true},
     {id:'3733',file:'ropa/IMG_3733.jpeg',type:'outer',name:'Sweater Blanco',color:'#ffffff',isBase:true},
     {id:'3734',file:'ropa/IMG_3734.jpeg',type:'outer',name:'Sweater Beige Tostado',color:'#c2b29d',isBase:true},
   ];
 
   const BASE_BELTS = [
-    {id:'belt-beige',file:'ropa/IMG_3660.jpeg',name:'Cinto Beige',color:'#c8b882',sub:'Hebilla plata',isBase:true},
-    {id:'belt-black',file:'ropa/IMG_3660.jpeg',name:'Cinto Negro',color:'#1a1a18',sub:'Formal/Urban',isBase:true},
-    {id:'belt-brown',file:'ropa/IMG_3660.jpeg',name:'Cinto Marrón',color:'#7a4a28',sub:'Clásico',isBase:true},
+    {id:'belt-beige',file:'ropa/IMG_3660.jpeg',name:'Cinto Beige',color:'#c8b882',isBase:true},
+    {id:'belt-black',file:'ropa/IMG_3660.jpeg',name:'Cinto Negro',color:'#1a1a18',isBase:true},
+    {id:'belt-brown',file:'ropa/IMG_3660.jpeg',name:'Cinto Marrón',color:'#7a4a28',isBase:true},
   ];
 
   const BASE_SHOES = [
-    {id:'shoe-lacoste',file:'ropa/IMG_3662.jpeg',name:'Zapatillas Lacoste',color:'#e8e0d0',sub:'Crema casual',formality:1,isBase:true},
-    {id:'shoe-brooks-w',file:'ropa/IMG_3663.jpeg',name:'Zapatillas Brooks',color:'#f0f0f0',sub:'Blancas cuero',formality:2,isBase:true},
-    {id:'shoe-brooks-b',file:'ropa/IMG_3664.jpeg',name:'Zapatos Brooks',color:'#3a2418',sub:'Marrones Smart',formality:3,isBase:true},
+    {id:'shoe-lacoste',file:'ropa/IMG_3662.jpeg',name:'Zapatillas Lacoste',color:'#e8e0d0',formality:1,isBase:true},
+    {id:'shoe-brooks-w',file:'ropa/IMG_3663.jpeg',name:'Zapatillas Brooks',color:'#f0f0f0',formality:2,isBase:true},
+    {id:'shoe-brooks-b',file:'ropa/IMG_3664.jpeg',name:'Zapatos Brooks',color:'#3a2418',formality:3,isBase:true},
   ];
 
-  // --- REGLAS ACTUALIZADAS CON LOS ABRIGOS ---
   const RULES = {
-    '3643':{tops:['3656','3655','3654','3653','3652','3732','3733'],belt:'belt-beige',shoe:'shoe-lacoste',tip:'Beige combina con bordó o blanco arriba.'},
-    '3644':{tops:['3652','3650','3656','3733','3734'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Sage pide neutrales. Sweater blanco resalta el tono.'},
-    '3645':{tops:['3655','3656','3653','3652','3733','3734'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Jean azul con sweater beige = look clásico universitario.'},
-    '3646':{tops:['3656','3657','3652','3733','3732'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Navy con campera bordó crea buen contraste otoñal.'},
-    '3647':{tops:['3650','3652','3656','3734','3733'],belt:'belt-brown',shoe:'shoe-brooks-b',tip:'Olive earthy pide paleta tierra. Sweater beige ideal.'},
-    '3648':{tops:['3655','3656','3652','3733','3732'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Pantalón negro con campera bordó es muy smart.'},
+    '3643':{tops:['3656','3655','3654','3653','3652','3732','3733'],belt:'belt-beige',shoe:'shoe-lacoste',tip:'Beige combina con bordó o blanco.'},
+    '3644':{tops:['3652','3650','3656','3733','3734'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Sage pide neutrales.'},
+    '3645':{tops:['3655','3656','3653','3652','3733','3734'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Jean azul con beige es infalible.'},
+    '3646':{tops:['3656','3657','3652','3733','3732'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Navy con bordó crea buen contraste.'},
+    '3647':{tops:['3650','3652','3656','3734','3733'],belt:'belt-brown',shoe:'shoe-brooks-b',tip:'Olive earthy pide tonos tierra.'},
+    '3648':{tops:['3655','3656','3652','3733','3732'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Negro con bordó es muy smart.'},
   };
 
   let EXTRA_GARMENTS = [];
-  function allGarments() { return [...BASE_GARMENTS, ...EXTRA_GARMENTS.filter(e=>!['belt','shoe'].includes(e.type))]; }
-  function allBelts()    { return [...BASE_BELTS,    ...EXTRA_GARMENTS.filter(e=>e.type==='belt')]; }
-  function allShoes()    { return [...BASE_SHOES,    ...EXTRA_GARMENTS.filter(e=>e.type==='shoe')]; }
+  function allGarments() { return [...BASE_GARMENTS, ...EXTRA_GARMENTS]; }
+  function allBelts()    { return BASE_BELTS; }
+  function allShoes()    { return BASE_SHOES; }
 
+  // --- FILTRO DE SEGURIDAD PARA CARGAR DESDE FIREBASE ---
   async function loadFromFirebase() {
     try {
       const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
       EXTRA_GARMENTS = [];
-      querySnapshot.forEach((doc) => { EXTRA_GARMENTS.push({ id: doc.id, ...doc.data() }); });
+      querySnapshot.forEach((doc) => { 
+        const data = doc.data();
+        // Solo cargamos si el documento TIENE NOMBRE y NO es el documento de la semana
+        if (doc.id !== "semana-guardada" && data.name) {
+          EXTRA_GARMENTS.push({ id: doc.id, ...data }); 
+        }
+      });
       renderWardrobe(currentFilter);
-    } catch (e) { showToast("Sync nube activo"); }
+    } catch (e) { console.log("Sync activo"); }
   }
 
   const TYPE_LABEL = {top:'Remera',bottom:'Pantalón',shirt:'Camisa',outer:'Abrigo',belt:'Cinto',shoe:'Calzado'};
@@ -394,7 +333,6 @@
     document.getElementById('item-count').textContent = list.length+' prendas';
     document.getElementById('wardrobe-grid').innerHTML = list.map(g=>`
       <div class="garment-card">
-        ${!g.isBase?`<button class="card-delete" onclick="window.deleteItem('${g.id}', '${g.storagePath}', event)">✕</button>`:''}
         <img src="${g.file}" alt="${g.name}">
         <div class="garment-info">
           <div class="garment-type">${TYPE_LABEL[g.type]||g.type}</div>
@@ -407,7 +345,6 @@
   function renderAccDisplay(){
     const mkCard = (items, isShoe) => items.map(x=>`
       <div class="acc-card">
-        ${!x.isBase?`<button class="card-delete" onclick="window.deleteItem('${x.id}', '${x.storagePath}', event)">✕</button>`:''}
         <img src="${x.file}" alt="${x.name}">
         <div class="acc-info"><div class="acc-type">${isShoe?'Calzado':'Cinto'}</div>
         <div class="acc-name"><span class="color-dot" style="background:${x.color}"></span>${x.name}</div>
@@ -437,7 +374,6 @@
           <span class="avail-check">${available.has(g.id)?'✓':''}</span>
         </div>`).join('');
     };
-    // Juntamos remeras, camisas y abrigos como "Partes de arriba" para el armador
     const allTops = allGarments().filter(g=>['top','shirt','outer'].includes(g.type));
     mk(allGarments().filter(g=>g.type==='bottom'),'avail-bottoms');
     mk(allTops,'avail-tops');
@@ -469,7 +405,7 @@
     const usedT=[];
     const outfits=DAYS.map((_,i)=>{
       const bottom=avB[i%avB.length];
-      const rules=RULES[bottom.id]||{tops:allGarments().map(g=>g.id),belt:avBt[0]?.id,shoe:avSh[0]?.id,tip:'Ajustá colores.'};
+      const rules=RULES[bottom.id]||{tops:allGarments().map(g=>g.id),belt:avBt[0]?.id,shoe:avSh[0]?.id,tip:'Contraste sugerido.'};
       const compat=avT.filter(t=>rules.tops.includes(t.id));
       const pool=compat.length?compat:avT;
       const top=pool[i%pool.length]; usedT.push(top.id);
@@ -506,6 +442,17 @@
       .then(() => showToast('Semana sincronizada ☁️')).catch(e => console.error(e));
   };
 
+  // --- LIMPIAR SEMANA ---
+  window.clearWeek = async function() {
+    if(!confirm('¿Querés borrar la planificación semanal actual?')) return;
+    try {
+      document.getElementById('week-grid').innerHTML = `<div style="padding:30px;text-align:center;color:var(--muted);font-size:0.7rem;border:1.5px dashed var(--border);border-radius:4px;">Seleccioná prendas disponibles → "Generar semana"</div>`;
+      localStorage.removeItem('asesor_week_html');
+      await deleteDoc(doc(db, COLLECTION_NAME, "semana-guardada"));
+      showToast('Semana borrada ✓');
+    } catch (e) { showToast('Error al borrar'); }
+  };
+
   // --- LOOK DEL DÍA ---
   window.populateAnchorSelect = function() {
     const select = document.getElementById('event-anchor');
@@ -525,7 +472,6 @@
   window.generateEventLook = function() {
     const anchorId = document.getElementById('event-anchor').value;
     const reqFormality = parseInt(document.getElementById('event-formality').value);
-    const numOptions = parseInt(document.getElementById('event-num').value);
     let validOutfits = [];
     const bottoms = allGarments().filter(g => g.type === 'bottom');
     const tops = allGarments().filter(g => ['top','shirt','outer'].includes(g.type));
@@ -544,7 +490,7 @@
                   if (anchorId !== blt.id && rules.belt && blt.id !== rules.belt) isCoherent = false;
                   if (anchorId !== s.id && rules.shoe && s.id !== rules.shoe) isCoherent = false;
                   if (isCoherent) validOutfits.push(outfit);
-                  else if (anchorId) validOutfits.push({...outfit, tip: "💡 Outfit personalizado."});
+                  else if (anchorId) validOutfits.push({...outfit, tip: "💡 Outfit forzado por tu elección."});
                 }
               });
             }
@@ -560,22 +506,24 @@
     }
 
     const shuffled = uniqueOutfits.sort(() => 0.5 - Math.random());
-    const finalSelection = shuffled.slice(0, numOptions);
+    const finalSelection = shuffled.slice(0, 1);
     if (finalSelection.length === 0) {
       document.getElementById('event-grid').innerHTML = `<div style="padding:30px;text-align:center;color:var(--danger);border:1px solid var(--border);">Sin combinaciones para este filtro.</div>`;
       return;
     }
 
     const si = (file,w,h,cls) => `<img class="${cls}" src="${file}" style="width:${w}px;height:${h}px">`;
-    document.getElementById('event-grid').innerHTML = finalSelection.map((o, i) => `
+    document.getElementById('event-grid').innerHTML = finalSelection.map((o) => `
       <div class="day-card">
-        <div class="day-header" style="background:var(--ink);color:var(--cream)"><span class="day-name">Opción ${i + 1}</span></div>
+        <div class="day-header" style="background:var(--ink);color:var(--cream)"><span class="day-name">Propuesta para hoy</span></div>
         <div class="day-slots">
           <div class="slot"><span class="slot-label">Arriba</span>${si(o.top.file,62,72,'slot-img')}<span class="slot-name">${o.top.name}</span></div>
           <span class="plus-sep">+</span>
           <div class="slot"><span class="slot-label">Abajo</span>${si(o.bottom.file,62,72,'slot-img')}<span class="slot-name">${o.bottom.name}</span></div>
-          ${o.belt ? `<span class="plus-sep">+</span><div class="slot"><span class="slot-label">Cinto</span>${si(o.belt.file,50,38,'slot-acc-img')}<span class="slot-name">${o.belt.name}</span></div>` : ''}
-          ${o.shoe ? `<span class="plus-sep">+</span><div class="slot"><span class="slot-label">Calzado</span>${si(o.shoe.file,50,38,'slot-acc-img')}<span class="slot-name">${o.shoe.name}</span></div>` : ''}
+          <span class="plus-sep">+</span>
+          <div class="slot"><span class="slot-label">Cinto</span>${si(o.belt.file,50,38,'slot-acc-img')}<span class="slot-name">${o.belt.name}</span></div>
+          <span class="plus-sep">+</span>
+          <div class="slot"><span class="slot-label">Calzado</span>${si(o.shoe.file,50,38,'slot-acc-img')}<span class="slot-name">${o.shoe.name}</span></div>
         </div><div class="outfit-tip">💡 ${o.tip}</div></div>`).join('');
   };
 
@@ -586,17 +534,13 @@
     });
     const active = document.getElementById(`tab-${tab}`); if(active) active.classList.remove('hidden');
     document.querySelectorAll('nav button').forEach((b,i) => b.classList.toggle('active', ['guardarropa','armador','evento','reglas'][i] === tab));
-    
     if(tab === 'armador') renderAvailability();
     if(tab === 'evento') window.populateAnchorSelect();
   };
 
-  // --- MODAL Y FUNCIONES VARIAS ---
-  window.closeModal = function(){ document.getElementById('modal-overlay').classList.remove('open'); };
-  window.updateColorPreview = function(val){document.getElementById('color-preview').style.background=val;};
   function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
 
-  // --- INIT Y SYNC ---
+  // --- INIT ---
   renderWardrobe('all');
   loadFromFirebase();
 
@@ -612,7 +556,7 @@
           localStorage.setItem('asesor_week_html', cloudHtml);
         }
       }
-    } catch (e) { console.log("Sync..."); }
+    } catch (e) { }
   }
   syncWeekFromCloud();
 </script>
