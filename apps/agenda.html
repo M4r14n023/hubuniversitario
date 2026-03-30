@@ -2596,6 +2596,7 @@
           events,
           extracurricularSessions,
           extraMuscleGroupsPreset,
+          attendance: {}, // Sistema de asistencia: { "YYYY-MM-DD": { "session-id": "presente"|"ausente"|"feriado"|"paro"|null } }
         };
       }
 
@@ -2625,6 +2626,9 @@
                 "Core",
                 "Mixto",
               ];
+            }
+            if (!data.attendance) {
+              data.attendance = {};
             }
             return data;
           } catch (e) {
@@ -2746,6 +2750,38 @@
             id: `${c.session1.id}-${c.session2.id}-${c.type}`,
           }));
         }, [weeklySessions, courses]);
+
+        // ============ ESTADÍSTICAS DE ASISTENCIA ============
+        const attendanceStats = useMemo(() => {
+          const attendance = data.attendance || {};
+          
+          let presentes = 0;
+          let ausentes = 0;
+          let feriados = 0;
+          let paros = 0;
+          
+          Object.values(attendance).forEach(dayRecord => {
+            Object.values(dayRecord).forEach(status => {
+              if (status === 'presente') presentes++;
+              else if (status === 'ausente') ausentes++;
+              else if (status === 'feriado') feriados++;
+              else if (status === 'paro') paros++;
+            });
+          });
+          
+          // Porcentaje de presentismo (solo presentes y ausentes cuentan)
+          const total = presentes + ausentes;
+          const porcentaje = total > 0 ? ((presentes / total) * 100).toFixed(1) : 0;
+          
+          return {
+            presentes,
+            ausentes,
+            feriados,
+            paros,
+            porcentaje,
+            total
+          };
+        }, [data.attendance]);
 
         // ==========================================
         // NUEVO: CONTROL DE MODO OFFLINE
@@ -3202,6 +3238,12 @@
                 >
                   Estadísticas
                 </button>
+                <button
+                  className={`tab ${activeTab === "asistencia" ? "active" : ""}`}
+                  onClick={() => setActiveTab("asistencia")}
+                >
+                  📋 Asistencia
+                </button>
               </div>
 
               {activeTab === "semana" && (
@@ -3242,6 +3284,17 @@
                   events={events}
                   courses={courses}
                   term={term}
+                  attendanceStats={attendanceStats}
+                />
+              )}
+
+              {activeTab === "asistencia" && (
+                <AttendanceView
+                  data={data}
+                  setData={setData}
+                  weeklySessions={weeklySessions}
+                  extracurricularSessions={extracurricularSessions}
+                  courses={courses}
                 />
               )}
             </div>
@@ -4169,7 +4222,7 @@
 
       // ============ VISTA ESTADÍSTICAS ============
 
-      function StatsView({ sessions, events, courses, term }) {
+      function StatsView({ sessions, events, courses, term, attendanceStats }) {
         const stats = useMemo(() => {
           const totalCourses = courses.length;
 
@@ -4229,10 +4282,15 @@
             </div>
 
             <div className="stat-card">
-              <div className="stat-title">Clases Restantes</div>
-              <div className="stat-value">{stats.totalClasses}</div>
-              <div className="stat-subtitle">
-                Sin sistema de asistencia activo
+              <div className="stat-title">Asistencia Real</div>
+              <div className="stat-value" style={{ color: attendanceStats.porcentaje >= 75 ? 'var(--success)' : attendanceStats.porcentaje >= 50 ? 'var(--warning)' : 'var(--error)' }}>
+                {attendanceStats.porcentaje}%
+              </div>
+              <div className="stat-subtitle" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                <span>✅ {attendanceStats.presentes}</span>
+                <span>❌ {attendanceStats.ausentes}</span>
+                <span>🛑 {attendanceStats.paros}</span>
+                <span>🌴 {attendanceStats.feriados}</span>
               </div>
             </div>
 
@@ -4268,6 +4326,248 @@
                 )}
               </div>
             </div>
+          </div>
+        );
+      }
+
+      // ============ VISTA DE ASISTENCIA ============
+      
+      function AttendanceView({ data, setData, weeklySessions, extracurricularSessions, courses }) {
+        const [selectedDate, setSelectedDate] = useState(() => {
+          const today = new Date();
+          return today.toISOString().split('T')[0];
+        });
+        
+        // Obtener día de la semana de la fecha seleccionada
+        const dayOfWeek = useMemo(() => {
+          const date = new Date(selectedDate + 'T12:00:00'); // Mediodía para evitar problemas de zona horaria
+          const day = date.getDay();
+          return day === 0 ? 7 : day; // Convertir domingo de 0 a 7
+        }, [selectedDate]);
+        
+        // Filtrar sesiones del día
+        const sessionsForDay = useMemo(() => {
+          return [...weeklySessions, ...(extracurricularSessions || [])]
+            .filter(s => s.dayOfWeek === dayOfWeek)
+            .sort((a, b) => {
+              const timeA = parseTime(a.startTime);
+              const timeB = parseTime(b.startTime);
+              return timeA - timeB;
+            });
+        }, [weeklySessions, extracurricularSessions, dayOfWeek]);
+        
+        // Función para actualizar asistencia
+        const handleAttendanceToggle = (sessionId, newStatus) => {
+          setData(prevData => {
+            const attendance = { ...(prevData.attendance || {}) };
+            
+            if (!attendance[selectedDate]) {
+              attendance[selectedDate] = {};
+            }
+            
+            // Toggle: si ya está seleccionado el mismo estado, lo quitamos
+            if (attendance[selectedDate][sessionId] === newStatus) {
+              attendance[selectedDate][sessionId] = null;
+            } else {
+              attendance[selectedDate][sessionId] = newStatus;
+            }
+            
+            return { ...prevData, attendance };
+          });
+        };
+        
+        // Obtener estado actual de una sesión
+        const getSessionStatus = (sessionId) => {
+          return data.attendance?.[selectedDate]?.[sessionId] || null;
+        };
+        
+        return (
+          <div className="stats-view">
+            <div style={{ marginBottom: '2rem' }}>
+              <h2 style={{ fontFamily: 'var(--serif)', fontSize: '1.8rem', marginBottom: '1rem', color: 'var(--primary)' }}>
+                📋 Control de Asistencia
+              </h2>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                <label style={{ fontWeight: 600 }}>Fecha:</label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  style={{
+                    padding: '0.75rem',
+                    border: '2px solid var(--border)',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    fontFamily: 'var(--sans)',
+                    background: 'var(--surface)',
+                    color: 'var(--text)'
+                  }}
+                />
+                <span style={{ color: 'var(--text-muted)' }}>
+                  {new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-AR', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </span>
+              </div>
+            </div>
+            
+            {sessionsForDay.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '3rem', 
+                background: 'var(--surface)',
+                borderRadius: '12px',
+                color: 'var(--text-muted)'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌴</div>
+                <p style={{ fontSize: '1.2rem' }}>No hay clases programadas para este día</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {sessionsForDay.map(session => {
+                  const course = session.courseId 
+                    ? courses.find(c => c.id === session.courseId)
+                    : null;
+                  
+                  const sessionName = course 
+                    ? `${course.nombre} (${session.modalidad === 'teoria' ? 'T' : 'P'})`
+                    : getActivityTitle(session);
+                  
+                  const status = getSessionStatus(session.id);
+                  
+                  // Determinar color del borde según estado
+                  let borderColor = 'var(--border)';
+                  let bgColor = 'var(--surface)';
+                  
+                  if (status === 'presente') {
+                    borderColor = '#4ade80';
+                    bgColor = 'rgba(74, 222, 128, 0.1)';
+                  } else if (status === 'ausente') {
+                    borderColor = '#f87171';
+                    bgColor = 'rgba(248, 113, 113, 0.1)';
+                  } else if (status === 'paro') {
+                    borderColor = '#f59e0b';
+                    bgColor = 'rgba(245, 158, 11, 0.1)';
+                  } else if (status === 'feriado') {
+                    borderColor = '#60a5fa';
+                    bgColor = 'rgba(96, 165, 250, 0.1)';
+                  }
+                  
+                  return (
+                    <div
+                      key={session.id}
+                      style={{
+                        padding: '1.5rem',
+                        background: bgColor,
+                        border: `3px solid ${borderColor}`,
+                        borderRadius: '12px',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <div style={{ marginBottom: '1rem' }}>
+                        <h3 style={{ 
+                          fontSize: '1.2rem', 
+                          fontWeight: 600, 
+                          marginBottom: '0.5rem',
+                          color: 'var(--text)'
+                        }}>
+                          {sessionName}
+                        </h3>
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: '1.5rem', 
+                          fontSize: '0.9rem', 
+                          color: 'var(--text-muted)',
+                          flexWrap: 'wrap'
+                        }}>
+                          <span>🕐 {formatTime(session.startTime)} - {formatTime(session.endTime)}</span>
+                          {session.aula && <span>📍 {session.aula}</span>}
+                          {session.docente && <span>👤 {session.docente}</span>}
+                        </div>
+                      </div>
+                      
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                        gap: '0.75rem'
+                      }}>
+                        <button
+                          onClick={() => handleAttendanceToggle(session.id, 'presente')}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            border: status === 'presente' ? '3px solid #4ade80' : '2px solid var(--border)',
+                            borderRadius: '8px',
+                            background: status === 'presente' ? '#4ade80' : 'var(--surface)',
+                            color: status === 'presente' ? 'white' : 'var(--text)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            fontSize: '0.95rem'
+                          }}
+                        >
+                          ✅ Presente
+                        </button>
+                        
+                        <button
+                          onClick={() => handleAttendanceToggle(session.id, 'ausente')}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            border: status === 'ausente' ? '3px solid #f87171' : '2px solid var(--border)',
+                            borderRadius: '8px',
+                            background: status === 'ausente' ? '#f87171' : 'var(--surface)',
+                            color: status === 'ausente' ? 'white' : 'var(--text)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            fontSize: '0.95rem'
+                          }}
+                        >
+                          ❌ Ausente
+                        </button>
+                        
+                        <button
+                          onClick={() => handleAttendanceToggle(session.id, 'paro')}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            border: status === 'paro' ? '3px solid #f59e0b' : '2px solid var(--border)',
+                            borderRadius: '8px',
+                            background: status === 'paro' ? '#f59e0b' : 'var(--surface)',
+                            color: status === 'paro' ? 'white' : 'var(--text)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            fontSize: '0.95rem'
+                          }}
+                        >
+                          🛑 Paro
+                        </button>
+                        
+                        <button
+                          onClick={() => handleAttendanceToggle(session.id, 'feriado')}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            border: status === 'feriado' ? '3px solid #60a5fa' : '2px solid var(--border)',
+                            borderRadius: '8px',
+                            background: status === 'feriado' ? '#60a5fa' : 'var(--surface)',
+                            color: status === 'feriado' ? 'white' : 'var(--text)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            fontSize: '0.95rem'
+                          }}
+                        >
+                          🌴 Feriado
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       }
