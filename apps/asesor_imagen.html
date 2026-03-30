@@ -221,13 +221,40 @@
   </div>
 
   <div id="tab-reglas" class="hidden">
-    <p class="section-title">Reglas de Estilo</p>
-    <p class="section-sub">Principios aplicados al armar cada outfit</p>
-    <div style="max-width:660px;display:grid;gap:9px">
-      <div class="rule-box"><strong>Neutrales primero.</strong> Pantalones beige, sage y negro son la base universal.</div>
-      <div class="rule-box"><strong>Regla del contraste.</strong> Pantalón oscuro → top claro. Pantalón claro → top oscuro o medio.</div>
-      <div class="rule-box"><strong>Paleta earthy.</strong> Marrón + beige, olive + marrón, bordó + navy.</div>
-      <div class="rule-box"><strong>Calzado coordina.</strong> Cinto marrón → zapatos marrones. Cinto beige → zapatillas blancas/crema.</div>
+    <p class="section-title">Mi Filosofía de Estilo</p>
+    <p class="section-sub">Principios de color y contraste adaptados a tu piel trigueña</p>
+    <div style="max-width:660px;display:grid;gap:12px">
+      
+      <div class="rule-box" style="border-left-color: var(--accent);">
+        <strong>1. La Regla de la Luminosidad (El Secreto para tu Piel).</strong> 
+        Tu tez trigueña tiene una riqueza natural que se beneficia enormemente de los colores claros cerca del rostro. Los sweaters <strong>Off-White y Beige Tostado</strong>, y la camisa <strong>Rosa MC</strong> actúan como reflectores de luz, haciendo que tu piel se vea radiante y saludable. Evita el "apagón" combinando un top oscuro con un pantalón oscuro si no tienes un accesorio claro.
+      </div>
+
+      <div class="rule-box" style="border-left-color: #7a8c7e;">
+        <strong>2. Contraste Sí, pero Refinado.</strong> 
+        Al buscar que "no saquen protagonismo", evita los contrastes estridentes (ej: blanco puro con negro puro). Opta por contrastes más suaves y ricos: 
+        <strong>Pantalón Navy + Sweater Off-White</strong> (clásico y luminoso) o 
+        <strong>Pantalón Olive + Camisa Rosa</strong> (armonía de complementarios opacos). Esto crea interés visual sin gritar.
+      </div>
+
+      <div class="rule-box" style="border-left-color: #6b1a1a;">
+        <strong>3. Tu Paleta Estrella: Armonía Monocromática y Tonal.</strong> 
+        Combinar colores de la misma familia es lo que mejor funciona para que destaque el conjunto. Ejemplos perfectos para ti: 
+        <strong>Pantalón Olive + Camisa/Top Olive</strong> (monocromo, muy sofisticado), 
+        <strong>Pantalón Chino Beige + Sweater Beige Tostado</strong> (tonal, elegante sport), 
+        <strong>Pantalón Jean Sage + Sweater Blanco</strong>.
+      </div>
+
+      <div class="rule-box" style="border-left-color: var(--ink);">
+        <strong>4. Cuidado con el Total Black.</strong> 
+        El negro es elegante, pero en una piel trigueña puede verse muy severo si está cerca del rostro sin textura. Si usas la remera negra, asegúrate de que el pantalón sea claro (beige o sage) o usa un accesorio tonal (cinto marrón) para romper la uniformidad.
+      </div>
+
+      <div class="rule-box" style="border-left-color: #d4c5a9;">
+        <strong>5. Los Metalizados y los Accesorios.</strong> 
+        Para tu tono de piel, el hardware (hebillas) plateado de los cintos beige y negro es correcto, pero el **dorado** del cinto marrón de cuero es **tu color ideal**, ya que resalta el tono cálido de tu piel. Úsalo siempre que quieras elevar un look tonal o monocromático.
+      </div>
+
     </div>
   </div>
 </main>
@@ -288,12 +315,23 @@
   ];
 
   const RULES = {
-    '3643':{tops:['3656','3655','3654','3653','3652','3732','3733'],belt:'belt-beige',shoe:'shoe-lacoste',tip:'Beige combina con bordó o blanco.'},
-    '3644':{tops:['3652','3650','3656','3733','3734'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Sage pide neutrales.'},
-    '3645':{tops:['3655','3656','3653','3652','3733','3734'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Jean azul con beige es infalible.'},
-    '3646':{tops:['3656','3657','3652','3733','3732'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Navy con bordó crea buen contraste.'},
-    '3647':{tops:['3650','3652','3656','3734','3733'],belt:'belt-brown',shoe:'shoe-brooks-b',tip:'Olive earthy pide tonos tierra.'},
-    '3648':{tops:['3655','3656','3652','3733','3732'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Negro con bordó es muy smart.'},
+    // Chino Beige
+    '3643':{tops:['3656','3655','3654','3653','3652','3732','3733'],belt:'belt-beige',shoe:'shoe-lacoste',tip:'Combinación Tonal Sofisticada. Usa el Sweater Blanco o Beige para un look limpio que resalte la calidez de tu piel. El Cinto Beige mantiene la armonía.'},
+    
+    // Jean Sage (Verde Grisáceo)
+    '3644':{tops:['3652','3650','3656','3733','3734'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Armonía de Contraste Suave. El Sage con el Sweater Off-White crea luminosidad cerca de tu rostro. Cinto Marrón con hebilla dorada es ideal aquí.'},
+    
+    // Jean Azul Oscuro (Dark Denim)
+    '3645':{tops:['3655','3656','3653','3652','3733','3734'],belt:'belt-brown',shoe:'shoe-brooks-w',tip:'Clásico Refinado. Jean oscuro con Sweater Beige Tostado o Camisa Off-White. Evita el top negro para no apagar el conjunto.'},
+    
+    // Chino Navy (Azul Marino Puro)
+    '3646':{tops:['3656','3657','3652','3733','3732'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Contraste Profundo. Navy con Campera Bordó Oxford es una combinación rica y otoñal. Usa Cinto Negro y Zapatos Marrones para un look "elegante sport".'},
+    
+    // Chino Olive (Verde Militar Opaco)
+    '3647':{tops:['3650','3652','3656','3734','3733'],belt:'belt-brown',shoe:'shoe-brooks-b',tip:'Monocromo Tonal Estrella. Resalta tu piel trigueña con el Sweater Beige Tostado o busca la sofisticación total combinándolo con la remera Olive. Indispensable el Cinto Marrón con dorado.'},
+    
+    // Chino Negro
+    '3648':{tops:['3655','3656','3652','3733','3732'],belt:'belt-black',shoe:'shoe-brooks-b',tip:'Smart Refinado. Rompe la dureza del negro cerca de tu rostro usando el Sweater Blanco o la Camisa Rosa MC. Cinto Negro y Zapatos Marrones para un toque de distinción.'},
   };
 
   let EXTRA_GARMENTS = [];
@@ -390,13 +428,15 @@
     localStorage.setItem('asesor_available', JSON.stringify([...available]));
   };
 
-  // --- GENERADOR SEMANAL ---
+  // --- GENERADOR SEMANAL ADAPTADO A PIEL TRIGUEÑA ---
   window.generateWeek = function(){
     const avB=allGarments().filter(g=>g.type==='bottom'&&available.has(g.id));
+    // Incluimos abrigos (outer) como tops válidos
     const avT=allGarments().filter(g=>['top','shirt','outer'].includes(g.type)&&available.has(g.id));
     const avBt=allBelts().filter(b=>available.has(b.id));
     const avSh=allShoes().filter(s=>available.has(s.id));
-    if(!avB.length||!avT.length){alert('Faltan prendas disponibles.');return;}
+    
+    if(!avB.length||!avT.length){alert('Faltan prendas disponibles (pantalón y parte de arriba).');return;}
     
     const numDays = parseInt(document.getElementById('week-days-count').value);
     const isFullWeek = numDays === 5;
@@ -406,11 +446,30 @@
     const outfits=DAYS.map((_,i)=>{
       const bottom=avB[i%avB.length];
       const rules=RULES[bottom.id]||{tops:allGarments().map(g=>g.id),belt:avBt[0]?.id,shoe:avSh[0]?.id,tip:'Contraste sugerido.'};
-      const compat=avT.filter(t=>rules.tops.includes(t.id));
-      const pool=compat.length?compat:avT;
-      const top=pool[i%pool.length]; usedT.push(top.id);
+      
+      // Filtramos tops que estén en las reglas y estén disponibles
+      let pool = avT.filter(t=>rules.tops.includes(t.id));
+      if (!pool.length) pool = avT; // Si no hay compatibles, usar todos los disponibles
+
+      // --- CRITERIO NUEVO PARA PIEL TRIGUEÑA ---
+      // Priorizar los tops más luminosos (Whites/Beiges/Pinks)
+      const brightTops = ['3656','3655','3733','3734','3653'];
+      const prioritized = pool.filter(t => brightTops.includes(t.id));
+      
+      // Si hay luminosos disponibles, usarlos el 70% de las veces para asegurar brillo cerca de la piel
+      if (prioritized.length && Math.random() < 0.7) {
+          pool = prioritized;
+      }
+
+      // Evitar repeticiones inmediatas
+      const freshPool = pool.filter(t=>!usedT.slice(-2).includes(t.id));
+      const top = freshPool.length ? freshPool[i%freshPool.length] : pool[i%pool.length];
+      usedT.push(top.id);
+      
+      // Cinto y Calzado (Sugerido por regla o secuencial)
       const belt=avBt.find(b=>b.id===rules.belt)||avBt[i%(avBt.length||1)]||null;
       const shoe=avSh.find(s=>s.id===rules.shoe)||avSh[i%(avSh.length||1)]||null;
+      
       return{bottom,top,belt,shoe,tip:rules.tip};
     });
     
@@ -422,9 +481,11 @@
     }
 
     const si=(file,w,h,cls)=>`<img class="${cls}" src="${file}" style="width:${w}px;height:${h}px">`;
+    
     document.getElementById('week-grid').innerHTML=DAYS.map((dayName,i)=>{
       const o=outfits[i]; const d=new Date(startDate); d.setDate(startDate.getDate()+i);
       let ds = isFullWeek ? d.toLocaleDateString('es-AR',{day:'numeric',month:'short'}) : (i===0?'Hoy':i===1?'Mañana':d.toLocaleDateString('es-AR',{day:'numeric',month:'short'}));
+      
       return`<div class="day-card">
         <div class="day-header"><span class="day-name">${dayName}</span><span class="day-date">${ds}</span></div>
         <div class="day-slots">
@@ -433,13 +494,16 @@
           <div class="slot"><span class="slot-label">Abajo</span>${si(o.bottom.file,62,72,'slot-img')}<span class="slot-name">${o.bottom.name}</span></div>
           ${o.belt?`<span class="plus-sep">+</span><div class="slot"><span class="slot-label">Cinto</span>${si(o.belt.file,50,38,'slot-acc-img')}<span class="slot-name">${o.belt.name}</span></div>`:''}
           ${o.shoe?`<span class="plus-sep">+</span><div class="slot"><span class="slot-label">Calzado</span>${si(o.shoe.file,50,38,'slot-acc-img')}<span class="slot-name">${o.shoe.name}</span></div>`:''}
-        </div><div class="outfit-tip">💡 ${o.tip}</div></div>`;
+        </div>
+        <div class="outfit-tip">💡 ${o.tip}</div>
+      </div>`;
     }).join('');
 
     const weekHtml = document.getElementById('week-grid').innerHTML;
     localStorage.setItem('asesor_week_html', weekHtml);
+    // Sincronización nube...
     setDoc(doc(db, COLLECTION_NAME, "semana-guardada"), { html: weekHtml, actualizado: Date.now() })
-      .then(() => showToast('Semana sincronizada ☁️')).catch(e => console.error(e));
+      .then(() => showToast('Semana sincronizada para tu piel trigueña ☁️')).catch(e => console.error(e));
   };
 
   // --- LIMPIAR SEMANA ---
