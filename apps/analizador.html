@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trackr - Analizador de Resúmenes</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-dark: #0a0e12; --bg-card: #151a21; --bg-input: #1a1f28;
+      --accent-primary: #00ff88; --accent-secondary: #00d4ff;
+      --text-primary: #ffffff; --text-secondary: #8b92a8;
+      --border-color: #2a3040; --success: #00ff88;
+      --warning: #ffb800; --danger: #ff4757;
+      --shadow: rgba(0, 255, 136, 0.1);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-dark); color: var(--text-primary);
+      min-height: 100vh; line-height: 1.6; padding: 2rem;
+    }
+
+    /* Animación de fondo compartida con Trackr */
+    body::before {
+      content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: radial-gradient(circle at 20% 50%, rgba(0, 255, 136, 0.05) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 80%, rgba(0, 212, 255, 0.05) 0%, transparent 50%);
+      animation: bgFloat 20s ease-in-out infinite; pointer-events: none; z-index: -1;
+    }
+    @keyframes bgFloat { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(-30px, -30px) rotate(5deg); } }
+
+    .container { max-width: 900px; margin: 0 auto; }
+
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .header h1 { font-size: 2.5rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    
+    .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; font-family: 'DM Sans'; text-decoration: none; display: inline-block;}
+    .btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-color); }
+    .btn-secondary:hover { border-color: var(--accent-secondary); color: var(--accent-secondary); }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 2rem; margin-bottom: 1.5rem; }
+    
+    /* Input API */
+    .api-setup { display: flex; gap: 1rem; margin-top: 1rem; }
+    .api-setup input { flex: 1; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: white; font-family: 'JetBrains Mono'; }
+    .api-setup button { background: var(--accent-secondary); color: var(--bg-dark); }
+
+    /* File Upload */
+    .file-upload { border: 2px dashed var(--border-color); border-radius: 12px; padding: 3rem; text-align: center; cursor: pointer; transition: 0.3s; }
+    .file-upload:hover { border-color: var(--accent-primary); background: rgba(0,255,136,0.05); }
+    .file-upload input { display: none; }
+    .file-upload-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+
+    /* Resultados Grid */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+    @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+    
+    .stat-box { background: var(--bg-input); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); }
+    .stat-box.danger { border-color: var(--danger); background: rgba(255,71,87,0.05); }
+    .stat-box.warning { border-color: var(--warning); background: rgba(255,184,0,0.05); }
+    .stat-label { color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-family: 'JetBrains Mono'; margin-bottom: 0.5rem; }
+    .stat-value { font-size: 2rem; font-weight: bold; color: var(--text-primary); font-family: 'JetBrains Mono'; }
+
+    /* Tablas/Listas */
+    .list-item { display: flex; justify-content: space-between; padding: 1rem; border-bottom: 1px solid var(--border-color); }
+    .list-item:last-child { border-bottom: none; }
+    .badge { background: rgba(0,212,255,0.1); color: var(--accent-secondary); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-family: 'JetBrains Mono'; }
+
+    /* Loader */
+    .loader { display: none; text-align: center; padding: 3rem; }
+    .spinner { width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--accent-primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Trackr // AI</h1>
+        <p style="color: var(--text-secondary); font-family: 'JetBrains Mono';">Analizador de Tarjetas de Crédito</p>
+      </div>
+      <a href="gastos.html" class="btn btn-secondary">← Volver a Gastos</a>
+    </div>
+
+    <div class="card" id="apiCard">
+      <h3>🔑 Conexión IA</h3>
+      <p style="color: var(--text-secondary); font-size: 0.9rem;">Para analizar PDFs sin un servidor, Trackr usa la API gratuita de Gemini. Tu clave se guarda solo en este navegador.</p>
+      <div class="api-setup">
+        <input type="password" id="apiKeyInput" placeholder="AIzaSyCH8-RXK4QM7Aa-6zcssC8jOUQROsO1AAM">
+        <button class="btn" onclick="saveApiKey()">Guardar Clave</button>
+      </div>
+    </div>
+
+    <div class="card" id="uploadCard" style="display: none;">
+      <h3>📄 Analizar Resumen</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Subí tu resumen en formato PDF. La IA extraerá los datos y hará las proyecciones informativas.</p>
+      
+      <div class="file-upload" onclick="document.getElementById('pdfInput').click()">
+        <input type="file" id="pdfInput" accept="application/pdf" onchange="processPDF(this)">
+        <div class="file-upload-icon">📑</div>
+        <div class="file-upload-text" id="uploadText">Tocá acá para seleccionar tu PDF</div>
+      </div>
+    </div>
+
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <h3 style="color: var(--accent-primary);">La IA está leyendo tu resumen...</h3>
+      <p style="color: var(--text-secondary);">Agrupando cuotas y calculando proyecciones. Esto puede tomar unos 15 segundos.</p>
+    </div>
+
+    <div id="resultsArea" style="display: none;">
+      
+      <div class="grid-2">
+        <div class="stat-box danger">
+          <div class="stat-label">Total a Pagar (Este mes)</div>
+          <div class="stat-value" id="resTotalPagar">$0.00</div>
+          <div style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem;" id="resVencimiento">Vence: --</div>
+        </div>
+        <div class="stat-box warning">
+          <div class="stat-label">Proyección Próximo Mes</div>
+          <div class="stat-value" id="resProyeccion">$0.00</div>
+          <div style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem;">Cuotas pendientes + Cargos Fijos</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card" style="margin-bottom: 0;">
+          <h4 style="color: var(--success); margin-bottom: 1rem;">🎉 Cuotas que finalizan</h4>
+          <div style="font-size: 2rem; font-family: 'JetBrains Mono'; color: var(--text-primary); margin-bottom: 0.5rem;" id="resTerminanSuma">$0.00</div>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;" id="resTerminanCant">-- compras terminan este mes.</p>
+        </div>
+
+        <div class="card" style="margin-bottom: 0;">
+          <h4 style="color: var(--accent-secondary); margin-bottom: 1rem;">📊 Cuotas a futuro</h4>
+          <div id="resAgrupadasLista" style="max-height: 150px; overflow-y: auto;">
+            </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-color: var(--danger);">
+        <h4 style="color: var(--danger); margin-bottom: 1rem;">⚠️ Escenario de Cancelación Total</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">Si quisieras cancelar toda tu deuda en cuotas el mes que viene, este sería el detalle:</p>
+        
+        <div id="resCancelacionLista" style="background: var(--bg-input); border-radius: 8px; margin-bottom: 1.5rem;">
+          </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+          <span style="color: var(--text-secondary); font-size: 1.1rem;">Deuda Total en Cuotas:</span>
+          <span style="font-size: 2.5rem; font-weight: bold; color: var(--danger); font-family: 'JetBrains Mono';" id="resCancelacionTotal">$0.00</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedKey = localStorage.getItem('geminiApiKey');
+      if (savedKey) {
+        document.getElementById('apiKeyInput').value = savedKey;
+        document.getElementById('uploadCard').style.display = 'block';
+      }
+    });
+
+    function saveApiKey() {
+      const key = document.getElementById('apiKeyInput').value.trim();
+      if (key) {
+        localStorage.setItem('geminiApiKey', key);
+        document.getElementById('uploadCard').style.display = 'block';
+        alert('API Key guardada en tu navegador.');
+      }
+    }
+
+    // Procesamiento de PDF a Base64
+    async function processPDF(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const apiKey = localStorage.getItem('geminiApiKey');
+      if (!apiKey) {
+        alert('Por favor, guarda tu API Key primero.');
+        return;
+      }
+
+      document.getElementById('uploadText').innerText = file.name;
+      document.getElementById('uploadCard').style.display = 'none';
+      document.getElementById('resultsArea').style.display = 'none';
+      document.getElementById('loader').style.display = 'block';
+
+      try {
+        const base64PDF = await toBase64(file);
+        // Limpiamos la cabecera del base64 ("data:application/pdf;base64,")
+        const rawBase64 = base64PDF.split(',')[1]; 
+        
+        await analyzeWithGemini(rawBase64, apiKey);
+      } catch (error) {
+        alert('Error al procesar el archivo: ' + error.message);
+        resetUI();
+      }
+    }
+
+    const toBase64 = file => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
+
+    // Llamada a la API de IA
+    async function analyzeWithGemini(base64Data, apiKey) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      
+      const prompt = `Analiza este resumen de tarjeta de crédito (PDF adjunto). Actúa como un experto financiero y extrae la información en formato JSON estrictamente bajo esta estructura. Solo devuelve el JSON, nada de texto extra:
+      {
+        "total_pagar": 0,
+        "fecha_vencimiento": "",
+        "cuotas_finalizan": { "cantidad": 0, "suma_total": 0 },
+        "cuotas_restantes_agrupadas": [
+          { "grupo": "3 de 6", "cantidad": 2, "suma_total": 5000, "detalle": "Opcional" }
+        ],
+        "proyeccion_proximo_mes": { "total_estimado": 0 },
+        "cancelacion_total": {
+          "items": [
+            { "nombre": "Heladera", "cuotas_restantes": 3, "total_adeudado": 30000 }
+          ],
+          "gran_total": 30000
+        }
+      }
+      Reglas:
+      - cuotas_finalizan: Son las compras cuya cuota actual es igual a la cuota final (ej: 6/6).
+      - cuotas_restantes_agrupadas: Agrupa compras por su estado (ej: todas las que van "3 de 6").
+      - proyeccion_proximo_mes.total_estimado: Suma el valor de las cuotas que NO finalizan este mes + gastos de mantenimiento.
+      - cancelacion_total: Lista cada compra en cuotas multiplicando las cuotas restantes por el valor de la cuota.`;
+
+      const requestBody = {
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: "application/pdf", data: base64Data } }
+          ]
+        }],
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      };
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+
+        const data = await response.json();
+        
+        if (data.error) throw new Error(data.error.message);
+
+        // Parsear la respuesta
+        const jsonText = data.candidates[0].content.parts[0].text;
+        const result = JSON.parse(jsonText);
+        
+        renderResults(result);
+
+      } catch (error) {
+        console.error(error);
+        alert('Error en la API de IA: Revisa que tu PDF sea legible o que tu API Key sea correcta.');
+        resetUI();
+      }
+    }
+
+    // Mostrar Resultados en la Interfaz
+    function renderResults(data) {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('resultsArea').style.display = 'block';
+
+      // 1. Totales
+      document.getElementById('resTotalPagar').innerText = `$${data.total_pagar.toLocaleString('es-AR')}`;
+      document.getElementById('resVencimiento').innerText = `Vence: ${data.fecha_vencimiento}`;
+      document.getElementById('resProyeccion').innerText = `$${data.proyeccion_proximo_mes.total_estimado.toLocaleString('es-AR')}`;
+
+      // 2. Terminan
+      document.getElementById('resTerminanSuma').innerText = `$${data.cuotas_finalizan.suma_total.toLocaleString('es-AR')}`;
+      document.getElementById('resTerminanCant').innerText = `${data.cuotas_finalizan.cantidad} compra(s) terminan este mes.`;
+
+      // 3. Agrupadas
+      const grupList = document.getElementById('resAgrupadasLista');
+      grupList.innerHTML = data.cuotas_restantes_agrupadas.map(g => `
+        <div class="list-item">
+          <div><span class="badge">${g.grupo}</span> <span style="color:var(--text-secondary);font-size:0.9rem;">(${g.cantidad} compras)</span></div>
+          <div style="font-family:'JetBrains Mono'; font-weight:bold;">$${g.suma_total.toLocaleString('es-AR')}</div>
+        </div>
+      `).join('') || '<div class="list-item">No hay cuotas a futuro.</div>';
+
+      // 4. Cancelación Total
+      const cancList = document.getElementById('resCancelacionLista');
+      cancList.innerHTML = data.cancelacion_total.items.map(item => `
+        <div class="list-item">
+          <div>
+            <div style="color:var(--text-primary);">${item.nombre}</div>
+            <div style="font-size:0.8rem;color:var(--text-secondary);">Restan ${item.cuotas_restantes} cuota(s)</div>
+          </div>
+          <div style="font-family:'JetBrains Mono';">$${item.total_adeudado.toLocaleString('es-AR')}</div>
+        </div>
+      `).join('');
+      document.getElementById('resCancelacionTotal').innerText = `$${data.cancelacion_total.gran_total.toLocaleString('es-AR')}`;
+    }
+
+    function resetUI() {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('uploadCard').style.display = 'block';
+      document.getElementById('pdfInput').value = '';
+      document.getElementById('uploadText').innerText = 'Tocá acá para seleccionar tu PDF';
+    }
+  </script>
+</body>
+</html>
