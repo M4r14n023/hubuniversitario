@@ -187,12 +187,12 @@
       }
     }
 
-    async function analyzeWithGemini(base64Data, apiKey) {
-      // URL de Producción estable
-      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+   async function analyzeWithGemini(base64Data, apiKey) {
+      // Usamos v1beta para asegurar la compatibilidad con envío de archivos PDF
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       
       const prompt = `Actúa como un experto financiero. Analiza este resumen de tarjeta de crédito (PDF adjunto).
-      Entrega los resultados estrictamente en formato JSON sin texto adicional:
+      Entrega los resultados estrictamente en formato JSON sin texto adicional ni bloques de código:
       {
         "total_pagar": 0,
         "fecha_vencimiento": "DD/MM/AAAA",
@@ -205,10 +205,10 @@
         }
       }
       REGLAS DE ANÁLISIS:
-      - total_pagar: Saldo total de la liquidación actual.
-      - cuotas_finalizan: Compras que pagan su última cuota en este resumen.
-      - proyeccion_proximo_mes: Suma de cuotas que vencen el mes próximo más cargos fijos de mantenimiento detectados.
-      - cancelacion_total: Suma de todas las cuotas futuras pendientes multiplicadas por su valor unitario.`;
+      1. total_pagar: Saldo total de la liquidación actual.
+      2. cuotas_finalizan: Compras que pagan su última cuota en este resumen (ej: 03/03).
+      3. proyeccion_proximo_mes: Suma de cuotas que vencen el mes próximo más cargos fijos de mantenimiento detectados[cite: 31, 34].
+      4. cancelacion_total: Suma de todas las cuotas futuras pendientes multiplicadas por su valor unitario.`;
 
       const requestBody = {
         contents: [{
@@ -227,15 +227,25 @@
         });
 
         const data = await response.json();
-        if (data.error) throw new Error(data.error.message);
+        
+        if (data.error) {
+          throw new Error(data.error.message);
+        }
+
+        if (!data.candidates || !data.candidates[0].content) {
+          throw new Error('No se recibió una respuesta válida de la IA.');
+        }
         
         let jsonText = data.candidates[0].content.parts[0].text;
-        // Limpieza de Markdown
+        
+        // Limpieza profunda para asegurar que solo quede el JSON
         jsonText = jsonText.replace(/```json/g, "").replace(/```/g, "").trim();
         
-        renderResults(JSON.parse(jsonText));
+        const result = JSON.parse(jsonText);
+        renderResults(result);
 
       } catch (error) {
+        console.error("Error completo:", error);
         alert('Error en el análisis: ' + error.message);
         resetUI();
       }
