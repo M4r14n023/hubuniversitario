@@ -196,7 +196,7 @@
         const genAI = new GoogleGenerativeAI(apiKey);
         
         // Usamos el modelo 1.5-flash (el SDK se encarga de la URL y los endpoints por detrás)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
         
         const prompt = `Actúa como un experto financiero. Analiza este resumen de tarjeta de crédito (PDF adjunto).
         Entrega los resultados estrictamente en formato JSON sin texto adicional ni bloques de código:
