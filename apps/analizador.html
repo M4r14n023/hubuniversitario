@@ -212,42 +212,37 @@
       reader.onerror = error => reject(error);
     });
 
-    // Llamada a la API de IA
     async function analyzeWithGemini(base64Data, apiKey) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       
-      const prompt = `Analiza este resumen de tarjeta de crédito (PDF adjunto). Actúa como un experto financiero y extrae la información en formato JSON estrictamente bajo esta estructura. Solo devuelve el JSON, nada de texto extra:
+      const prompt = `Analiza este resumen de tarjeta de crédito. Extrae la información en formato JSON estricto:
       {
         "total_pagar": 0,
-        "fecha_vencimiento": "",
+        "fecha_vencimiento": "DD/MM/AAAA",
         "cuotas_finalizan": { "cantidad": 0, "suma_total": 0 },
         "cuotas_restantes_agrupadas": [
-          { "grupo": "3 de 6", "cantidad": 2, "suma_total": 5000, "detalle": "Opcional" }
+          { "grupo": "X de Y", "cantidad": 0, "suma_total": 0 }
         ],
         "proyeccion_proximo_mes": { "total_estimado": 0 },
         "cancelacion_total": {
           "items": [
-            { "nombre": "Heladera", "cuotas_restantes": 3, "total_adeudado": 30000 }
+            { "nombre": "Descripción", "cuotas_restantes": 0, "total_adeudado": 0 }
           ],
-          "gran_total": 30000
+          "gran_total": 0
         }
       }
-      Reglas:
-      - cuotas_finalizan: Son las compras cuya cuota actual es igual a la cuota final (ej: 6/6).
-      - cuotas_restantes_agrupadas: Agrupa compras por su estado (ej: todas las que van "3 de 6").
-      - proyeccion_proximo_mes.total_estimado: Suma el valor de las cuotas que NO finalizan este mes + gastos de mantenimiento.
-      - cancelacion_total: Lista cada compra en cuotas multiplicando las cuotas restantes por el valor de la cuota.`;
+      IMPORTANTE: 
+      1. Si no encuentras cuotas, deja los arreglos vacíos. 
+      2. No agregues texto antes ni después del JSON.
+      3. Para 'cancelacion_total', multiplica el valor de la cuota por las cuotas que restan pagar (sin contar la de este mes).`;
 
       const requestBody = {
         contents: [{
           parts: [
-            { text: prompt },
-            { inlineData: { mimeType: "application/pdf", data: base64Data } }
+            { inlineData: { mimeType: "application/pdf", data: base64Data } },
+            { text: prompt }
           ]
-        }],
-        generationConfig: {
-          responseMimeType: "application/json"
-        }
+        }]
       };
 
       try {
@@ -259,17 +254,26 @@
 
         const data = await response.json();
         
-        if (data.error) throw new Error(data.error.message);
+        if (data.error) {
+          // Error específico de Google (ej: API Key inválida o Región no soportada)
+          throw new Error(`Google dice: ${data.error.message}`);
+        }
 
-        // Parsear la respuesta
-        const jsonText = data.candidates[0].content.parts[0].text;
-        const result = JSON.parse(jsonText);
+        if (!data.candidates || !data.candidates[0].content) {
+          throw new Error('La IA no pudo generar una respuesta. Revisa si el PDF tiene protección con contraseña.');
+        }
+
+        let jsonText = data.candidates[0].content.parts[0].text;
         
+        // Limpieza de posibles etiquetas de markdown que a veces pone la IA
+        jsonText = jsonText.replace(/```json/g, "").replace(/```/g, "").trim();
+        
+        const result = JSON.parse(jsonText);
         renderResults(result);
 
       } catch (error) {
-        console.error(error);
-        alert('Error en la API de IA: Revisa que tu PDF sea legible o que tu API Key sea correcta.');
+        console.error("Detalle del error:", error);
+        alert('Hubo un problema: ' + error.message);
         resetUI();
       }
     }
