@@ -75,7 +75,7 @@
   <div class="container">
     <div class="header">
       <div>
-        <h1>Analisis Resumen AI 2.0</h1>
+        <h1>Trackr // AI</h1>
         <p style="color: var(--text-secondary); font-family: 'JetBrains Mono';">Analizador de Tarjetas de Crédito</p>
       </div>
       <a href="gastos.html" class="btn btn-secondary">← Volver a Gastos</a>
@@ -157,7 +157,6 @@
       }
     });
 
-    // Exponemos las funciones al objeto window para que los "onclick" del HTML funcionen
     window.saveApiKey = function() {
       const key = document.getElementById('apiKeyInput').value.trim();
       if (key) {
@@ -192,11 +191,10 @@
 
     async function analyzeWithGemini(base64Data, apiKey) {
       try {
-        // Inicializamos el cliente oficial de Google
         const genAI = new GoogleGenerativeAI(apiKey);
         
-        // Usamos el modelo 1.5-flash (el SDK se encarga de la URL y los endpoints por detrás)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        // ¡EL CAMBIO CLAVE ESTÁ AQUÍ! Usamos la versión de la IA vigente en 2026.
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         
         const prompt = `Actúa como un experto financiero. Analiza este resumen de tarjeta de crédito (PDF adjunto).
         Entrega los resultados estrictamente en formato JSON sin texto adicional ni bloques de código:
@@ -217,7 +215,6 @@
         3. proyeccion_proximo_mes: Suma de cuotas que vencen el mes próximo más cargos fijos de mantenimiento detectados.
         4. cancelacion_total: Suma de todas las cuotas futuras pendientes multiplicadas por su valor unitario.`;
 
-        // Preparamos el archivo para enviarlo
         const pdfPart = {
           inlineData: {
             data: base64Data,
@@ -225,7 +222,6 @@
           }
         };
 
-        // Enviamos la petición usando el SDK
         const result = await model.generateContent([prompt, pdfPart]);
         const response = await result.response;
         let jsonText = response.text();
