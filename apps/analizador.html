@@ -35,7 +35,13 @@
     .container { max-width: 900px; margin: 0 auto; }
 
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-    .header h1 { font-size: 2.5rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .header h1 { 
+    font-size: 2.5rem; 
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); 
+    -webkit-background-clip: text; /* Soporte para Webkit (Chrome/Safari) */
+    background-clip: text;         /* Propiedad estándar (hace que desaparezca la advertencia) */
+    -webkit-text-fill-color: transparent; 
+    }
     
     .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; font-family: 'DM Sans'; text-decoration: none; display: inline-block;}
     .btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-color); }
