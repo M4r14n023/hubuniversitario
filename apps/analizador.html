@@ -193,7 +193,7 @@
 
     async function analyzeWithGemini(base64Data, apiKey) {
       // URL Corregida con publishers/google/
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/publishers/google/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       
       const prompt = `Analiza este resumen de tarjeta de crédito Mastercard. Extrae los datos en este JSON:
       {
