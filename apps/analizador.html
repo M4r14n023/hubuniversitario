@@ -146,7 +146,9 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
     document.addEventListener('DOMContentLoaded', () => {
       const savedKey = localStorage.getItem('geminiApiKey');
       if (savedKey) {
@@ -155,16 +157,17 @@
       }
     });
 
-    function saveApiKey() {
+    // Exponemos las funciones al objeto window para que los "onclick" del HTML funcionen
+    window.saveApiKey = function() {
       const key = document.getElementById('apiKeyInput').value.trim();
       if (key) {
         localStorage.setItem('geminiApiKey', key);
         document.getElementById('uploadCard').style.display = 'block';
-        alert('Clave guardada.');
+        alert('Clave guardada correctamente.');
       }
     }
 
-    async function processPDF(input) {
+    window.processPDF = async function(input) {
       const file = input.files[0];
       if (!file) return;
 
@@ -183,71 +186,60 @@
         };
       } catch (error) {
         alert('Error: ' + error.message);
-        resetUI();
+        window.resetUI();
       }
     }
 
-   async function analyzeWithGemini(base64Data, apiKey) {
-      // Usamos v1beta para asegurar la compatibilidad con envío de archivos PDF
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-      
-      const prompt = `Actúa como un experto financiero. Analiza este resumen de tarjeta de crédito (PDF adjunto).
-      Entrega los resultados estrictamente en formato JSON sin texto adicional ni bloques de código:
-      {
-        "total_pagar": 0,
-        "fecha_vencimiento": "DD/MM/AAAA",
-        "cuotas_finalizan": { "cantidad": 0, "suma_total": 0 },
-        "cuotas_restantes_agrupadas": [{ "grupo": "X de Y", "cantidad": 0, "suma_total": 0 }],
-        "proyeccion_proximo_mes": { "total_estimado": 0 },
-        "cancelacion_total": {
-          "items": [{ "nombre": "Comercio", "cuotas_restantes": 0, "total_adeudado": 0 }],
-          "gran_total": 0
-        }
-      }
-      REGLAS DE ANÁLISIS:
-      1. total_pagar: Saldo total de la liquidación actual.
-      2. cuotas_finalizan: Compras que pagan su última cuota en este resumen (ej: 03/03).
-      3. proyeccion_proximo_mes: Suma de cuotas que vencen el mes próximo más cargos fijos de mantenimiento detectados[cite: 31, 34].
-      4. cancelacion_total: Suma de todas las cuotas futuras pendientes multiplicadas por su valor unitario.`;
-
-      const requestBody = {
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType: "application/pdf", data: base64Data } }
-          ]
-        }]
-      };
-
+    async function analyzeWithGemini(base64Data, apiKey) {
       try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        });
-
-        const data = await response.json();
+        // Inicializamos el cliente oficial de Google
+        const genAI = new GoogleGenerativeAI(apiKey);
         
-        if (data.error) {
-          throw new Error(data.error.message);
-        }
-
-        if (!data.candidates || !data.candidates[0].content) {
-          throw new Error('No se recibió una respuesta válida de la IA.');
-        }
+        // Usamos el modelo 1.5-flash (el SDK se encarga de la URL y los endpoints por detrás)
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         
-        let jsonText = data.candidates[0].content.parts[0].text;
+        const prompt = `Actúa como un experto financiero. Analiza este resumen de tarjeta de crédito (PDF adjunto).
+        Entrega los resultados estrictamente en formato JSON sin texto adicional ni bloques de código:
+        {
+          "total_pagar": 0,
+          "fecha_vencimiento": "DD/MM/AAAA",
+          "cuotas_finalizan": { "cantidad": 0, "suma_total": 0 },
+          "cuotas_restantes_agrupadas": [{ "grupo": "X de Y", "cantidad": 0, "suma_total": 0 }],
+          "proyeccion_proximo_mes": { "total_estimado": 0 },
+          "cancelacion_total": {
+            "items": [{ "nombre": "Comercio", "cuotas_restantes": 0, "total_adeudado": 0 }],
+            "gran_total": 0
+          }
+        }
+        REGLAS DE ANÁLISIS:
+        1. total_pagar: Saldo total de la liquidación actual.
+        2. cuotas_finalizan: Compras que pagan su última cuota en este resumen (ej: 03/03).
+        3. proyeccion_proximo_mes: Suma de cuotas que vencen el mes próximo más cargos fijos de mantenimiento detectados.
+        4. cancelacion_total: Suma de todas las cuotas futuras pendientes multiplicadas por su valor unitario.`;
+
+        // Preparamos el archivo para enviarlo
+        const pdfPart = {
+          inlineData: {
+            data: base64Data,
+            mimeType: "application/pdf"
+          }
+        };
+
+        // Enviamos la petición usando el SDK
+        const result = await model.generateContent([prompt, pdfPart]);
+        const response = await result.response;
+        let jsonText = response.text();
         
         // Limpieza profunda para asegurar que solo quede el JSON
         jsonText = jsonText.replace(/```json/g, "").replace(/```/g, "").trim();
         
-        const result = JSON.parse(jsonText);
-        renderResults(result);
+        const dataParsed = JSON.parse(jsonText);
+        renderResults(dataParsed);
 
       } catch (error) {
         console.error("Error completo:", error);
         alert('Error en el análisis: ' + error.message);
-        resetUI();
+        window.resetUI();
       }
     }
 
@@ -288,7 +280,7 @@
       document.getElementById('resCancelacionTotal').innerText = `$${data.cancelacion_total.gran_total.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
     }
 
-    function resetUI() {
+    window.resetUI = function() {
       document.getElementById('loader').style.display = 'none';
       document.getElementById('uploadCard').style.display = 'block';
       document.getElementById('pdfInput').value = '';
