@@ -83,7 +83,7 @@
 
     <div class="card" id="apiCard">
       <h3>🔑 Conexión IA</h3>
-      <p style="color: var(--text-secondary); font-size: 0.9rem;">Para analizar PDFs sin un servidor, Trackr usa la API gratuita de Gemini. Tu clave se guarda solo en este navegador.</p>
+      <p style="color: var(--text-secondary); font-size: 0.9rem;">Analiza tus PDFs localmente usando la API de Gemini.</p>
       <div class="api-setup">
         <input type="password" id="apiKeyInput" value="AIzaSyCH8-RXK4QM7Aa-6zcssC8jOUQROsO1AAM">
         <button class="btn" onclick="saveApiKey()">Guardar Clave</button>
@@ -92,32 +92,32 @@
 
     <div class="card" id="uploadCard" style="display: none;">
       <h3>📄 Analizar Resumen</h3>
-      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Subí tu resumen en formato PDF. La IA extraerá los datos y hará las proyecciones informativas.</p>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Sube cualquier resumen PDF. La IA extraerá los datos automáticamente.</p>
       
       <div class="file-upload" onclick="document.getElementById('pdfInput').click()">
         <input type="file" id="pdfInput" accept="application/pdf" onchange="processPDF(this)">
         <div class="file-upload-icon">📑</div>
-        <div class="file-upload-text" id="uploadText">Tocá acá para seleccionar tu PDF</div>
+        <div class="file-upload-text" id="uploadText">Toca aquí para seleccionar tu PDF</div>
       </div>
     </div>
 
     <div class="loader" id="loader">
       <div class="spinner"></div>
-      <h3 style="color: var(--accent-primary);">La IA está leyendo tu resumen...</h3>
-      <p style="color: var(--text-secondary);">Agrupando cuotas y calculando proyecciones.</p>
+      <h3 style="color: var(--accent-primary);">La IA está leyendo el resumen...</h3>
+      <p style="color: var(--text-secondary);">Esto puede tardar hasta 15 segundos.</p>
     </div>
 
     <div id="resultsArea" style="display: none;">
       <div class="grid-2">
         <div class="stat-box danger">
-          <div class="stat-label">Total a Pagar (Este mes)</div>
+          <div class="stat-label">Total a Pagar</div>
           <div class="stat-value" id="resTotalPagar">$0.00</div>
           <div style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem;" id="resVencimiento">Vence: --</div>
         </div>
         <div class="stat-box warning">
           <div class="stat-label">Proyección Próximo Mes</div>
           <div class="stat-value" id="resProyeccion">$0.00</div>
-          <div style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem;">Cuotas pendientes + Cargos Fijos</div>
+          <div style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem;">Cuotas pendientes + Gastos fijos</div>
         </div>
       </div>
 
@@ -125,7 +125,7 @@
         <div class="card" style="margin-bottom: 0;">
           <h4 style="color: var(--success); margin-bottom: 1rem;">🎉 Cuotas que finalizan</h4>
           <div style="font-size: 2rem; font-family: 'JetBrains Mono'; color: var(--text-primary); margin-bottom: 0.5rem;" id="resTerminanSuma">$0.00</div>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;" id="resTerminanCant">-- compras terminan este mes.</p>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;" id="resTerminanCant">-- consumos finalizan este mes.</p>
         </div>
 
         <div class="card" style="margin-bottom: 0;">
@@ -136,10 +136,10 @@
 
       <div class="card" style="border-color: var(--danger);">
         <h4 style="color: var(--danger); margin-bottom: 1rem;">⚠️ Escenario de Cancelación Total</h4>
-        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">Si quisieras cancelar toda tu deuda en cuotas el mes que viene, este sería el detalle:</p>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">Deuda total si decidieras pagar todas las cuotas restantes el próximo mes:</p>
         <div id="resCancelacionLista" style="background: var(--bg-input); border-radius: 8px; margin-bottom: 1.5rem;"></div>
         <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-          <span style="color: var(--text-secondary); font-size: 1.1rem;">Deuda Total en Cuotas:</span>
+          <span style="color: var(--text-secondary); font-size: 1.1rem;">Monto de Cancelación:</span>
           <span style="font-size: 2.5rem; font-weight: bold; color: var(--danger); font-family: 'JetBrains Mono';" id="resCancelacionTotal">$0.00</span>
         </div>
       </div>
@@ -160,7 +160,7 @@
       if (key) {
         localStorage.setItem('geminiApiKey', key);
         document.getElementById('uploadCard').style.display = 'block';
-        alert('API Key guardada correctamente.');
+        alert('Clave guardada.');
       }
     }
 
@@ -175,48 +175,46 @@
       document.getElementById('loader').style.display = 'block';
 
       try {
-        const base64PDF = await toBase64(file);
-        const rawBase64 = base64PDF.split(',')[1]; 
-        await analyzeWithGemini(rawBase64, apiKey);
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async () => {
+          const rawBase64 = reader.result.split(',')[1];
+          await analyzeWithGemini(rawBase64, apiKey);
+        };
       } catch (error) {
         alert('Error: ' + error.message);
         resetUI();
       }
     }
 
-    const toBase64 = file => new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = error => reject(error);
-    });
-
     async function analyzeWithGemini(base64Data, apiKey) {
-      // URL Corregida con publishers/google/
-      const url = `https://generativelanguage.googleapis.com/v1beta/publishers/google/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      // URL de Producción estable
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       
-      const prompt = `Analiza este resumen de tarjeta de crédito Mastercard. Extrae los datos en este JSON:
+      const prompt = `Actúa como un experto financiero. Analiza este resumen de tarjeta de crédito (PDF adjunto).
+      Entrega los resultados estrictamente en formato JSON sin texto adicional:
       {
-        "total_pagar": 525510.80,
-        "fecha_vencimiento": "08/04/2026",
+        "total_pagar": 0,
+        "fecha_vencimiento": "DD/MM/AAAA",
         "cuotas_finalizan": { "cantidad": 0, "suma_total": 0 },
         "cuotas_restantes_agrupadas": [{ "grupo": "X de Y", "cantidad": 0, "suma_total": 0 }],
         "proyeccion_proximo_mes": { "total_estimado": 0 },
         "cancelacion_total": {
-          "items": [{ "nombre": "Descripción", "cuotas_restantes": 0, "total_adeudado": 0 }],
+          "items": [{ "nombre": "Comercio", "cuotas_restantes": 0, "total_adeudado": 0 }],
           "gran_total": 0
         }
       }
-      REGLAS:
-      - cuotas_finalizan: Compras que este mes pagan su última cuota (ej: 03/03).
-      - proyeccion_proximo_mes: Suma de cuotas que siguen el mes que viene + mantenimiento ($8839).
-      - cancelacion_total: Suma de todas las cuotas que restan pagar (ej: si es 01/03, restan 2 cuotas).`;
+      REGLAS DE ANÁLISIS:
+      - total_pagar: Saldo total de la liquidación actual.
+      - cuotas_finalizan: Compras que pagan su última cuota en este resumen.
+      - proyeccion_proximo_mes: Suma de cuotas que vencen el mes próximo más cargos fijos de mantenimiento detectados.
+      - cancelacion_total: Suma de todas las cuotas futuras pendientes multiplicadas por su valor unitario.`;
 
       const requestBody = {
         contents: [{
           parts: [
-            { inlineData: { mimeType: "application/pdf", data: base64Data } },
-            { text: prompt }
+            { text: prompt },
+            { inlineData: { mimeType: "application/pdf", data: base64Data } }
           ]
         }]
       };
@@ -232,11 +230,13 @@
         if (data.error) throw new Error(data.error.message);
         
         let jsonText = data.candidates[0].content.parts[0].text;
+        // Limpieza de Markdown
         jsonText = jsonText.replace(/```json/g, "").replace(/```/g, "").trim();
+        
         renderResults(JSON.parse(jsonText));
 
       } catch (error) {
-        alert('Hubo un problema: ' + error.message);
+        alert('Error en el análisis: ' + error.message);
         resetUI();
       }
     }
@@ -245,32 +245,37 @@
       document.getElementById('loader').style.display = 'none';
       document.getElementById('resultsArea').style.display = 'block';
 
-      document.getElementById('resTotalPagar').innerText = `$${data.total_pagar.toLocaleString('es-AR')}`;
+      document.getElementById('resTotalPagar').innerText = `$${data.total_pagar.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
       document.getElementById('resVencimiento').innerText = `Vence: ${data.fecha_vencimiento}`;
-      document.getElementById('resProyeccion').innerText = `$${data.proyeccion_proximo_mes.total_estimado.toLocaleString('es-AR')}`;
+      document.getElementById('resProyeccion').innerText = `$${data.proyeccion_proximo_mes.total_estimado.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
 
-      document.getElementById('resTerminanSuma').innerText = `$${data.cuotas_finalizan.suma_total.toLocaleString('es-AR')}`;
-      document.getElementById('resTerminanCant').innerText = `${data.cuotas_finalizan.cantidad} compra(s) terminan este mes.`;
+      document.getElementById('resTerminanSuma').innerText = `$${data.cuotas_finalizan.suma_total.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+      document.getElementById('resTerminanCant').innerText = `${data.cuotas_finalizan.cantidad} consumos finalizan este mes.`;
 
       const grupList = document.getElementById('resAgrupadasLista');
-      grupList.innerHTML = data.cuotas_restantes_agrupadas.map(g => `
-        <div class="list-item">
-          <div><span class="badge">${g.grupo}</span></div>
-          <div style="font-family:'JetBrains Mono'; font-weight:bold;">$${g.suma_total.toLocaleString('es-AR')}</div>
-        </div>
-      `).join('') || 'No hay cuotas pendientes.';
+      grupList.innerHTML = data.cuotas_restantes_agrupadas.length > 0 
+        ? data.cuotas_restantes_agrupadas.map(g => `
+          <div class="list-item">
+            <div><span class="badge">${g.grupo}</span> <small>(${g.cantidad})</small></div>
+            <div style="font-family:'JetBrains Mono'; font-weight:bold;">$${g.suma_total.toLocaleString('es-AR', {minimumFractionDigits: 2})}</div>
+          </div>
+        `).join('')
+        : '<div class="list-item">Sin cuotas pendientes.</div>';
 
       const cancList = document.getElementById('resCancelacionLista');
-      cancList.innerHTML = data.cancelacion_total.items.map(item => `
-        <div class="list-item">
-          <div>
-            <div style="color:var(--text-primary);">${item.nombre}</div>
-            <div style="font-size:0.8rem;color:var(--text-secondary);">Restan ${item.cuotas_restantes} cuotas</div>
+      cancList.innerHTML = data.cancelacion_total.items.length > 0
+        ? data.cancelacion_total.items.map(item => `
+          <div class="list-item">
+            <div>
+              <div style="color:var(--text-primary); font-size: 0.9rem;">${item.nombre}</div>
+              <div style="font-size:0.75rem;color:var(--text-secondary);">Restan ${item.cuotas_restantes} cuotas</div>
+            </div>
+            <div style="font-family:'JetBrains Mono';">$${item.total_adeudado.toLocaleString('es-AR', {minimumFractionDigits: 2})}</div>
           </div>
-          <div style="font-family:'JetBrains Mono';">$${item.total_adeudado.toLocaleString('es-AR')}</div>
-        </div>
-      `).join('');
-      document.getElementById('resCancelacionTotal').innerText = `$${data.cancelacion_total.gran_total.toLocaleString('es-AR')}`;
+        `).join('')
+        : '<div class="list-item">Sin deudas futuras.</div>';
+        
+      document.getElementById('resCancelacionTotal').innerText = `$${data.cancelacion_total.gran_total.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
     }
 
     function resetUI() {
