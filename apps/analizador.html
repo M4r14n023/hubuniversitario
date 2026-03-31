@@ -24,7 +24,6 @@
       min-height: 100vh; line-height: 1.6; padding: 2rem;
     }
 
-    /* Animación de fondo compartida con Trackr */
     body::before {
       content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
       background: radial-gradient(circle at 20% 50%, rgba(0, 255, 136, 0.05) 0%, transparent 50%),
@@ -44,18 +43,15 @@
 
     .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 2rem; margin-bottom: 1.5rem; }
     
-    /* Input API */
     .api-setup { display: flex; gap: 1rem; margin-top: 1rem; }
     .api-setup input { flex: 1; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: white; font-family: 'JetBrains Mono'; }
     .api-setup button { background: var(--accent-secondary); color: var(--bg-dark); }
 
-    /* File Upload */
     .file-upload { border: 2px dashed var(--border-color); border-radius: 12px; padding: 3rem; text-align: center; cursor: pointer; transition: 0.3s; }
     .file-upload:hover { border-color: var(--accent-primary); background: rgba(0,255,136,0.05); }
     .file-upload input { display: none; }
     .file-upload-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
 
-    /* Resultados Grid */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
     @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
     
@@ -65,12 +61,10 @@
     .stat-label { color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-family: 'JetBrains Mono'; margin-bottom: 0.5rem; }
     .stat-value { font-size: 2rem; font-weight: bold; color: var(--text-primary); font-family: 'JetBrains Mono'; }
 
-    /* Tablas/Listas */
     .list-item { display: flex; justify-content: space-between; padding: 1rem; border-bottom: 1px solid var(--border-color); }
     .list-item:last-child { border-bottom: none; }
     .badge { background: rgba(0,212,255,0.1); color: var(--accent-secondary); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-family: 'JetBrains Mono'; }
 
-    /* Loader */
     .loader { display: none; text-align: center; padding: 3rem; }
     .spinner { width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--accent-primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -91,7 +85,7 @@
       <h3>🔑 Conexión IA</h3>
       <p style="color: var(--text-secondary); font-size: 0.9rem;">Para analizar PDFs sin un servidor, Trackr usa la API gratuita de Gemini. Tu clave se guarda solo en este navegador.</p>
       <div class="api-setup">
-        <input type="password" id="apiKeyInput" placeholder="AIzaSyCH8-RXK4QM7Aa-6zcssC8jOUQROsO1AAM">
+        <input type="password" id="apiKeyInput" value="AIzaSyCH8-RXK4QM7Aa-6zcssC8jOUQROsO1AAM">
         <button class="btn" onclick="saveApiKey()">Guardar Clave</button>
       </div>
     </div>
@@ -110,11 +104,10 @@
     <div class="loader" id="loader">
       <div class="spinner"></div>
       <h3 style="color: var(--accent-primary);">La IA está leyendo tu resumen...</h3>
-      <p style="color: var(--text-secondary);">Agrupando cuotas y calculando proyecciones. Esto puede tomar unos 15 segundos.</p>
+      <p style="color: var(--text-secondary);">Agrupando cuotas y calculando proyecciones.</p>
     </div>
 
     <div id="resultsArea" style="display: none;">
-      
       <div class="grid-2">
         <div class="stat-box danger">
           <div class="stat-label">Total a Pagar (Este mes)</div>
@@ -137,29 +130,23 @@
 
         <div class="card" style="margin-bottom: 0;">
           <h4 style="color: var(--accent-secondary); margin-bottom: 1rem;">📊 Cuotas a futuro</h4>
-          <div id="resAgrupadasLista" style="max-height: 150px; overflow-y: auto;">
-            </div>
+          <div id="resAgrupadasLista" style="max-height: 150px; overflow-y: auto;"></div>
         </div>
       </div>
 
       <div class="card" style="border-color: var(--danger);">
         <h4 style="color: var(--danger); margin-bottom: 1rem;">⚠️ Escenario de Cancelación Total</h4>
         <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">Si quisieras cancelar toda tu deuda en cuotas el mes que viene, este sería el detalle:</p>
-        
-        <div id="resCancelacionLista" style="background: var(--bg-input); border-radius: 8px; margin-bottom: 1.5rem;">
-          </div>
-        
+        <div id="resCancelacionLista" style="background: var(--bg-input); border-radius: 8px; margin-bottom: 1.5rem;"></div>
         <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1rem;">
           <span style="color: var(--text-secondary); font-size: 1.1rem;">Deuda Total en Cuotas:</span>
           <span style="font-size: 2.5rem; font-weight: bold; color: var(--danger); font-family: 'JetBrains Mono';" id="resCancelacionTotal">$0.00</span>
         </div>
       </div>
-
     </div>
   </div>
 
   <script>
-    // Inicialización
     document.addEventListener('DOMContentLoaded', () => {
       const savedKey = localStorage.getItem('geminiApiKey');
       if (savedKey) {
@@ -173,21 +160,15 @@
       if (key) {
         localStorage.setItem('geminiApiKey', key);
         document.getElementById('uploadCard').style.display = 'block';
-        alert('API Key guardada en tu navegador.');
+        alert('API Key guardada correctamente.');
       }
     }
 
-    // Procesamiento de PDF a Base64
     async function processPDF(input) {
       const file = input.files[0];
       if (!file) return;
 
       const apiKey = localStorage.getItem('geminiApiKey');
-      if (!apiKey) {
-        alert('Por favor, guarda tu API Key primero.');
-        return;
-      }
-
       document.getElementById('uploadText').innerText = file.name;
       document.getElementById('uploadCard').style.display = 'none';
       document.getElementById('resultsArea').style.display = 'none';
@@ -195,12 +176,10 @@
 
       try {
         const base64PDF = await toBase64(file);
-        // Limpiamos la cabecera del base64 ("data:application/pdf;base64,")
         const rawBase64 = base64PDF.split(',')[1]; 
-        
         await analyzeWithGemini(rawBase64, apiKey);
       } catch (error) {
-        alert('Error al procesar el archivo: ' + error.message);
+        alert('Error: ' + error.message);
         resetUI();
       }
     }
@@ -213,28 +192,25 @@
     });
 
     async function analyzeWithGemini(base64Data, apiKey) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      // URL Corregida con publishers/google/
+      const url = `https://generativelanguage.googleapis.com/v1beta/publishers/google/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       
-      const prompt = `Analiza este resumen de tarjeta de crédito. Extrae la información en formato JSON estricto:
+      const prompt = `Analiza este resumen de tarjeta de crédito Mastercard. Extrae los datos en este JSON:
       {
-        "total_pagar": 0,
-        "fecha_vencimiento": "DD/MM/AAAA",
+        "total_pagar": 525510.80,
+        "fecha_vencimiento": "08/04/2026",
         "cuotas_finalizan": { "cantidad": 0, "suma_total": 0 },
-        "cuotas_restantes_agrupadas": [
-          { "grupo": "X de Y", "cantidad": 0, "suma_total": 0 }
-        ],
+        "cuotas_restantes_agrupadas": [{ "grupo": "X de Y", "cantidad": 0, "suma_total": 0 }],
         "proyeccion_proximo_mes": { "total_estimado": 0 },
         "cancelacion_total": {
-          "items": [
-            { "nombre": "Descripción", "cuotas_restantes": 0, "total_adeudado": 0 }
-          ],
+          "items": [{ "nombre": "Descripción", "cuotas_restantes": 0, "total_adeudado": 0 }],
           "gran_total": 0
         }
       }
-      IMPORTANTE: 
-      1. Si no encuentras cuotas, deja los arreglos vacíos. 
-      2. No agregues texto antes ni después del JSON.
-      3. Para 'cancelacion_total', multiplica el valor de la cuota por las cuotas que restan pagar (sin contar la de este mes).`;
+      REGLAS:
+      - cuotas_finalizan: Compras que este mes pagan su última cuota (ej: 03/03).
+      - proyeccion_proximo_mes: Suma de cuotas que siguen el mes que viene + mantenimiento ($8839).
+      - cancelacion_total: Suma de todas las cuotas que restan pagar (ej: si es 01/03, restan 2 cuotas).`;
 
       const requestBody = {
         contents: [{
@@ -253,61 +229,43 @@
         });
 
         const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
         
-        if (data.error) {
-          // Error específico de Google (ej: API Key inválida o Región no soportada)
-          throw new Error(`Google dice: ${data.error.message}`);
-        }
-
-        if (!data.candidates || !data.candidates[0].content) {
-          throw new Error('La IA no pudo generar una respuesta. Revisa si el PDF tiene protección con contraseña.');
-        }
-
         let jsonText = data.candidates[0].content.parts[0].text;
-        
-        // Limpieza de posibles etiquetas de markdown que a veces pone la IA
         jsonText = jsonText.replace(/```json/g, "").replace(/```/g, "").trim();
-        
-        const result = JSON.parse(jsonText);
-        renderResults(result);
+        renderResults(JSON.parse(jsonText));
 
       } catch (error) {
-        console.error("Detalle del error:", error);
         alert('Hubo un problema: ' + error.message);
         resetUI();
       }
     }
 
-    // Mostrar Resultados en la Interfaz
     function renderResults(data) {
       document.getElementById('loader').style.display = 'none';
       document.getElementById('resultsArea').style.display = 'block';
 
-      // 1. Totales
       document.getElementById('resTotalPagar').innerText = `$${data.total_pagar.toLocaleString('es-AR')}`;
       document.getElementById('resVencimiento').innerText = `Vence: ${data.fecha_vencimiento}`;
       document.getElementById('resProyeccion').innerText = `$${data.proyeccion_proximo_mes.total_estimado.toLocaleString('es-AR')}`;
 
-      // 2. Terminan
       document.getElementById('resTerminanSuma').innerText = `$${data.cuotas_finalizan.suma_total.toLocaleString('es-AR')}`;
       document.getElementById('resTerminanCant').innerText = `${data.cuotas_finalizan.cantidad} compra(s) terminan este mes.`;
 
-      // 3. Agrupadas
       const grupList = document.getElementById('resAgrupadasLista');
       grupList.innerHTML = data.cuotas_restantes_agrupadas.map(g => `
         <div class="list-item">
-          <div><span class="badge">${g.grupo}</span> <span style="color:var(--text-secondary);font-size:0.9rem;">(${g.cantidad} compras)</span></div>
+          <div><span class="badge">${g.grupo}</span></div>
           <div style="font-family:'JetBrains Mono'; font-weight:bold;">$${g.suma_total.toLocaleString('es-AR')}</div>
         </div>
-      `).join('') || '<div class="list-item">No hay cuotas a futuro.</div>';
+      `).join('') || 'No hay cuotas pendientes.';
 
-      // 4. Cancelación Total
       const cancList = document.getElementById('resCancelacionLista');
       cancList.innerHTML = data.cancelacion_total.items.map(item => `
         <div class="list-item">
           <div>
             <div style="color:var(--text-primary);">${item.nombre}</div>
-            <div style="font-size:0.8rem;color:var(--text-secondary);">Restan ${item.cuotas_restantes} cuota(s)</div>
+            <div style="font-size:0.8rem;color:var(--text-secondary);">Restan ${item.cuotas_restantes} cuotas</div>
           </div>
           <div style="font-family:'JetBrains Mono';">$${item.total_adeudado.toLocaleString('es-AR')}</div>
         </div>
@@ -319,7 +277,6 @@
       document.getElementById('loader').style.display = 'none';
       document.getElementById('uploadCard').style.display = 'block';
       document.getElementById('pdfInput').value = '';
-      document.getElementById('uploadText').innerText = 'Tocá acá para seleccionar tu PDF';
     }
   </script>
 </body>
