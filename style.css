@@ -12,10 +12,10 @@ body {
 .bat {
   width: 1px;
   height: 1px;
-  transform: scale(4);
+  transform: scale(2);
   position: relative;
-  left: -64px;
-  top: -64px;
+  left: -128px;
+  top: -128px;
   -webkit-animation: 0.4s bat steps(1) infinite;
           animation: 0.4s bat steps(1) infinite;
 }
