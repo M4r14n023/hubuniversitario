@@ -76,59 +76,28 @@
       margin: 0;
     }
 
-/* --- ANIMACIÓN BATMAN CORREGIDA --- */
-.bat-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px 0;
-  height: 120px; 
-}
+    /* --- CONTENEDOR PARA EL MURCIÉLAGO VÍA IFRAME --- */
+    .bat-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0;
+      height: 260px; /* Da el espacio necesario al iframe de 300px */
+      margin-bottom: -10px; /* Evita que el título quede muy abajo */
+    }
 
-.bat {
-  width: 1px;
-  height: 1px;
-  background: transparent;
-  position: relative;
-  transform: scale(5); /* Tamaño del pixel art */
-  color: #2c2c2c; /* Color en modo claro */
-  -webkit-animation: 0.4s bat steps(1) infinite;
-  animation: 0.4s bat steps(1) infinite;
-}
+    .bat-frame {
+      width: 300px;
+      height: 300px;
+      border: none;
+      background: transparent;
+      pointer-events: none; /* Impide que el iframe bloquee clics accidentales */
+    }
 
-/* Color blanco en modo oscuro */
-body.dark-mode .bat {
-  color: #ffffff !important;
-}
-
-@keyframes bat {
-  0%, 100% {
-    /* Fotograma 1: Alas extendidas */
-    box-shadow: 
-      -3px 0px, 3px 0px,
-      -3px 1px, -2px 1px, 2px 1px, 3px 1px,
-      -3px 2px, -2px 2px, -1px 2px, 0px 2px, 1px 2px, 2px 2px, 3px 2px,
-      -7px 3px, -6px 3px, -5px 3px, -4px 3px, -3px 3px, -2px 3px, -1px 3px, 0px 3px, 1px 3px, 2px 3px, 3px 3px, 4px 3px, 5px 3px, 6px 3px, 7px 3px,
-      -10px 4px, -9px 4px, -8px 4px, -7px 4px, -6px 4px, -5px 4px, -4px 4px, -3px 4px, -2px 4px, -1px 4px, 0px 4px, 1px 4px, 2px 4px, 3px 4px, 4px 4px, 5px 4px, 6px 4px, 7px 4px, 8px 4px, 9px 4px, 10px 4px,
-      -10px 5px, -9px 5px, -8px 5px, -3px 5px, -2px 5px, -1px 5px, 0px 5px, 1px 5px, 2px 5px, 3px 5px, 8px 5px, 9px 5px, 10px 5px,
-      -9px 6px, -8px 6px, -2px 6px, -1px 6px, 0px 6px, 1px 6px, 2px 6px, 8px 6px, 9px 6px,
-      -8px 7px, -1px 7px, 0px 7px, 1px 7px, 8px 7px,
-      0px 8px;
-  }
-  50% {
-    /* Fotograma 2: Alas abajo (aleteo) */
-    box-shadow: 
-      -3px 0px, 3px 0px,
-      -3px 1px, -2px 1px, 2px 1px, 3px 1px,
-      -3px 2px, -2px 2px, -1px 2px, 0px 2px, 1px 2px, 2px 2px, 3px 2px,
-      -5px 3px, -4px 3px, -3px 3px, -2px 3px, -1px 3px, 0px 3px, 1px 3px, 2px 3px, 3px 3px, 4px 3px, 5px 3px,
-      -6px 4px, -5px 4px, -4px 4px, -3px 4px, -2px 4px, -1px 4px, 0px 4px, 1px 4px, 2px 4px, 3px 4px, 4px 4px, 5px 4px, 6px 4px,
-      -7px 5px, -6px 5px, -3px 5px, -2px 5px, -1px 5px, 0px 5px, 1px 5px, 2px 5px, 3px 5px, 6px 5px, 7px 5px,
-      -8px 6px, -7px 6px, -2px 6px, -1px 6px, 0px 6px, 1px 6px, 2px 6px, 7px 6px, 8px 6px,
-      -9px 7px, -8px 7px, -1px 7px, 0px 7px, 1px 7px, 8px 7px, 9px 7px,
-      -10px 8px, -9px 8px, 0px 8px, 9px 8px, 10px 8px;
-  }
-}
+    /* En modo oscuro, invertimos los colores del iframe completo (el bat será blanco) */
+    body.dark-mode .bat-frame {
+      filter: invert(1) hue-rotate(180deg) brightness(1.5);
+    }
 
     /* Navegación principal del hub */
     .hub-nav {
@@ -565,8 +534,9 @@ body.dark-mode .bat {
   <div id="hub-welcome" class="hub-welcome">
     
     <div class="bat-wrapper">
-        <div class="bat"></div>
+        <iframe src="animacion_bat.html" class="bat-frame" allowtransparency="true"></iframe>
     </div>
+
     <h2>Bienvenido</h2>
     <p>Gestiona tu vida académica, tus finanzas y tu salud en un solo lugar.</p>
     
