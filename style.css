@@ -14,8 +14,8 @@ body {
   height: 1px;
   transform: scale(2);
   position: relative;
-  left: -128px;
-  top: -128px;
+  left: -64px;
+  top: -64px;
   -webkit-animation: 0.4s bat steps(1) infinite;
           animation: 0.4s bat steps(1) infinite;
 }
