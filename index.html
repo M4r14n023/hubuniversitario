@@ -415,6 +415,24 @@
         min-height: calc(100vh - 120px);
       }
     }
+    bat-wrapper {
+    position: relative; /* Cambia de absolute a relative para que no flote sobre el texto */
+    top: 0;
+    right: 0;
+    margin: 0 auto;    /* Lo centra horizontalmente */
+    width: 100px;      /* Lo hacemos un poco más pequeño para mobile */
+    height: 100px;
+  }
+
+  .hub-welcome {
+    margin: 2rem auto; /* Reducimos el margen superior en mobile */
+    padding: 1rem;
+  }
+  
+  .hub-welcome h2 {
+    font-size: 2rem;   /* Ajustamos el título para que no quede gigante */
+  }
+
     
     /* Bienvenida */
     .hub-welcome {
