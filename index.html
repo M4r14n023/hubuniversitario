@@ -75,7 +75,47 @@
       min-height: 100vh;
       margin: 0;
     }
-    
+
+    /* ----------------------------------------------------------- */
+    /* --- NUEVO: ANIMACIÓN BATMAN --- */
+    /* ----------------------------------------------------------- */
+    .bat-wrapper {
+      display: flex;
+      justify-content: center;
+      padding: 20px 0;
+      height: 60px;
+    }
+
+    .bat {
+      width: 1px;
+      height: 1px;
+      transform: scale(4);
+      position: relative;
+      /* Ajustamos para que se vea centrado en tu diseño */
+      left: 0px; 
+      top: 0px;
+      -webkit-animation: 0.4s bat steps(1) infinite;
+      animation: 0.4s bat steps(1) infinite;
+    }
+
+    @keyframes bat {
+      0% {
+        box-shadow: 1px 0, 0 1px, 2px 1px, 3px 1px, -1px 2px, 0 2px, 1px 2px, 2px 2px, 3px 2px, 4px 2px, -2px 3px, -1px 3px, 0 3px, 1px 3px, 2px 3px, 3px 3px, 4px 3px, 5px 3px, -3px 4px, -2px 4px, -1px 4px, 0 4px, 1px 4px, 2px 4px, 3px 4px, 4px 4px, 5px 4px, 6px 4px, -4px 5px, -3px 5px, -2px 5px, -1px 5px, 0 5px, 1px 5px, 2px 5px, 3px 5px, 4px 5px, 5px 5px, 6px 5px, 7px 5px, -4px 6px, -3px 6px, -2px 6px, -1px 6px, 0 6px, 3px 6px, 4px 6px, 5px 6px, 6px 6px, 7px 6px, -4px 7px, -3px 7px, -2px 7px, -1px 7px, 4px 7px, 5px 7px, 6px 7px, 7px 7px, -3px 8px, -2px 8px, 5px 8px, 6px 8px, -2px 9px, 5px 9px;
+        color: var(--hub-primary);
+      }
+      50% {
+        box-shadow: 1px 0, 0 1px, 2px 1px, 3px 1px, -1px 2px, 0 2px, 1px 2px, 2px 2px, 3px 2px, 4px 2px, -2px 3px, -1px 3px, 0 3px, 1px 3px, 2px 3px, 3px 3px, 4px 3px, 5px 3px, -4px 4px, -3px 4px, -2px 4px, -1px 4px, 0 4px, 1px 4px, 2px 4px, 3px 4px, 4px 4px, 5px 4px, 6px 4px, 7px 4px, -4px 5px, -3px 5px, -2px 5px, -1px 5px, 0 5px, 1px 5px, 2px 5px, 3px 5px, 4px 5px, 5px 5px, 6px 5px, 7px 5px, -3px 6px, -2px 6px, -1px 6px, 0 6px, 1px 6px, 2px 6px, 3px 6px, 4px 6px, 5px 6px, 6px 6px, -2px 7px, -1px 7px, 0 7px, 1px 7px, 2px 7px, 3px 7px, 4px 7px, 5px 7px, -1px 8px, 0 8px, 1px 8px, 2px 8px, 3px 8px, 4px 8px, 0 9px, 1px 9px, 2px 9px, 3px 9px;
+        color: var(--hub-text);
+      }
+    }
+
+    /* Color adaptativo en modo oscuro */
+    body.dark-mode .bat {
+      color: #ffffff !important;
+    }
+    /* --- FIN NUEVO --- */
+    /* ----------------------------------------------------------- */
+
     /* Navegación principal del hub */
     .hub-nav {
       background: var(--hub-surface);
@@ -509,6 +549,10 @@
   </div>
 
   <div id="hub-welcome" class="hub-welcome">
+    
+    <div class="bat-wrapper">
+        <div class="bat"></div>
+    </div>
     <h2>Bienvenido</h2>
     <p>Gestiona tu vida académica, tus finanzas y tu salud en un solo lugar.</p>
     
