@@ -415,23 +415,63 @@
         min-height: calc(100vh - 120px);
       }
     }
-    bat-wrapper {
-    position: relative; /* Cambia de absolute a relative para que no flote sobre el texto */
-    top: 0;
-    right: 0;
-    margin: 0 auto;    /* Lo centra horizontalmente */
-    width: 100px;      /* Lo hacemos un poco más pequeño para mobile */
-    height: 100px;
-  }
+/* Responsive mejorado para celular */
+    @media (max-width: 768px) {
+      .hub-nav-content {
+        height: auto;
+        flex-direction: column; /* Logo arriba, pestañas abajo */
+        padding: 1rem;
+      }
 
-  .hub-welcome {
-    margin: 2rem auto; /* Reducimos el margen superior en mobile */
-    padding: 1rem;
-  }
-  
-  .hub-welcome h2 {
-    font-size: 2rem;   /* Ajustamos el título para que no quede gigante */
-  }
+      .hub-logo {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 0.5rem;
+      }
+      
+      .hub-tabs {
+        width: 100%;
+        gap: 0.25rem;
+        overflow-x: auto;
+        display: flex;
+        padding-bottom: 5px;
+        justify-content: flex-start; /* Permite scroll horizontal si hay muchas */
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      .hub-tab {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+      }
+
+      /* ARREGLO DEL MURCIÉLAGO */
+      .bat-wrapper {
+        position: relative; /* Cambia de absolute a relative para que no flote sobre el texto */
+        top: 0;
+        right: 0;
+        margin: 0 auto 1rem auto; /* Lo centra y le da aire respecto al título */
+        width: 100px; 
+        height: 100px;
+        display: block;
+      }
+
+      .hub-welcome {
+        margin: 1rem auto;
+        padding: 2rem 1rem;
+        text-align: center;
+      }
+      
+      .hub-welcome h2 {
+        font-size: 1.8rem;
+        margin-top: 0.5rem;
+      }
+
+      .app-cards {
+        grid-template-columns: 1fr; /* Una sola columna de tarjetas en el celu */
+        gap: 1rem;
+      }
+    }
 
     
     /* Bienvenida */
