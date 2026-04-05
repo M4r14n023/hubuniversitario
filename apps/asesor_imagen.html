@@ -183,36 +183,54 @@
     </div>
   </div>
 
-  <div id="tab-evento" class="hidden">
+<div id="tab-evento" class="hidden">
     <div class="builder-layout">
       <div>
-        <p class="section-title">Look del Día</p>
-        <p class="section-sub">Armá tu outfit basado en una prenda protagonista o nivel de formalidad</p>
+        <p class="section-title">Configurador de Look</p>
+        <p class="section-sub">Fijá tus prendas base y dejá que la app complete el resto con coherencia</p>
         <div class="week-grid" id="event-grid">
           <div style="padding:30px;text-align:center;color:var(--muted);font-size:0.7rem;border:1.5px dashed var(--border);border-radius:4px;">
-            Configurá tu salida en el panel derecho → "Generar Look"
+            Elegí al menos una prenda ancla → "Generar Look"
           </div>
         </div>
       </div>
       <div class="side-panel">
         <div class="panel-card">
-          <div class="panel-header">Configuración del Evento</div>
+          <div class="panel-header">Anclas Protagonistas (Max 2)</div>
           <div class="panel-body">
-            <div class="form-row">
-              <label class="form-label" style="font-size: 0.55rem; color:var(--muted); text-transform: uppercase;">Prenda Obligatoria (Ancla)</label>
-              <select id="event-anchor" class="form-select" style="width:100%; padding:8px; font-family:'DM Mono'; border:1px solid var(--border);">
-                <option value="">Ninguna (Libre)</option>
-              </select>
-            </div>
-            <div class="form-row" style="margin-top:12px;">
-              <label class="form-label" style="font-size: 0.55rem; color:var(--muted); text-transform: uppercase;">Nivel de Formalidad</label>
-              <select id="event-formality" class="form-select" style="width:100%; padding:8px; font-family:'DM Mono'; border:1px solid var(--border);">
-                <option value="0">Cualquiera</option>
-                <option value="1">Casual Relajado</option>
-                <option value="2">Smart Casual</option>
-                <option value="3">Elegante Sport</option>
-              </select>
-            </div>
+            <p style="font-size:0.55rem; color:var(--muted); margin-bottom:8px;">Elegí Pantalones O Partes de arriba</p>
+            <select id="anchor-core-1" class="form-select anchor-sel" onchange="window.validateAnchorGroups('core')">
+              <option value="">— Ancla Principal 1 —</option>
+            </select>
+            <select id="anchor-core-2" class="form-select anchor-sel" style="margin-top:8px" onchange="window.validateAnchorGroups('core')">
+              <option value="">— Ancla Principal 2 —</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-header">Anclas Complemento (Max 2)</div>
+          <div class="panel-body">
+            <p style="font-size:0.55rem; color:var(--muted); margin-bottom:8px;">Elegí Calzado O Cintos</p>
+            <select id="anchor-acc-1" class="form-select anchor-sel" onchange="window.validateAnchorGroups('acc')">
+              <option value="">— Ancla Accesorio 1 —</option>
+            </select>
+            <select id="anchor-acc-2" class="form-select anchor-sel" style="margin-top:8px" onchange="window.validateAnchorGroups('acc')">
+              <option value="">— Ancla Accesorio 2 —</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-header">Preferencia</div>
+          <div class="panel-body">
+            <label class="form-label">Formalidad</label>
+            <select id="event-formality" class="form-select">
+              <option value="0">Cualquiera</option>
+              <option value="1">Casual Relajado</option>
+              <option value="2">Smart Casual</option>
+              <option value="3">Elegante Sport</option>
+            </select>
             <button class="generate-btn" style="margin-top:15px" onclick="window.generateEventLook()">✦ Generar Look</button>
           </div>
         </div>
@@ -533,28 +551,110 @@
     addGroup('Calzado', allShoes());
   };
 
+// --- LÓGICA DE VALIDACIÓN Y LLENADO DE ANCLAS ---
+  window.populateAnchorSelect = function() {
+    const cores = [document.getElementById('anchor-core-1'), document.getElementById('anchor-core-2')];
+    const accs = [document.getElementById('anchor-acc-1'), document.getElementById('anchor-acc-2')];
+    
+    if(cores[0].options.length > 1) return;
+
+    const fill = (select, groups) => {
+      groups.forEach(g => {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = g.label;
+        g.items.forEach(i => {
+          const opt = document.createElement('option');
+          opt.value = i.id; opt.textContent = i.name;
+          opt.dataset.type = i.type;
+          optgroup.appendChild(opt);
+        });
+        select.appendChild(optgroup);
+      });
+    };
+
+    const mainItems = [
+      {label: 'Pantalones', items: allGarments().filter(g=>g.type==='bottom')},
+      {label: 'Partes de Arriba', items: allGarments().filter(g=>['top','shirt','outer'].includes(g.type))}
+    ];
+    const sideItems = [
+      {label: 'Calzado', items: allShoes()},
+      {label: 'Cintos', items: allBelts()}
+    ];
+
+    cores.forEach(s => fill(s, mainItems));
+    accs.forEach(s => fill(s, sideItems));
+  };
+
+  window.validateAnchorGroups = function(groupType) {
+    const prefix = groupType === 'core' ? 'anchor-core-' : 'anchor-acc-';
+    const s1 = document.getElementById(prefix + '1');
+    const s2 = document.getElementById(prefix + '2');
+    
+    if (!s1.value) return;
+    
+    const type1 = s1.options[s1.selectedIndex].dataset.type;
+    // Si es del grupo core, normalizamos tipo (top/shirt/outer -> 'upper')
+    const cat1 = ['top','shirt','outer'].includes(type1) ? 'upper' : type1;
+
+    Array.from(s2.options).forEach(opt => {
+      if (!opt.value) return;
+      const type2 = opt.dataset.type;
+      const cat2 = ['top','shirt','outer'].includes(type2) ? 'upper' : type2;
+      
+      // Bloquear si no es de la misma categoría madre
+      opt.disabled = (cat1 !== cat2);
+    });
+
+    if (s2.value && s2.options[s2.selectedIndex].disabled) {
+      s2.value = "";
+      showToast("Elegí prendas de la misma categoría");
+    }
+  };
+
   window.generateEventLook = function() {
-    const anchorId = document.getElementById('event-anchor').value;
+    const anchors = [
+      document.getElementById('anchor-core-1').value,
+      document.getElementById('anchor-core-2').value,
+      document.getElementById('anchor-acc-1').value,
+      document.getElementById('anchor-acc-2').value
+    ].filter(v => v !== "");
+
+    if (anchors.length === 0) {
+      alert("Al menos una prenda de anclaje es obligatoria.");
+      return;
+    }
+
     const reqFormality = parseInt(document.getElementById('event-formality').value);
+    
+    // 1. Determinar cantidad de opciones según tu regla lógica
+    // 1 ancla -> 3 looks | 2 anclas -> 4 looks | +2 anclas -> Factorial (min 4)
+    let numRequested = 3;
+    if (anchors.length === 2) numRequested = 4;
+    if (anchors.length > 2) numRequested = 6; // Escalamos el factorial
+
     let validOutfits = [];
     const bottoms = allGarments().filter(g => g.type === 'bottom');
-    const tops = allGarments().filter(g => ['top','shirt','outer'].includes(g.type));
-    const belts = allBelts(); const shoes = allShoes();
+    const uppers = allGarments().filter(g => ['top','shirt','outer'].includes(g.type));
+    const belts = allBelts();
+    const shoes = allShoes();
 
+    // 2. Generar universo de combinaciones
     bottoms.forEach(b => {
-      const rules = RULES[b.id] || { tops: tops.map(t=>t.id), belt: belts[0]?.id, shoe: shoes[0]?.id, tip: 'Combinación libre.' };
-      tops.forEach(t => {
-        if (rules.tops.includes(t.id)) {
+      const rules = RULES[b.id] || { tops: uppers.map(u=>u.id), tip: 'Combinación libre.' };
+      uppers.forEach(u => {
+        if (rules.tops.includes(u.id)) {
           shoes.forEach(s => {
             if (reqFormality === 0 || (s.formality || 2) === reqFormality) {
               belts.forEach(blt => {
-                let outfit = { bottom: b, top: t, belt: blt, shoe: s, tip: rules.tip };
-                if (!anchorId || [b.id, t.id, blt.id, s.id].includes(anchorId)) {
-                  let isCoherent = true;
-                  if (anchorId !== blt.id && rules.belt && blt.id !== rules.belt) isCoherent = false;
-                  if (anchorId !== s.id && rules.shoe && s.id !== rules.shoe) isCoherent = false;
-                  if (isCoherent) validOutfits.push(outfit);
-                  else if (anchorId) validOutfits.push({...outfit, tip: "💡 Outfit forzado por tu elección."});
+                const outfit = { bottom: b, top: u, belt: blt, shoe: s, tip: rules.tip };
+                const ids = [b.id, u.id, blt.id, s.id];
+                
+                // Filtro: El outfit debe contener AL MENOS UNA de las anclas seleccionadas
+                // Y si hay varias anclas, priorizamos los que tengan la mayor cantidad de ellas
+                const matchCount = anchors.filter(a => ids.includes(a)).length;
+                
+                if (matchCount > 0) {
+                  validOutfits.push({ ...outfit, priority: matchCount });
                 }
               });
             }
@@ -563,23 +663,27 @@
       });
     });
 
-    const uniqueOutfits = []; const seen = new Set();
+    // 3. Ordenar por prioridad (los que cumplen más anclas arriba) y mezclar
+    validOutfits.sort((a, b) => b.priority - a.priority || Math.random() - 0.5);
+
+    // 4. Limpiar duplicados visuales
+    const unique = [];
+    const seen = new Set();
     for (let o of validOutfits) {
       const key = o.bottom.id + '-' + o.top.id + '-' + o.shoe.id;
-      if (!seen.has(key)) { seen.add(key); uniqueOutfits.push(o); }
+      if (!seen.has(key)) { seen.add(key); unique.push(o); }
+      if (unique.length >= numRequested) break;
     }
 
-    const shuffled = uniqueOutfits.sort(() => 0.5 - Math.random());
-    const finalSelection = shuffled.slice(0, 1);
-    if (finalSelection.length === 0) {
-      document.getElementById('event-grid').innerHTML = `<div style="padding:30px;text-align:center;color:var(--danger);border:1px solid var(--border);">Sin combinaciones para este filtro.</div>`;
+    if (unique.length === 0) {
+      document.getElementById('event-grid').innerHTML = `<div style="padding:30px;text-align:center;color:var(--danger);border:1px solid var(--border);">No encontré combinaciones coherentes. Probá cambiando las anclas.</div>`;
       return;
     }
 
     const si = (file,w,h,cls) => `<img class="${cls}" src="${file}" style="width:${w}px;height:${h}px">`;
-    document.getElementById('event-grid').innerHTML = finalSelection.map((o) => `
-      <div class="day-card">
-        <div class="day-header" style="background:var(--ink);color:var(--cream)"><span class="day-name">Propuesta para hoy</span></div>
+    document.getElementById('event-grid').innerHTML = unique.map((o, i) => `
+      <div class="day-card" style="margin-bottom:12px">
+        <div class="day-header" style="background:var(--ink);color:var(--cream)"><span class="day-name">Propuesta ${i + 1}</span></div>
         <div class="day-slots">
           <div class="slot"><span class="slot-label">Arriba</span>${si(o.top.file,62,72,'slot-img')}<span class="slot-name">${o.top.name}</span></div>
           <span class="plus-sep">+</span>
@@ -588,7 +692,9 @@
           <div class="slot"><span class="slot-label">Cinto</span>${si(o.belt.file,50,38,'slot-acc-img')}<span class="slot-name">${o.belt.name}</span></div>
           <span class="plus-sep">+</span>
           <div class="slot"><span class="slot-label">Calzado</span>${si(o.shoe.file,50,38,'slot-acc-img')}<span class="slot-name">${o.shoe.name}</span></div>
-        </div><div class="outfit-tip">💡 ${o.tip}</div></div>`).join('');
+        </div>
+        <div class="outfit-tip">💡 ${o.tip}</div>
+      </div>`).join('');
   };
 
   // --- NAVEGACIÓN ---
