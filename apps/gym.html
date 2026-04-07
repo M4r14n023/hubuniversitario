@@ -40,6 +40,18 @@
 
     <main class="max-w-md mx-auto p-4 pb-24" id="app-container"></main>
 
+    <div id="timer-overlay" class="fixed inset-0 bg-black z-[100] hidden flex-col items-center justify-center transition-colors duration-500">
+        <div class="text-gray-700 text-xs font-bold uppercase tracking-widest mb-4">Descanso en curso</div>
+        <div id="timer-seconds" class="text-8xl font-black text-gray-400 tabular-nums">0:00</div>
+        <div class="w-64 h-1 bg-gray-900 rounded-full mt-8 overflow-hidden">
+            <div id="timer-bar" class="h-full bg-orange-600 transition-all duration-1000" style="width: 100%"></div>
+        </div>
+        <div class="flex gap-4 mt-12">
+            <button onclick="window.ajustarTimer(30)" class="px-4 py-2 border border-gray-800 text-gray-400 rounded-full text-xs hover:bg-gray-900">+30s</button>
+            <button onclick="window.cancelarTimer()" class="px-6 py-2 border border-red-900/30 text-red-500 rounded-full text-xs hover:bg-red-900/20">Omitir Descanso</button>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -112,13 +124,10 @@
                     if (i % 2.5 === 0 || i % 3 === 0) rack.push(i);
                 }
             } else if (equipo === 'prensa') {
-                // Combinando 10, 15 y 20 se puede lograr cualquier múltiplo de 5 a partir de 10
                 for (let i = 10; i <= 400; i += 5) rack.push(i);
             } else if (equipo === 'curl_femoral' || equipo === 'maquina') {
-                // Ladrillos estrictos de 5kg
                 for (let i = 5; i <= 200; i += 5) rack.push(i);
             } else {
-                // Barras y Sillón de cuádriceps (Discos de 2.5 en adelante)
                 for (let i = 2.5; i <= 200; i += 2.5) rack.push(i);
             }
             return rack;
@@ -130,7 +139,7 @@
             return rack.reduce((prev, curr) => Math.abs(curr - peso) < Math.abs(prev - peso) ? curr : prev);
         };
 
-        // --- ESTADO ---
+        // --- ESTADO Y VARIABLES GLOBALES ---
         window.appState = JSON.parse(localStorage.getItem('gymTrackrState_v2')) || {
             isInitialized: false,
             baselineSets: {}, 
@@ -139,6 +148,11 @@
             routine: defaultRoutine,
             lastUpdated: 0
         };
+
+        window.timerInterval = null;
+        window.wakeLock = null;
+        window.tiempoRestante = 0;
+        window.tiempoTotal = 0;
 
         const container = document.getElementById('app-container');
         const syncIcon = document.getElementById('sync-icon');
@@ -231,10 +245,7 @@
                             optimalW = Math.round(optimalW * 2) / 2;
                         }
                         
-                        optimizedSeries.push({ 
-                            weight: optimalW, 
-                            reps: ex.maxReps 
-                        });
+                        optimizedSeries.push({ weight: optimalW, reps: ex.maxReps });
                     }
                     baselineSets[ex.id] = optimizedSeries;
                 });
@@ -246,7 +257,7 @@
             window.renderDashboard();
         }
 
-        // --- DASHBOARD (AHORA CON ORDENAMIENTO DINÁMICO) ---
+        // --- DASHBOARD ---
         window.renderDashboard = function() {
             if(!window.appState.isInitialized) return window.renderSetup();
             document.getElementById('header-stats').classList.remove('hidden');
@@ -254,16 +265,11 @@
 
             let html = `<div class="bg-gradient-to-br from-gray-900 to-gray-950 p-6 rounded-2xl border border-gray-800 shadow-xl mb-8 text-center"><h2 class="text-lg font-bold text-gray-300 mb-6">¿Qué toca entrenar hoy?</h2><div class="grid grid-cols-1 gap-4">`;
 
-            // LÓGICA DE ORDENAMIENTO: Buscamos la fecha del último entrenamiento de cada bloque
             const bloquesOrdenados = Object.values(window.appState.routine).sort((a, b) => {
                 const logA = [...window.appState.history].reverse().find(h => h.blockId === a.id);
                 const logB = [...window.appState.history].reverse().find(h => h.blockId === b.id);
-                
-                // Si nunca se hizo, le damos fecha muy antigua (año 2000)
                 const fechaA = logA ? new Date(logA.date).getTime() : new Date('2000-01-01').getTime();
                 const fechaB = logB ? new Date(logB.date).getTime() : new Date('2000-01-01').getTime();
-                
-                // Ordenamos de menor (más antiguo) a mayor (más reciente)
                 return fechaA - fechaB;
             });
 
@@ -271,7 +277,6 @@
                 const lastLog = [...window.appState.history].reverse().find(h => h.blockId === block.id);
                 const lastDateStr = lastLog ? new Date(lastLog.date).toLocaleDateString('es-ES', {weekday: 'short', day: 'numeric'}) : 'Nunca';
                 
-                // Si es el primero de la lista (el que más tiempo hace que no entrenas), lo destacamos
                 const isSiguiente = index === 0;
                 const etiquetaRecomendado = isSiguiente ? `<span class="absolute top-0 right-0 bg-orange-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-xl">TE TOCA</span>` : '';
 
@@ -299,7 +304,7 @@
             container.innerHTML = html + `</div></div>`;
         }
 
-        // --- ENTRENO ACTIVO (CON REDONDEO INTELIGENTE E INTRA-SERIES) ---
+        // --- ENTRENO ACTIVO ---
         window.startWorkout = function(blockId) {
             const block = window.appState.routine[blockId];
             let workout = { blockId: blockId, date: new Date().toISOString(), logs: {}, rpe: {} }; 
@@ -314,6 +319,7 @@
                 if (nom.includes('curl femoral')) equipo = 'curl_femoral';
                 else if (nom.includes('prensa')) equipo = 'prensa';
                 else if (nom.includes('sillón') || nom.includes('sillon')) equipo = 'barra'; 
+                else if (nom.includes('hammer') || nom.includes('barra') || nom.includes('sentadilla') || nom.includes('peso muerto rumano')) equipo = 'barra';
                 else if (nom.includes('estocadas') || nom.includes('gemelos') || nom.includes('mancuerna') || nom.includes('laterales') || nom.includes('martillo')) equipo = 'mancuerna';
                 else if (nom.includes('polea') || nom.includes('jalón') || nom.includes('tríceps')) equipo = 'polea';
 
@@ -426,8 +432,8 @@
                     const isBodyweight = set.weight === 0;
                     
                     const nom = ex.name.toLowerCase();
-                    const esBarra = nom.includes('barra') || nom.includes('sentadilla') || nom.includes('peso muerto rumano');
-                    const etiquetaPeso = esBarra ? 'kg/lado' : 'kg';
+                    const esCargaPorLado = nom.includes('barra') || nom.includes('sentadilla') || nom.includes('peso muerto rumano') || nom.includes('hammer');
+                    const etiquetaPeso = esCargaPorLado ? 'kg/lado' : 'kg';
 
                     html += `
                         <div class="flex items-center gap-2 ${isDone ? 'opacity-50' : ''} transition-opacity">
@@ -484,8 +490,104 @@
             window.saveState();
         }
 
+        // --- FUNCIONES DEL CRONÓMETRO ---
+        window.startTimer = async (segundos) => {
+            clearInterval(window.timerInterval);
+            window.tiempoTotal = segundos;
+            window.tiempoRestante = segundos;
+            
+            const timerContainer = document.getElementById('timer-overlay');
+            const timerDisplay = document.getElementById('timer-seconds');
+            const timerBar = document.getElementById('timer-bar');
+            
+            timerContainer.classList.remove('hidden');
+            timerContainer.classList.replace('flex-col', 'flex'); // Tailwind flex fix
+            
+            // WakeLock para no apagar pantalla
+            try {
+                if ('wakeLock' in navigator) {
+                    window.wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (err) { console.log("WakeLock no soportado"); }
+
+            window.actualizarDisplay();
+
+            window.timerInterval = setInterval(() => {
+                window.tiempoRestante--;
+                window.actualizarDisplay();
+
+                if (window.tiempoRestante <= 0) {
+                    clearInterval(window.timerInterval);
+                    window.finalizarDescanso();
+                }
+            }, 1000);
+        };
+
+        window.actualizarDisplay = () => {
+            const timerDisplay = document.getElementById('timer-seconds');
+            const timerBar = document.getElementById('timer-bar');
+            
+            const mins = Math.floor(window.tiempoRestante / 60);
+            const secs = window.tiempoRestante % 60;
+            timerDisplay.innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            
+            const progress = (window.tiempoRestante / window.tiempoTotal) * 100;
+            timerBar.style.width = `${progress}%`;
+        };
+
+        window.ajustarTimer = (segundos) => {
+            window.tiempoRestante += segundos;
+            window.tiempoTotal += segundos;
+            window.actualizarDisplay();
+        };
+
+        window.cancelarTimer = async () => {
+            clearInterval(window.timerInterval);
+            const timerContainer = document.getElementById('timer-overlay');
+            timerContainer.classList.add('hidden');
+            timerContainer.classList.replace('flex', 'flex-col');
+            if (window.wakeLock) {
+                await window.wakeLock.release();
+                window.wakeLock = null;
+            }
+        };
+
+        window.finalizarDescanso = () => {
+            const timerContainer = document.getElementById('timer-overlay');
+            const timerDisplay = document.getElementById('timer-seconds');
+            
+            timerContainer.classList.add('bg-orange-600');
+            timerDisplay.innerText = "¡A TIRAR!";
+            timerDisplay.classList.replace('text-gray-400', 'text-white');
+            
+            if ("vibrate" in navigator) navigator.vibrate([500, 200, 500]);
+
+            setTimeout(async () => {
+                timerContainer.classList.add('hidden');
+                timerContainer.classList.replace('flex', 'flex-col');
+                timerContainer.classList.remove('bg-orange-600');
+                timerDisplay.classList.replace('text-white', 'text-gray-400');
+                if (window.wakeLock) {
+                    await window.wakeLock.release();
+                    window.wakeLock = null;
+                }
+            }, 3000);
+        };
+
         window.toggleSet = function(exId, setIndex) {
-            window.appState.currentWorkout.logs[exId][setIndex].done = !window.appState.currentWorkout.logs[exId][setIndex].done;
+            const set = window.appState.currentWorkout.logs[exId][setIndex];
+            set.done = !set.done;
+            
+            // Si la serie se marcó como completada, lanzamos el cronómetro
+            if (set.done) {
+                let tiempo = 90;
+                Object.values(window.appState.routine).forEach(b => {
+                    const ex = b.exercises.find(e => e.id === exId);
+                    if(ex) tiempo = ex.focus === 'Fuerza' ? 180 : 90;
+                });
+                window.startTimer(tiempo);
+            }
+
             window.saveState();
             window.renderActiveWorkout(); 
         }
