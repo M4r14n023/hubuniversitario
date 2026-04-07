@@ -58,20 +58,8 @@
 
         // --- 1. RUTINA PDF ---
         const defaultRoutine = {
-            push: {
-                id: 'push', name: 'DÍA 1 - PUSH', color: 'text-blue-400', border: 'border-blue-500',
-                exercises: [
-                    { id: 'p1', name: 'Press de banca con barra', sets: 4, minReps: 4, maxReps: 6, focus: 'Fuerza' },
-                    { id: 'p2', name: 'Press inclinado mancuernas', sets: 3, minReps: 8, maxReps: 10, focus: 'Hipertrofia' },
-                    { id: 'p3', name: 'Cruce de poleas', sets: 3, minReps: 12, maxReps: 15, focus: 'Hipertrofia' },
-                    { id: 'p4', name: 'Press militar con barra', sets: 3, minReps: 5, maxReps: 7, focus: 'Fuerza' },
-                    { id: 'p5', name: 'Elevaciones laterales', sets: 3, minReps: 12, maxReps: 15, focus: 'Hipertrofia' },
-                    { id: 'p6', name: 'Flexiones manos juntas', sets: 3, minReps: 8, maxReps: 15, focus: 'Pecho/Tríceps' },
-                    { id: 'p7', name: 'Extensión de tríceps polea', sets: 3, minReps: 10, maxReps: 12, focus: 'Hipertrofia' }
-                ]
-            },
             pull: {
-                id: 'pull', name: 'DÍA 2 - PULL', color: 'text-emerald-400', border: 'border-emerald-500',
+                id: 'pull', name: 'PULL (Espalda)', color: 'text-emerald-400', border: 'border-emerald-500',
                 exercises: [
                     { id: 'pu1', name: 'Dominadas pronas', sets: 4, minReps: 6, maxReps: 8, focus: 'Fuerza' },
                     { id: 'pu2', name: 'Remo Hammer', sets: 4, minReps: 8, maxReps: 10, focus: 'Hipertrofia' },
@@ -82,8 +70,20 @@
                     { id: 'pu7', name: 'Curl martillo', sets: 3, minReps: 10, maxReps: 12, focus: 'Hipertrofia' }
                 ]
             },
+            push: {
+                id: 'push', name: 'PUSH (Pecho)', color: 'text-blue-400', border: 'border-blue-500',
+                exercises: [
+                    { id: 'p1', name: 'Press de banca con barra', sets: 4, minReps: 4, maxReps: 6, focus: 'Fuerza' },
+                    { id: 'p2', name: 'Press inclinado mancuernas', sets: 3, minReps: 8, maxReps: 10, focus: 'Hipertrofia' },
+                    { id: 'p3', name: 'Cruce de poleas', sets: 3, minReps: 12, maxReps: 15, focus: 'Hipertrofia' },
+                    { id: 'p4', name: 'Press militar con barra', sets: 3, minReps: 5, maxReps: 7, focus: 'Fuerza' },
+                    { id: 'p5', name: 'Elevaciones laterales', sets: 3, minReps: 12, maxReps: 15, focus: 'Hipertrofia' },
+                    { id: 'p6', name: 'Flexiones manos juntas', sets: 3, minReps: 8, maxReps: 15, focus: 'Pecho/Tríceps' },
+                    { id: 'p7', name: 'Extensión de tríceps polea', sets: 3, minReps: 10, maxReps: 12, focus: 'Hipertrofia' }
+                ]
+            },
             legs: {
-                id: 'legs', name: 'DÍA 3 - PIERNAS', color: 'text-amber-400', border: 'border-amber-500',
+                id: 'legs', name: 'PIERNAS', color: 'text-amber-400', border: 'border-amber-500',
                 exercises: [
                     { id: 'l1', name: 'Sentadilla trasera', sets: 4, minReps: 4, maxReps: 6, focus: 'Fuerza' },
                     { id: 'l2', name: 'Hip Thrust con barra', sets: 4, minReps: 6, maxReps: 8, focus: 'Fuerza' },
@@ -96,11 +96,13 @@
                 ]
             }
         };
+
         const getPausa = (focus) => {
           if (focus === 'Fuerza') return '2-3 min';
           if (focus === 'Hipertrofia') return '60-90 seg';
           return '60 seg'; 
         };
+
         const getRack = (equipo) => {
             let rack = [];
             if (equipo === 'mancuerna') {
@@ -223,11 +225,10 @@
                         let r = parseFloat(document.getElementById(`set-r-${ex.id}-${i}`).value) || 0;
                         
                         let optimalW = w;
-                        // Si no es peso corporal, aplicar Epley
                         if(w > 0 && r > 0) {
                             let oneRM = w * (1 + r / 30);
                             optimalW = oneRM / (1 + targetReps / 30);
-                            optimalW = Math.round(optimalW * 2) / 2; // Redondear a 0.5kg
+                            optimalW = Math.round(optimalW * 2) / 2;
                         }
                         
                         optimizedSeries.push({ 
@@ -245,7 +246,7 @@
             window.renderDashboard();
         }
 
-        // --- DASHBOARD ---
+        // --- DASHBOARD (AHORA CON ORDENAMIENTO DINÁMICO) ---
         window.renderDashboard = function() {
             if(!window.appState.isInitialized) return window.renderSetup();
             document.getElementById('header-stats').classList.remove('hidden');
@@ -253,11 +254,30 @@
 
             let html = `<div class="bg-gradient-to-br from-gray-900 to-gray-950 p-6 rounded-2xl border border-gray-800 shadow-xl mb-8 text-center"><h2 class="text-lg font-bold text-gray-300 mb-6">¿Qué toca entrenar hoy?</h2><div class="grid grid-cols-1 gap-4">`;
 
-            Object.values(window.appState.routine).forEach(block => {
+            // LÓGICA DE ORDENAMIENTO: Buscamos la fecha del último entrenamiento de cada bloque
+            const bloquesOrdenados = Object.values(window.appState.routine).sort((a, b) => {
+                const logA = [...window.appState.history].reverse().find(h => h.blockId === a.id);
+                const logB = [...window.appState.history].reverse().find(h => h.blockId === b.id);
+                
+                // Si nunca se hizo, le damos fecha muy antigua (año 2000)
+                const fechaA = logA ? new Date(logA.date).getTime() : new Date('2000-01-01').getTime();
+                const fechaB = logB ? new Date(logB.date).getTime() : new Date('2000-01-01').getTime();
+                
+                // Ordenamos de menor (más antiguo) a mayor (más reciente)
+                return fechaA - fechaB;
+            });
+
+            bloquesOrdenados.forEach((block, index) => {
                 const lastLog = [...window.appState.history].reverse().find(h => h.blockId === block.id);
                 const lastDateStr = lastLog ? new Date(lastLog.date).toLocaleDateString('es-ES', {weekday: 'short', day: 'numeric'}) : 'Nunca';
+                
+                // Si es el primero de la lista (el que más tiempo hace que no entrenas), lo destacamos
+                const isSiguiente = index === 0;
+                const etiquetaRecomendado = isSiguiente ? `<span class="absolute top-0 right-0 bg-orange-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-xl">TE TOCA</span>` : '';
+
                 html += `
-                    <button onclick="window.startWorkout('${block.id}')" class="relative overflow-hidden group bg-gray-800 hover:bg-gray-700 border-l-4 ${block.border} p-4 rounded-xl flex items-center justify-between transition-all">
+                    <button onclick="window.startWorkout('${block.id}')" class="relative overflow-hidden group bg-gray-800 hover:bg-gray-700 border-l-4 ${block.border} p-4 rounded-xl flex items-center justify-between transition-all ${isSiguiente ? 'ring-1 ring-orange-500/50 shadow-lg shadow-orange-900/20' : 'opacity-80'}">
+                        ${etiquetaRecomendado}
                         <div class="text-left z-10"><h3 class="font-bold text-lg text-white">${block.name}</h3><p class="text-xs text-gray-400 mt-1">Última: ${lastDateStr}</p></div>
                         <div class="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-gray-400 group-hover:text-white transition z-10">▶</div>
                     </button>`;
@@ -288,19 +308,17 @@
                 workout.logs[ex.id] = [];
                 const lastLog = [...window.appState.history].reverse().find(h => h.blockId === blockId);
                 
-                // 1. DETECCIÓN AUTOMÁTICA DEL EQUIPO PARA ESE EJERCICIO
-                let equipo = 'barra'; // Por defecto usa múltiplos de 2.5
+                let equipo = 'barra'; 
                 const nom = ex.name.toLowerCase();
                 
-                // Filtros específicos por nombre
                 if (nom.includes('curl femoral')) equipo = 'curl_femoral';
                 else if (nom.includes('prensa')) equipo = 'prensa';
-                else if (nom.includes('sillón') || nom.includes('sillon')) equipo = 'barra'; // Usa discos de 2.5
+                else if (nom.includes('sillón') || nom.includes('sillon')) equipo = 'barra'; 
                 else if (nom.includes('estocadas') || nom.includes('gemelos') || nom.includes('mancuerna') || nom.includes('laterales') || nom.includes('martillo')) equipo = 'mancuerna';
                 else if (nom.includes('polea') || nom.includes('jalón') || nom.includes('tríceps')) equipo = 'polea';
 
                 let shouldIncrease = false;
-                let rpeAccion = 0; // 0 = Normal, 1 = Subir Agresivo, -1 = Bajar peso
+                let rpeAccion = 0; 
 
                 if (lastLog && lastLog.logs[ex.id]) {
                     const prevSets = lastLog.logs[ex.id];
@@ -315,7 +333,6 @@
                         }
                     }
 
-                    // ARRAY Y MEMORIA PARA EL REDONDEO DE LAS SERIES
                     let calculosPesos = [];
                     let deficitDePeso = 0; 
 
@@ -331,25 +348,17 @@
                         }
 
                         if (targetTeorico > 0) {
-                            // Sumamos el déficit de la serie anterior
                             let targetConDeficit = targetTeorico + deficitDePeso;
-                            
-                            // Redondeamos al equipamiento real
                             let pesoReal = redondearPeso(targetConDeficit, equipo);
-                            
-                            // Guardamos lo que sobró o faltó para la próxima serie
                             deficitDePeso = targetConDeficit - pesoReal;
-                            
                             calculosPesos.push(pesoReal);
                         } else {
                             calculosPesos.push(0);
                         }
                     }
 
-                    // Ordenamos de menor a mayor (Ej: 15, 15, 17.5, 17.5) para que el salto quede al final
                     calculosPesos.sort((a, b) => a - b);
 
-                    // Insertamos las series ya calculadas
                     for(let i=0; i<ex.sets; i++) {
                         let prevW = prevSets[i]?.weight || 0;
                         workout.logs[ex.id].push({ 
@@ -407,7 +416,7 @@
                     if (logs[0].isBWProgression) {
                         html += `<div class="bg-emerald-950/50 border-b border-emerald-900/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center">📈 ¡Dominado! Agrega lastre (kg) si lo deseas.</div>`;
                     } else {
-                        html += `<div class="bg-emerald-950/50 border-b border-emerald-900/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center">📈 Carga aumentada (+2.5%)</div>`;
+                        html += `<div class="bg-emerald-950/50 border-b border-emerald-900/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center">📈 Carga aumentada</div>`;
                     }
                 }
 
@@ -416,7 +425,6 @@
                     const isDone = set.done;
                     const isBodyweight = set.weight === 0;
                     
-                    // Detectamos si es de barra para cambiar la etiqueta visual
                     const nom = ex.name.toLowerCase();
                     const esBarra = nom.includes('barra') || nom.includes('sentadilla') || nom.includes('peso muerto rumano');
                     const etiquetaPeso = esBarra ? 'kg/lado' : 'kg';
@@ -447,10 +455,8 @@
                         </div>`;
                 });
                 
-                // CERRAMOS EL CONTENEDOR DE SERIES
                 html += `</div>`; 
 
-                // --- AGREGAMOS LOS BOTONES DE RPE AQUÍ ---
                 const currentRPE = window.appState.currentWorkout.rpe ? window.appState.currentWorkout.rpe[ex.id] : '';
                 html += `
                     <div class="px-3 pb-3 pt-3 border-t border-gray-800 bg-gray-900/50">
@@ -461,12 +467,11 @@
                             <button onclick="window.setEsfuerzo('${ex.id}', '-2')" class="py-2 rounded-lg text-[10px] font-bold border transition ${currentRPE === '-2' ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-gray-950 text-emerald-500 border-emerald-900/30'}">😊 -2</button>
                         </div>
                     </div>
-                </div>`; // Cierre de la tarjeta principal
+                </div>`;
             });
             container.innerHTML = html;
         }
 
-        // --- FUNCIÓN PARA GUARDAR EL RPE ---
         window.setEsfuerzo = function(exId, valor) {
             if (!window.appState.currentWorkout.rpe) window.appState.currentWorkout.rpe = {};
             window.appState.currentWorkout.rpe[exId] = valor;
