@@ -1891,8 +1891,7 @@
       showToast('Cuenta eliminada exitosamente', 'success');
     }
 
-    // Fixed Expense Management
-    function payFixedExpense(expenseId) {
+function payFixedExpense(expenseId) {
       const fixedExp = fixedExpenses.find(e => e.id === expenseId);
       if (!fixedExp) return;
 
@@ -1934,6 +1933,7 @@
       renderFixedExpenses();
       renderExpenses();
       renderAccounts();
+      renderSchedule(); // <-- ESTA LÍNEA ERA LA QUE FALTABA
       updateDashboard();
       showToast('Gasto fijo pagado exitosamente', 'success');
     }
@@ -3317,21 +3317,36 @@
       }
     }
 
-    function renderSchedule() {
+function renderSchedule() {
       const timeline = document.getElementById('scheduleTimeline');
       if (!timeline) return;
 
       const monthFilter = document.getElementById('scheduleMonthFilter');
       const selectedMonth = monthFilter ? monthFilter.value : 'all';
 
-      // Filter expenses by month if needed
-      let filtered = fixedExpenses;
+      // 1. Filtrar los gastos que YA se pagaron este mes para no descontarlos doble
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      
+      let pendingExpenses = fixedExpenses.filter(exp => {
+        if (exp.paidThisMonth) {
+          const paidDate = new Date(exp.paidThisMonth);
+          // Si se pagó este mismo mes y año, lo ocultamos del calendario
+          if (paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear) {
+            return false; 
+          }
+        }
+        return true; // Si no se pagó, lo mostramos
+      });
+
+      // 2. Aplicar el filtro del mes seleccionado en el selector
+      let filtered = pendingExpenses;
       if (selectedMonth !== 'all') {
-        filtered = fixedExpenses.filter(exp => exp.month === parseInt(selectedMonth));
+        filtered = pendingExpenses.filter(exp => exp.month === parseInt(selectedMonth));
       }
 
       if (filtered.length === 0) {
-        timeline.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No hay vencimientos para mostrar</p></div>';
+        timeline.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No hay vencimientos pendientes para mostrar</p></div>';
         return;
       }
 
@@ -3373,7 +3388,7 @@
               </div>
             </div>
             <div>
-              <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.5rem;">Total a Pagar</div>
+              <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.5rem;">Total Pendiente a Pagar</div>
               <div style="font-size: 1.5rem; font-weight: 700; color: var(--danger); font-family: 'JetBrains Mono', monospace;">
                 -$${filtered.reduce((sum, exp) => sum + exp.amount, 0).toFixed(2)}
               </div>
@@ -3440,7 +3455,7 @@
         }).join('')}
 
         <div style="background: var(--bg-input); border: 2px solid ${runningBalance >= 0 ? 'var(--success)' : 'var(--danger)'}; border-radius: 12px; padding: 1.5rem; text-align: center;">
-          <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.5rem;">Balance Final Proyectado</div>
+          <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.5rem;">Balance Final Proyectado (Fin de Mes)</div>
           <div style="font-size: 2.5rem; font-weight: 700; color: ${runningBalance >= 0 ? 'var(--success)' : 'var(--danger)'}; font-family: 'JetBrains Mono', monospace;">
             $${runningBalance.toFixed(2)}
           </div>
