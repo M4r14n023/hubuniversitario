@@ -4055,7 +4055,7 @@
         );
       }
 
-      // ============ VISTA LISTA ============
+     // ============ VISTA LISTA ============
 
       function ListView({
         sessions,
@@ -4069,7 +4069,7 @@
         const allItems = useMemo(() => {
           const items = [];
 
-          // Agrupar sesiones por materia
+          // 1. CLASES: Agrupar sesiones por materia
           const sessionsByCourse = new Map();
           sessions.forEach((s) => {
             if (!sessionsByCourse.has(s.courseId)) {
@@ -4097,10 +4097,22 @@
             });
           });
 
-          // Agregar eventos
-          events.forEach((event) => {
+          // 2. EXÁMENES Y TPS: Ordenar cronológicamente (más pronto primero)
+          const sortedEvents = [...events].sort((a, b) => {
+            return new Date(a.dateISO) - new Date(b.dateISO);
+          });
+
+          sortedEvents.forEach((event) => {
             const course = courses.find((c) => c.id === event.courseId);
             const date = new Date(event.dateISO);
+            
+            // Verificamos si el examen ya pasó (para ponerle opacidad visual)
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const eventDateOnly = new Date(date);
+            eventDateOnly.setHours(0,0,0,0);
+            const isPast = eventDateOnly < today;
+
             items.push({
               type: "event",
               id: event.id,
@@ -4108,8 +4120,10 @@
               courseName: course?.nombre || "",
               eventType: event.eventualType,
               examType: getExamTypeName(event),
-              date: date.toLocaleDateString("es-AR"),
+              // Fecha formateada para que se lea mejor (ej: Lunes 15 de Abril)
+              dateStr: date.toLocaleDateString("es-AR", { weekday: 'long', day: 'numeric', month: 'long' }),
               notes: event.notes,
+              isPast: isPast,
               data: event,
             });
           });
@@ -4171,19 +4185,23 @@
                 <div
                   key={item.id}
                   className="list-item"
+                  // Magia visual: difuminar si el examen ya pasó
+                  style={{ opacity: item.isPast ? 0.45 : 1 }}
                   onClick={() => {
                     const course = courses.find((c) => c.id === item.courseId);
                     onOpenItem(course, "course");
                   }}
                 >
                   <div className="list-item-header">
-                    <div className="list-item-title">{item.courseName}</div>
+                    <div className="list-item-title">
+                      {item.courseName}
+                      {item.isPast && <span style={{fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--text-muted)', marginLeft: '0.5rem'}}>(Completado)</span>}
+                    </div>
                     {item.type === "session" && (
                       <span
                         className="list-item-badge"
                         style={{
-                          background:
-                            getCourseColor(item.courseId).border + "20",
+                          background: getCourseColor(item.courseId).border + "20",
                           color: getCourseColor(item.courseId).border,
                           border: `2px solid ${getCourseColor(item.courseId).border}`,
                         }}
@@ -4209,8 +4227,8 @@
                     )}
                     {item.type === "event" && (
                       <>
-                        {item.date}
-                        {item.notes && ` • ${item.notes}`}
+                        <span style={{color: 'var(--primary)', fontWeight: 'bold'}}>📅 {item.dateStr}</span>
+                        {item.notes && ` • 📝 ${item.notes}`}
                       </>
                     )}
                   </div>
@@ -4220,8 +4238,6 @@
           </div>
         );
       }
-
-      // ============ VISTA ESTADÍSTICAS ============
 
       // ============ VISTA ESTADÍSTICAS ============
 
@@ -4355,11 +4371,14 @@
 
       // ============ VISTA DE ASISTENCIA ============
       
-      function AttendanceView({ data, setData, weeklySessions, extracurricularSessions, courses }) {
+      function AttendanceView({ data, setData, weeklySessions, courses }) {
         const [selectedDate, setSelectedDate] = useState(() => {
           const today = new Date();
           return today.toISOString().split('T')[0];
         });
+        
+        // NUEVO: Estado para abrir/cerrar el acordeón de materias
+        const [expandedCourse, setExpandedCourse] = useState(null);
         
         const dayOfWeek = useMemo(() => {
           const date = new Date(selectedDate + 'T12:00:00');
@@ -4367,34 +4386,76 @@
           return day === 0 ? 7 : day;
         }, [selectedDate]);
         
-        // Filtrar sesiones del día
+        // 1. Lógica para proyectar tooooodas las clases de cada materia
+        const courseProjections = useMemo(() => {
+          const todayObj = new Date();
+          todayObj.setHours(0, 0, 0, 0); // Normalizamos a la medianoche de hoy
+
+          return courses.map(course => {
+            const courseSessions = weeklySessions.filter(s => s.courseId === course.id);
+            let allOccurrences = [];
+
+            // Generador interno de fechas para no depender de funciones externas
+            courseSessions.forEach(session => {
+              const baseDateStr = session.modalidad === 'teoria' ? course.inicioTeoricos : course.inicioPracticos;
+              const startDateStr = baseDateStr || course.startDate || data.term?.startDate || "2026-03-16";
+              const endDateStr = data.term?.endDate || "2026-07-03";
+              
+              const start = new Date(startDateStr + 'T00:00:00');
+              const end = new Date(endDateStr + 'T23:59:59');
+              let current = new Date(start);
+
+              // Ajustar al primer día de la semana que coincida con la sesión
+              const targetDay = session.dayOfWeek === 7 ? 0 : session.dayOfWeek;
+              while (current.getDay() !== targetDay) {
+                current.setDate(current.getDate() + 1);
+              }
+
+              // Generar todas las fechas sumando de a 7 días
+              while (current <= end) {
+                allOccurrences.push({
+                  dateStr: current.toISOString().split('T')[0],
+                  sessionName: session.modalidad === 'teoria' ? 'Teoría' : 'Práctica'
+                });
+                current.setDate(current.getDate() + 7);
+              }
+            });
+
+            // Ordenar cronológicamente todas las clases de la materia
+            allOccurrences.sort((a, b) => new Date(a.dateStr) - new Date(b.dateStr));
+
+            // Contar cuántas quedan a partir de HOY
+            const remainingCount = allOccurrences.filter(occ => {
+              return new Date(occ.dateStr + 'T00:00:00') >= todayObj;
+            }).length;
+
+            return {
+              ...course,
+              allOccurrences,
+              remainingCount
+            };
+          });
+        }, [courses, weeklySessions, data.term]);
+
+        // 2. Filtrar las clases específicas del día seleccionado (Para tomar lista)
         const sessionsForDay = useMemo(() => {
           const selectedDateObj = new Date(selectedDate + 'T00:00:00');
-
-          return weeklySessions // SOLO clases de la facultad, eliminamos extracurricularSessions
+          return weeklySessions
             .filter(s => {
               if (s.dayOfWeek !== dayOfWeek) return false;
-
-              // FILTRO DE FECHA DE INICIO: Verificar si la materia ya empezó para esta fecha
               const course = courses.find(c => c.id === s.courseId);
-              if (!course) return true;
+              if (!course) return false;
 
-              // Buscar la fecha de inicio según si es teórico o práctico
               const baseDateStr = s.modalidad === 'teoria' ? course.inicioTeoricos : course.inicioPracticos;
               const startDateStr = baseDateStr || course.startDate || data.term?.startDate;
 
               if (startDateStr) {
                 const startDateObj = new Date(startDateStr + 'T00:00:00');
-                if (selectedDateObj < startDateObj) return false; // Si la fecha elegida es anterior al inicio, se oculta
+                if (selectedDateObj < startDateObj) return false; 
               }
-
               return true;
             })
-            .sort((a, b) => {
-              const timeA = parseTime(a.startTime);
-              const timeB = parseTime(b.startTime);
-              return timeA - timeB;
-            });
+            .sort((a, b) => a.startTime.localeCompare(b.startTime));
         }, [weeklySessions, dayOfWeek, selectedDate, courses, data.term]);
         
         const handleAttendanceToggle = (sessionId, newStatus) => {
@@ -4407,7 +4468,6 @@
             } else {
               attendance[selectedDate][sessionId] = newStatus;
             }
-            
             return { ...prevData, attendance };
           });
         };
@@ -4418,25 +4478,83 @@
         
         return (
           <div className="stats-view">
-            <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{ fontFamily: 'var(--serif)', fontSize: '1.8rem', marginBottom: '1rem', color: 'var(--primary)' }}>
-                📋 Control de Asistencia
-              </h2>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-                <label style={{ fontWeight: 600 }}>Fecha:</label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  style={{ padding: '0.75rem', border: '2px solid var(--border)', borderRadius: '6px', fontSize: '1rem', fontFamily: 'var(--sans)', background: 'var(--surface)', color: 'var(--text)' }}
-                />
-                <span style={{ color: 'var(--text-muted)' }}>
-                  {new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </span>
+            <h2 style={{ fontFamily: 'var(--serif)', fontSize: '1.8rem', marginBottom: '1.5rem', color: 'var(--primary)' }}>
+              📋 Control de Asistencia
+            </h2>
+
+            {/* SECCIÓN FIJA: SELECTOR DE FECHA */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap', background: 'var(--surface)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <label style={{ fontWeight: 600 }}>Tomar lista para el día:</label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                style={{ padding: '0.75rem', border: '2px solid var(--primary)', borderRadius: '6px', fontSize: '1rem', background: 'var(--background)', color: 'var(--text)' }}
+              />
+              <span style={{ color: 'var(--text-muted)' }}>
+                {new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </span>
+            </div>
+
+            {/* NUEVO: ACORDEÓN DE CLASES RESTANTES */}
+            <div style={{ marginBottom: '2.5rem' }}>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                Mapa de Cursada
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {courseProjections.map(course => (
+                  <div key={course.id} style={{ background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                    
+                    {/* Cabecera del Acordeón */}
+                    <button
+                      onClick={() => setExpandedCourse(expandedCourse === course.id ? null : course.id)}
+                      style={{ width: '100%', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: expandedCourse === course.id ? 'var(--background)' : 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text)', transition: 'background 0.2s' }}
+                    >
+                      <span style={{ fontWeight: 'bold', fontSize: '1.05rem' }}>{course.nombre}</span>
+                      <span style={{ fontSize: '0.9rem', color: 'var(--background)', background: 'var(--primary)', padding: '4px 10px', borderRadius: '20px', fontWeight: 'bold' }}>
+                        Clases restantes: {course.remainingCount}
+                      </span>
+                    </button>
+
+                    {/* Contenido Desplegable (Fechas blureadas y normales) */}
+                    {expandedCourse === course.id && (
+                      <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto', background: 'var(--background)' }}>
+                        {course.allOccurrences.map((occ, idx) => {
+                          const isPast = new Date(occ.dateStr + 'T00:00:00') < new Date(new Date().setHours(0,0,0,0));
+                          
+                          return (
+                            <div key={idx} style={{
+                              padding: '0.5rem',
+                              borderRadius: '6px',
+                              background: 'var(--surface)',
+                              border: '1px solid var(--border)',
+                              textAlign: 'center',
+                              // Acá está la magia visual que pediste:
+                              opacity: isPast ? 0.4 : 1,
+                              filter: isPast ? 'blur(0.8px)' : 'none',
+                              transform: isPast ? 'scale(0.95)' : 'none',
+                              transition: 'all 0.3s'
+                            }}>
+                              <div style={{ fontWeight: 'bold', fontSize: '0.95rem', color: isPast ? 'var(--text-muted)' : 'var(--text)' }}>
+                                {new Date(occ.dateStr + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                              </div>
+                              <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '2px' }}>
+                                {occ.sessionName}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
-            
+
+            {/* SECCIÓN DINÁMICA: LISTA PARA TOMAR ASISTENCIA */}
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Tomar Lista
+            </h3>
             {sessionsForDay.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '3rem', background: 'var(--surface)', borderRadius: '12px', color: 'var(--text-muted)' }}>
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌴</div>
@@ -4463,7 +4581,7 @@
                           {sessionName}
                         </h3>
                         <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.9rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-                          <span>🕐 {formatTime(session.startTime)} - {formatTime(session.endTime)}</span>
+                          <span>🕐 {session.startTime} - {session.endTime}</span>
                           {session.aula && <span>📍 {session.aula}</span>}
                         </div>
                       </div>
