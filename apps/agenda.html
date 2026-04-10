@@ -4454,7 +4454,13 @@
             courseSessions.forEach(session => {
               const baseDateStr = session.modalidad === 'teoria' ? course.inicioTeoricos : course.inicioPracticos;
               const startDateStr = baseDateStr || course.startDate || data.term?.startDate || "2026-03-16";
-              const endDateStr = data.term?.endDate || "2026-07-03";
+              
+              // ==========================================
+              // CORRECCIÓN: ACÁ APLICAMOS LA LÓGICA ANUAL
+              // ==========================================
+              const endDateStr = (course.isAnual && course.endDate) 
+                ? course.endDate 
+                : (data.term?.endDate || "2026-07-03");
               
               const start = new Date(startDateStr + 'T00:00:00');
               const end = new Date(endDateStr + 'T23:59:59');
