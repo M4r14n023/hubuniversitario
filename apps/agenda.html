@@ -1866,6 +1866,8 @@
         notas: "",
         inicioTeoricos: "",
         inicioPracticos: "",
+        isAnual: false, // Nueva: indica si es materia anual
+        endDate: "", // Nueva: fecha de fin personalizada (solo si isAnual = true)
       });
       const createEmptyWeeklySession = () => ({
         id: `session-${Date.now()}`,
@@ -2128,6 +2130,31 @@
         const occurrences = [];
         const start = new Date(term.startDate);
         const end = new Date(term.endDate);
+
+        let current = new Date(start);
+
+        // Avanzar hasta el primer día que coincida
+        while (current <= end) {
+          const currentDay = current.getDay() === 0 ? 7 : current.getDay();
+          if (currentDay === session.dayOfWeek) {
+            occurrences.push(new Date(current));
+          }
+          current.setDate(current.getDate() + 1);
+        }
+
+        return occurrences;
+      }
+
+      // NUEVA: Generar ocurrencias considerando si la materia es anual
+      function generateSessionOccurrencesForCourse(session, term, course) {
+        const occurrences = [];
+        const start = new Date(term.startDate);
+        
+        // Si la materia es anual Y tiene fecha de fin, usar esa fecha
+        // Si no, usar la fecha de fin del término
+        const end = (course && course.isAnual && course.endDate) 
+          ? new Date(course.endDate) 
+          : new Date(term.endDate);
 
         let current = new Date(start);
 
@@ -2629,6 +2656,14 @@
             }
             if (!data.attendance) {
               data.attendance = {};
+            }
+            // Asegurar campos nuevos en courses (materias anuales)
+            if (data.courses) {
+              data.courses = data.courses.map(course => ({
+                ...course,
+                isAnual: course.isAnual !== undefined ? course.isAnual : false,
+                endDate: course.endDate || ''
+              }));
             }
             return data;
           } catch (e) {
@@ -4247,7 +4282,8 @@
 
           let totalClasses = 0;
           sessions.forEach((session) => {
-            const occurrences = generateSessionOccurrences(session, term);
+            const course = courses.find(c => c.id === session.courseId);
+            const occurrences = generateSessionOccurrencesForCourse(session, term, course);
             totalClasses += occurrences.length;
           });
 
@@ -4257,7 +4293,7 @@
 
             let totalSessionOccurrences = 0;
             courseSessions.forEach((session) => {
-              const occurrences = generateSessionOccurrences(session, term);
+              const occurrences = generateSessionOccurrencesForCourse(session, term, course);
               totalSessionOccurrences += occurrences.length;
             });
 
@@ -4284,7 +4320,7 @@
               totalSessions: totalSessionOccurrences,
               sessionTypes: courseSessions.map((s) => ({
                 modalidad: s.modalidad,
-                count: generateSessionOccurrences(s, term).length,
+                count: generateSessionOccurrencesForCourse(s, term, course).length,
               })),
               events: courseEvents.length,
               attendance: courseAttendance // Pasamos los datos calculados
@@ -4332,7 +4368,21 @@
                     <div key={course.id} className="stat-list-item" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'stretch' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                          <strong>{course.nombre}</strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                            <strong>{course.nombre}</strong>
+                            {course.isAnual && (
+                              <span style={{ 
+                                fontSize: '0.7rem', 
+                                padding: '0.15rem 0.5rem', 
+                                background: 'var(--primary)', 
+                                color: 'white', 
+                                borderRadius: '12px',
+                                fontWeight: 600
+                              }}>
+                                📅 ANUAL
+                              </span>
+                            )}
+                          </div>
                           <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
                             {sessionTypes.map((st, i) => (
                               <span key={i}>
@@ -4341,6 +4391,11 @@
                               </span>
                             ))}
                             {events > 0 && ` • ${events} exámenes`}
+                            {course.isAnual && course.endDate && (
+                              <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', fontStyle: 'italic' }}>
+                                Finaliza: {new Date(course.endDate).toLocaleDateString('es-AR')}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div style={{ fontWeight: 600, color: "var(--primary)" }}>
@@ -5432,6 +5487,59 @@
                           }
                         />
                       </div>
+                    </div>
+                    
+                    {/* NUEVA SECCIÓN: Materia Anual */}
+                    <div style={{ 
+                      marginTop: "0.75rem", 
+                      padding: "0.75rem", 
+                      background: "var(--background)", 
+                      borderRadius: "6px",
+                      border: "1px solid var(--border)"
+                    }}>
+                      <label style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: "0.5rem",
+                        cursor: "pointer",
+                        fontWeight: 500
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={course.isAnual || false}
+                          onChange={(e) => handleChange(index, "isAnual", e.target.checked)}
+                          style={{ cursor: "pointer" }}
+                        />
+                        📅 Materia Anual (fecha de fin personalizada)
+                      </label>
+                      
+                      {course.isAnual && (
+                        <div style={{ marginTop: "0.75rem" }}>
+                          <label style={{ 
+                            fontSize: "0.75rem", 
+                            color: "var(--text-muted)",
+                            display: "block",
+                            marginBottom: "0.25rem"
+                          }}>
+                            Fecha de finalización
+                          </label>
+                          <input
+                            type="date"
+                            className="form-input"
+                            value={course.endDate || ""}
+                            onChange={(e) => handleChange(index, "endDate", e.target.value)}
+                            placeholder="Fecha de fin de la materia anual"
+                          />
+                          <small style={{ 
+                            fontSize: "0.7rem", 
+                            color: "var(--text-muted)",
+                            display: "block",
+                            marginTop: "0.25rem"
+                          }}>
+                            Esta materia se extenderá hasta esta fecha, independiente del término del cuatrimestre
+                          </small>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="item-entry-actions">
