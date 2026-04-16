@@ -38,8 +38,19 @@ self.addEventListener('activate', e => {
 // 3. FETCH: Estrategia de Cache First con caída a Red
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.match(e.request).then(res => {
-      return res || fetch(e.request);
-    })
+    // 1. Intenta ir a internet primero (Network First)
+    fetch(e.request)
+      .then(response => {
+        // Si hay internet, actualiza la copia de seguridad invisiblemente
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then(cache => {
+          cache.put(e.request, responseClone);
+        });
+        return response;
+      })
+      .catch(() => {
+        // 2. Si FALLA (estás sin wifi), recién ahí saca el archivo de la mochila (Caché)
+        return caches.match(e.request);
+      })
   );
 });
