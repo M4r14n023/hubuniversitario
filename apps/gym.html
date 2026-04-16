@@ -41,14 +41,14 @@
     <main class="max-w-md mx-auto p-4 pb-24" id="app-container"></main>
 
     <div id="timer-overlay" class="fixed inset-0 bg-black z-[100] hidden flex-col items-center justify-center transition-colors duration-500">
-        <div class="text-gray-700 text-xs font-bold uppercase tracking-widest mb-4">Descanso en curso</div>
-        <div id="timer-seconds" class="text-8xl font-black text-gray-400 tabular-nums">0:00</div>
-        <div class="w-64 h-1 bg-gray-900 rounded-full mt-8 overflow-hidden">
+        <div id="timer-next-info"></div>
+        <div id="timer-seconds" class="text-7xl font-black text-gray-400 tabular-nums">0:00</div>
+        <div class="w-64 h-1 bg-gray-900 rounded-full mt-6 overflow-hidden">
             <div id="timer-bar" class="h-full bg-orange-600 transition-all duration-1000" style="width: 100%"></div>
         </div>
-        <div class="flex gap-4 mt-12">
-            <button onclick="window.ajustarTimer(30)" class="px-4 py-2 border border-gray-800 text-gray-400 rounded-full text-xs hover:bg-gray-900">+30s</button>
-            <button onclick="window.cancelarTimer()" class="px-6 py-2 border border-red-900/30 text-red-500 rounded-full text-xs hover:bg-red-900/20">Omitir Descanso</button>
+        <div class="flex gap-4 mt-10">
+            <button onclick="window.ajustarTimer(30)" class="px-4 py-2 border border-gray-800 text-gray-400 rounded-full text-[10px] uppercase font-bold hover:bg-gray-900">+30s</button>
+            <button onclick="window.cancelarTimer()" class="px-6 py-2 border border-red-900/30 text-red-500 rounded-full text-[10px] uppercase font-bold hover:bg-red-900/20">Omitir Descanso</button>
         </div>
     </div>
 
@@ -68,7 +68,6 @@
         const db = getFirestore(app);
         const SYNC_DOC_ID = "rutina-mariano-v2-pro"; 
 
-        // --- 1. RUTINA PDF ---
         const defaultRoutine = {
             pull: {
                 id: 'pull', name: 'PULL (Espalda)', color: 'text-emerald-400', border: 'border-emerald-500',
@@ -139,7 +138,6 @@
             return rack.reduce((prev, curr) => Math.abs(curr - peso) < Math.abs(prev - peso) ? curr : prev);
         };
 
-        // --- ESTADO Y VARIABLES GLOBALES ---
         window.appState = JSON.parse(localStorage.getItem('gymTrackrState_v2')) || {
             isInitialized: false,
             baselineSets: {}, 
@@ -160,10 +158,8 @@
         window.saveState = function() {
             window.appState.lastUpdated = Date.now();
             localStorage.setItem('gymTrackrState_v2', JSON.stringify(window.appState));
-            
             syncIcon.innerHTML = '⏳ Sync';
             syncIcon.classList.add('syncing');
-            
             setDoc(doc(db, "sync-gym", SYNC_DOC_ID), window.appState)
                 .then(() => { syncIcon.innerHTML = '🟢 Sync'; syncIcon.classList.remove('syncing'); })
                 .catch(() => { syncIcon.innerHTML = '🔴 Error'; syncIcon.classList.remove('syncing'); });
@@ -181,83 +177,53 @@
             }
         });
 
-        // --- SETUP MULTI-SERIE ---
         window.renderSetup = function() {
             let html = `
                 <div class="mb-6">
                     <h2 class="text-2xl font-bold text-white mb-2 text-center">Calibración de Series</h2>
-                    <p class="text-gray-400 text-xs text-center mb-2">Ingresa peso y repeticiones logradas. La IA ajustará el peso óptimo.</p>
-                    <p class="text-orange-400 text-[10px] text-center bg-orange-950/30 p-2 rounded-lg border border-orange-900/50">💡 Tip: Para ejercicios con peso corporal (Dominadas, Flexiones), deja el peso en 0.</p>
+                    <p class="text-gray-400 text-xs text-center mb-2">Ingresa peso y repeticiones logradas.</p>
                 </div>
             `;
-
             Object.values(window.appState.routine).forEach(block => {
-                html += `<div class="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-800">
-                            <h3 class="font-bold mb-4 ${block.color}">${block.name}</h3>
-                            <div class="space-y-6">`;
-                
+                html += `<div class="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-800"><h3 class="font-bold mb-4 ${block.color}">${block.name}</h3><div class="space-y-6">`;
                 block.exercises.forEach(ex => {
-                    html += `
-                        <div class="bg-gray-950 p-3 rounded-lg border border-gray-800">
-                            <div class="mb-3 border-b border-gray-800 pb-2">
-                                <p class="text-sm font-semibold text-gray-200">${ex.name}</p>
-                                <p class="text-[10px] text-orange-400 uppercase tracking-wider">${ex.focus} • Objetivo: ${ex.minReps}-${ex.maxReps} reps</p>
-                            </div>
-                            <div class="grid grid-cols-1 gap-2">
-                    `;
-                    
+                    html += `<div class="bg-gray-950 p-3 rounded-lg border border-gray-800"><div class="mb-3 border-b border-gray-800 pb-2"><p class="text-sm font-semibold text-gray-200">${ex.name}</p></div><div class="grid grid-cols-1 gap-2">`;
                     for(let i=0; i<ex.sets; i++) {
-                        html += `
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-gray-500 font-bold w-6">S${i+1}</span>
-                                <input type="number" step="0.5" id="set-w-${ex.id}-${i}" placeholder="0" class="w-1/2 bg-gray-800 text-white text-center rounded p-2 text-sm border border-gray-700 focus:border-orange-500">
-                                <span class="text-gray-500 text-xs">kg</span>
-                                <span class="text-gray-500 text-xs">x</span>
-                                <input type="number" id="set-r-${ex.id}-${i}" placeholder="reps" class="w-1/2 bg-gray-800 text-white text-center rounded p-2 text-sm border border-gray-700 focus:border-orange-500">
-                            </div>
-                        `;
+                        html += `<div class="flex items-center gap-2"><span class="text-xs text-gray-500 font-bold w-6">S${i+1}</span><input type="number" step="0.5" id="set-w-${ex.id}-${i}" placeholder="0" class="w-1/2 bg-gray-800 text-white text-center rounded p-2 text-sm border border-gray-700 focus:border-orange-500"><span class="text-gray-500 text-xs">x</span><input type="number" id="set-r-${ex.id}-${i}" placeholder="reps" class="w-1/2 bg-gray-800 text-white text-center rounded p-2 text-sm border border-gray-700 focus:border-orange-500"></div>`;
                     }
                     html += `</div></div>`;
                 });
                 html += `</div></div>`;
             });
-
-            html += `<button onclick="window.finishSetup()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 rounded-xl mt-4 shadow-lg shadow-orange-900/50">Optimizar y Guardar</button>`;
+            html += `<button onclick="window.finishSetup()" class="w-full bg-orange-600 text-white font-bold py-4 rounded-xl mt-4">Optimizar y Guardar</button>`;
             container.innerHTML = html;
         }
 
         window.finishSetup = function() {
             let baselineSets = {};
-            
             Object.values(window.appState.routine).forEach(block => {
                 block.exercises.forEach(ex => {
                     let optimizedSeries = [];
                     let targetReps = Math.floor((ex.minReps + ex.maxReps) / 2);
-                    
                     for(let i=0; i<ex.sets; i++) {
                         let w = parseFloat(document.getElementById(`set-w-${ex.id}-${i}`).value) || 0;
                         let r = parseFloat(document.getElementById(`set-r-${ex.id}-${i}`).value) || 0;
-                        
                         let optimalW = w;
                         if(w > 0 && r > 0) {
                             let oneRM = w * (1 + r / 30);
-                            optimalW = oneRM / (1 + targetReps / 30);
-                            optimalW = Math.round(optimalW * 2) / 2;
+                            optimalW = Math.round((oneRM / (1 + targetReps / 30)) * 2) / 2;
                         }
-                        
-                        optimizedSeries.push({ weight: optimalW, reps: ex.maxReps });
+                        optimizedSeries.push({ weight: optimalW, reps: ex.maxReps, skipped: false });
                     }
                     baselineSets[ex.id] = optimizedSeries;
                 });
             });
-            
             window.appState.baselineSets = baselineSets;
             window.appState.isInitialized = true;
             window.saveState();
             window.renderDashboard();
         }
 
-        // --- DASHBOARD ---
         window.renderDashboard = function() {
             if(!window.appState.isInitialized) return window.renderSetup();
             document.getElementById('header-stats').classList.remove('hidden');
@@ -276,7 +242,6 @@
             bloquesOrdenados.forEach((block, index) => {
                 const lastLog = [...window.appState.history].reverse().find(h => h.blockId === block.id);
                 const lastDateStr = lastLog ? new Date(lastLog.date).toLocaleDateString('es-ES', {weekday: 'short', day: 'numeric'}) : 'Nunca';
-                
                 const isSiguiente = index === 0;
                 const etiquetaRecomendado = isSiguiente ? `<span class="absolute top-0 right-0 bg-orange-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-xl">TE TOCA</span>` : '';
 
@@ -304,7 +269,6 @@
             container.innerHTML = html + `</div></div>`;
         }
 
-        // --- ENTRENO ACTIVO ---
         window.startWorkout = function(blockId) {
             const block = window.appState.routine[blockId];
             let workout = { blockId: blockId, date: new Date().toISOString(), logs: {}, rpe: {} }; 
@@ -327,23 +291,27 @@
                 let rpeAccion = 0; 
 
                 if (lastLog && lastLog.logs[ex.id]) {
-                    const prevSets = lastLog.logs[ex.id];
-                    shouldIncrease = prevSets.every(s => s.reps >= ex.maxReps && s.done);
+                    // LÓGICA DE EJERCICIOS SALTADOS: Buscar el último registro válido no saltado
+                    let validPrevSets = lastLog.logs[ex.id];
+                    if (validPrevSets[0] && validPrevSets[0].skipped) {
+                        let pastValidLog = [...window.appState.history].reverse().find(h => h.logs[ex.id] && h.logs[ex.id][0] && !h.logs[ex.id][0].skipped);
+                        if (pastValidLog) validPrevSets = pastValidLog.logs[ex.id];
+                        else validPrevSets = window.appState.baselineSets[ex.id] || Array(ex.sets).fill({weight: 0, reps: ex.maxReps});
+                    }
+
+                    shouldIncrease = validPrevSets.every(s => s.reps >= ex.maxReps && s.done && !s.skipped);
                     
                     const prevRPE = lastLog.rpe ? lastLog.rpe[ex.id] : null;
                     if (prevRPE) {
-                        if (ex.maxReps <= 8) { 
-                            if (prevRPE === 'fallo') rpeAccion = -1; 
-                        } else if (ex.maxReps >= 10) { 
-                            if (prevRPE === '-1' || prevRPE === '-2') rpeAccion = 1; 
-                        }
+                        if (ex.maxReps <= 8 && prevRPE === 'fallo') rpeAccion = -1; 
+                        else if (ex.maxReps >= 10 && (prevRPE === '-1' || prevRPE === '-2')) rpeAccion = 1; 
                     }
 
                     let calculosPesos = [];
                     let deficitDePeso = 0; 
 
                     for(let i=0; i<ex.sets; i++) {
-                        let prevW = prevSets[i]?.weight || 0;
+                        let prevW = validPrevSets[i]?.weight || 0;
                         let targetTeorico = prevW;
 
                         if (prevW > 0) {
@@ -355,7 +323,17 @@
 
                         if (targetTeorico > 0) {
                             let targetConDeficit = targetTeorico + deficitDePeso;
-                            let pesoReal = redondearPeso(targetConDeficit, equipo);
+                            let pesoReal = 0;
+
+                            // LÓGICA CRUCE DE POLEAS (Dividir peso total para que sea factible en 2 torres)
+                            if (nom.includes('cruce de poleas')) {
+                                let pesoPorLadoTeorico = targetConDeficit / 2;
+                                let pesoPorLadoReal = redondearPeso(pesoPorLadoTeorico, 'polea');
+                                pesoReal = pesoPorLadoReal * 2;
+                            } else {
+                                pesoReal = redondearPeso(targetConDeficit, equipo);
+                            }
+
                             deficitDePeso = targetConDeficit - pesoReal;
                             calculosPesos.push(pesoReal);
                         } else {
@@ -366,11 +344,12 @@
                     calculosPesos.sort((a, b) => a - b);
 
                     for(let i=0; i<ex.sets; i++) {
-                        let prevW = prevSets[i]?.weight || 0;
+                        let prevW = validPrevSets[i]?.weight || 0;
                         workout.logs[ex.id].push({ 
                             reps: ex.maxReps, 
                             weight: calculosPesos[i], 
                             done: false, 
+                            skipped: false,
                             shouldIncrease: (shouldIncrease || rpeAccion === 1) && i===0 && rpeAccion !== -1,
                             isBWProgression: prevW === 0 && shouldIncrease && i===0
                         });
@@ -378,7 +357,7 @@
                 } else {
                     const baseSets = window.appState.baselineSets[ex.id] || Array(ex.sets).fill({weight: 0, reps: ex.maxReps});
                     for(let i=0; i<ex.sets; i++) {
-                        workout.logs[ex.id].push({ reps: ex.maxReps, weight: baseSets[i].weight, done: false, shouldIncrease: false, isBWProgression: false });
+                        workout.logs[ex.id].push({ reps: ex.maxReps, weight: baseSets[i].weight, done: false, skipped: false, shouldIncrease: false, isBWProgression: false });
                     }
                 }
             });
@@ -388,7 +367,7 @@
             window.renderActiveWorkout();
         }
 
-       window.renderActiveWorkout = function() {
+        window.renderActiveWorkout = function() {
             const block = window.appState.routine[window.appState.currentWorkout.blockId];
             let html = `
                 <div class="flex justify-between items-center mb-6">
@@ -405,9 +384,14 @@
                 html += `
                     <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden mb-6 shadow-lg">
                         <div class="bg-gray-800/50 p-3 border-b border-gray-800">
-                            <div class="flex items-center gap-2 mb-1">
-                                <h3 class="font-bold text-gray-100">${ex.name}</h3>
-                                <span class="text-[9px] font-black px-1.5 py-0.5 rounded border ${focusColor}">${focusChar}</span>
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-bold text-gray-100">${ex.name}</h3>
+                                    <span class="text-[9px] font-black px-1.5 py-0.5 rounded border ${focusColor}">${focusChar}</span>
+                                </div>
+                                <button onclick="window.saltarEjercicio('${ex.id}')" class="text-[8px] bg-gray-950 text-gray-500 border border-gray-800 px-2 py-1 rounded uppercase font-bold hover:text-red-400 transition-colors">
+                                    No hecho
+                                </button>
                             </div>
                             <div class="flex items-center gap-3">
                                 <p class="text-[10px] text-gray-400">${ex.minReps}-${ex.maxReps} reps</p>
@@ -418,9 +402,9 @@
                         </div>
                 `;
 
-                if(logs[0].shouldIncrease) {
+                if(logs[0].shouldIncrease && !logs[0].skipped) {
                     if (logs[0].isBWProgression) {
-                        html += `<div class="bg-emerald-950/50 border-b border-emerald-900/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center">📈 ¡Dominado! Agrega lastre (kg) si lo deseas.</div>`;
+                        html += `<div class="bg-emerald-950/50 border-b border-emerald-900/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center">📈 ¡Dominado! Agrega lastre si lo deseas.</div>`;
                     } else {
                         html += `<div class="bg-emerald-950/50 border-b border-emerald-900/50 px-3 py-1.5 text-[10px] text-emerald-400 font-bold text-center">📈 Carga aumentada</div>`;
                     }
@@ -429,31 +413,32 @@
                 html += `<div class="p-3 space-y-2">`;
                 logs.forEach((set, index) => {
                     const isDone = set.done;
-                    const isBodyweight = set.weight === 0;
+                    const isBodyweight = set.weight === 0 && !set.skipped;
+                    const isSkipped = set.skipped;
                     
                     const nom = ex.name.toLowerCase();
                     const esCargaPorLado = nom.includes('barra') || nom.includes('sentadilla') || nom.includes('peso muerto rumano') || nom.includes('hammer');
                     const etiquetaPeso = esCargaPorLado ? 'kg/lado' : 'kg';
 
                     html += `
-                        <div class="flex items-center gap-2 ${isDone ? 'opacity-50' : ''} transition-opacity">
+                        <div class="flex items-center gap-2 ${isDone ? 'opacity-50' : ''} ${isSkipped ? 'grayscale' : ''} transition-opacity">
                             <div class="w-6 text-center text-xs font-bold text-gray-500">${index + 1}</div>
                             
                             <div class="flex-1 relative">
                                 ${isBodyweight ? `<span class="absolute -top-2 left-2 bg-gray-900 text-orange-400 text-[8px] px-1 rounded border border-orange-900/50 z-10 font-bold">Corporal</span>` : ''}
-                                <input type="number" step="0.5" id="w-${ex.id}-${index}" value="${set.weight}" onchange="window.updateSet('${ex.id}', ${index}, 'weight', this.value)" class="w-full bg-gray-950 ${isBodyweight ? 'text-orange-300' : 'text-white'} text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-orange-500">
+                                <input type="number" step="0.5" id="w-${ex.id}-${index}" value="${set.weight}" onchange="window.updateSet('${ex.id}', ${index}, 'weight', this.value)" class="w-full bg-gray-950 ${isBodyweight ? 'text-orange-300' : 'text-white'} text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-orange-500" ${isSkipped ? 'disabled' : ''}>
                                 <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-gray-500">${etiquetaPeso}</span>
                             </div>
                             
                             <span class="text-gray-600">x</span>
                             
                             <div class="flex-1 relative">
-                                <input type="number" id="r-${ex.id}-${index}" value="${set.reps}" onchange="window.updateSet('${ex.id}', ${index}, 'reps', this.value)" class="w-full bg-gray-950 text-white text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-orange-500">
+                                <input type="number" id="r-${ex.id}-${index}" value="${set.reps}" onchange="window.updateSet('${ex.id}', ${index}, 'reps', this.value)" class="w-full bg-gray-950 text-white text-center text-lg font-bold rounded-lg py-2 border border-gray-700 focus:border-orange-500" ${isSkipped ? 'disabled' : ''}>
                                 <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">reps</span>
                             </div>
                             
                             <label class="relative flex items-center justify-center cursor-pointer w-12 h-10">
-                                <input type="checkbox" class="sr-only checkbox-custom" ${isDone ? 'checked' : ''} onchange="window.toggleSet('${ex.id}', ${index})">
+                                <input type="checkbox" class="sr-only checkbox-custom" ${isDone ? 'checked' : ''} onchange="window.toggleSet('${ex.id}', ${index})" ${isSkipped ? 'disabled' : ''}>
                                 <div class="w-8 h-8 rounded-lg border-2 border-gray-600 bg-gray-800 flex items-center justify-center transition-colors">
                                     <svg class="w-5 h-5 text-white hidden pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                                 </div>
@@ -474,9 +459,9 @@
                         </div>
                     </div>
                 </div>`;
-            }); // <-- ACÁ TERMINA EL BUCLE DE EJERCICIOS
+            }); 
 
-            // --- BOTÓN FINALIZAR (AHORA ESTÁ AFUERA DEL BUCLE, SOLO APARECE UNA VEZ) ---
+            // BOTÓN FINALIZAR (Afuera del loop)
             html += `
                 <div class="mt-4 pb-10">
                     <button onclick="window.finishWorkout()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-5 rounded-2xl shadow-lg shadow-orange-900/50 text-lg transition-transform active:scale-95">
@@ -486,6 +471,18 @@
             `;
             
             container.innerHTML = html;
+        }
+
+        window.saltarEjercicio = function(exId) {
+            if(!confirm('¿Marcar este ejercicio como no realizado hoy?')) return;
+            const logs = window.appState.currentWorkout.logs[exId];
+            logs.forEach(set => {
+                set.done = true;
+                set.weight = 0; 
+                set.skipped = true; 
+            });
+            window.saveState();
+            window.renderActiveWorkout();
         }
 
         window.setEsfuerzo = function(exId, valor) {
@@ -500,8 +497,8 @@
             window.saveState();
         }
 
-        // --- FUNCIONES DEL CRONÓMETRO ---
-        window.startTimer = async (segundos) => {
+        // --- CRONÓMETRO CON INFO DE PRÓXIMA SERIE ---
+        window.startTimer = async (segundos, ejercicioNombre, serieSiguiente, pesoSiguiente, etiqueta) => {
             clearInterval(window.timerInterval);
             window.tiempoTotal = segundos;
             window.tiempoRestante = segundos;
@@ -510,15 +507,26 @@
             const timerDisplay = document.getElementById('timer-seconds');
             const timerBar = document.getElementById('timer-bar');
             
-            timerContainer.classList.remove('hidden');
-            timerContainer.classList.replace('flex-col', 'flex'); // Tailwind flex fix
+            let sigInfo = document.getElementById('timer-next-info');
+            if (!sigInfo) {
+                sigInfo = document.createElement('div');
+                sigInfo.id = 'timer-next-info';
+                timerContainer.prepend(sigInfo);
+            }
             
-            // WakeLock para no apagar pantalla
-            try {
-                if ('wakeLock' in navigator) {
-                    window.wakeLock = await navigator.wakeLock.request('screen');
-                }
-            } catch (err) { console.log("WakeLock no soportado"); }
+            sigInfo.className = "text-center mb-8 px-8";
+            sigInfo.innerHTML = `
+                <p class="text-orange-500 text-[10px] uppercase font-black tracking-[0.2em] mb-2">Próxima Serie</p>
+                <h4 class="text-white text-lg font-bold leading-tight mb-1">${ejercicioNombre}</h4>
+                <p class="text-gray-400 text-sm">${serieSiguiente} — <span class="text-orange-400 font-mono font-bold">${pesoSiguiente}${etiqueta}</span></p>
+            `;
+
+            timerContainer.classList.remove('hidden');
+            timerContainer.classList.replace('flex-col', 'flex'); 
+            timerDisplay.classList.remove('text-4xl');
+            timerDisplay.classList.add('text-7xl', 'tabular-nums'); 
+
+            try { if ('wakeLock' in navigator) window.wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
 
             window.actualizarDisplay();
 
@@ -539,10 +547,10 @@
             
             const mins = Math.floor(window.tiempoRestante / 60);
             const secs = window.tiempoRestante % 60;
-            timerDisplay.innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            if(timerDisplay) timerDisplay.innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
             
             const progress = (window.tiempoRestante / window.tiempoTotal) * 100;
-            timerBar.style.width = `${progress}%`;
+            if(timerBar) timerBar.style.width = `${progress}%`;
         };
 
         window.ajustarTimer = (segundos) => {
@@ -556,10 +564,7 @@
             const timerContainer = document.getElementById('timer-overlay');
             timerContainer.classList.add('hidden');
             timerContainer.classList.replace('flex', 'flex-col');
-            if (window.wakeLock) {
-                await window.wakeLock.release();
-                window.wakeLock = null;
-            }
+            if (window.wakeLock) { await window.wakeLock.release(); window.wakeLock = null; }
         };
 
         window.finalizarDescanso = () => {
@@ -567,8 +572,8 @@
             const timerDisplay = document.getElementById('timer-seconds');
             
             timerContainer.classList.add('bg-orange-600');
-            timerDisplay.innerText = "Tiempo!";
-            timerDisplay.classList.replace('text-gray-400', 'text-white');
+            // Texto adaptado al celular
+            timerDisplay.innerHTML = `<span class="text-4xl font-black tracking-tighter">¡Tiempo!</span>`;
             
             if ("vibrate" in navigator) navigator.vibrate([500, 200, 500]);
 
@@ -576,26 +581,41 @@
                 timerContainer.classList.add('hidden');
                 timerContainer.classList.replace('flex', 'flex-col');
                 timerContainer.classList.remove('bg-orange-600');
-                timerDisplay.classList.replace('text-white', 'text-gray-400');
-                if (window.wakeLock) {
-                    await window.wakeLock.release();
-                    window.wakeLock = null;
-                }
+                if (window.wakeLock) { await window.wakeLock.release(); window.wakeLock = null; }
             }, 3000);
         };
 
         window.toggleSet = function(exId, setIndex) {
-            const set = window.appState.currentWorkout.logs[exId][setIndex];
+            const workout = window.appState.currentWorkout;
+            const set = workout.logs[exId][setIndex];
             set.done = !set.done;
             
-            // Si la serie se marcó como completada, lanzamos el cronómetro
-            if (set.done) {
-                let tiempo = 90;
+            if (set.done && !set.skipped) {
+                let exActual = null;
                 Object.values(window.appState.routine).forEach(b => {
-                    const ex = b.exercises.find(e => e.id === exId);
-                    if(ex) tiempo = ex.focus === 'Fuerza' ? 180 : 90;
+                    const found = b.exercises.find(e => e.id === exId);
+                    if(found) exActual = found;
                 });
-                window.startTimer(tiempo);
+
+                if(exActual) {
+                    let tiempo = exActual.focus === 'Fuerza' ? 180 : 90;
+                    let sigSerieNum = setIndex + 2; 
+                    let sigPeso = set.weight; 
+                    
+                    if (sigSerieNum <= exActual.sets) {
+                       sigPeso = workout.logs[exId][setIndex + 1].weight;
+                    }
+                    
+                    const nom = exActual.name.toLowerCase();
+                    const esCargaPorLado = nom.includes('barra') || nom.includes('sentadilla') || nom.includes('peso muerto rumano') || nom.includes('hammer');
+                    const etiqueta = esCargaPorLado ? ' kg/lado' : ' kg';
+
+                    if (sigSerieNum > exActual.sets) {
+                        window.startTimer(tiempo, "¡Ejercicio Terminado!", "Prepárate para el siguiente bloque", "", "");
+                    } else {
+                        window.startTimer(tiempo, exActual.name, `Serie ${sigSerieNum}`, sigPeso, etiqueta);
+                    }
+                }
             }
 
             window.saveState();
@@ -611,32 +631,28 @@
         }
 
         window.finishWorkout = function() {
-    // Solo una confirmación al inicio
-    if(!confirm('¿Guardar entrenamiento y finalizar?')) return;
-    
-    const completedWorkout = {
-        ...window.appState.currentWorkout,
-        date: new Date().toISOString(),
-        workoutName: window.appState.routine[window.appState.currentWorkout.blockId].name
-    };
+            if(!confirm('¿Guardar entrenamiento y finalizar?')) return;
+            
+            const completedWorkout = {
+                ...window.appState.currentWorkout,
+                date: new Date().toISOString(),
+                workoutName: window.appState.routine[window.appState.currentWorkout.blockId].name
+            };
 
-    window.appState.history.push(completedWorkout);
-    window.appState.currentWorkout = null;
-    window.saveState();
+            window.appState.history.push(completedWorkout);
+            window.appState.currentWorkout = null;
+            window.saveState();
 
-    // Feedback visual inmediato y redirección automática en 2 segundos
-    container.innerHTML = `
-        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center">
-            <div class="text-7xl mb-6 animate-bounce">✅</div>
-            <h2 class="text-2xl font-bold text-white">¡Sesión Guardada!</h2>
-            <p class="text-gray-400 mt-2">Sincronizando datos...</p>
-        </div>
-    `;
-    
-    setTimeout(() => { 
-        window.renderDashboard(); 
-    }, 2000);
-}
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                    <div class="text-7xl mb-6 animate-bounce">✅</div>
+                    <h2 class="text-2xl font-bold text-white">¡Sesión Guardada!</h2>
+                    <p class="text-gray-400 mt-2">Sincronizando datos...</p>
+                </div>
+            `;
+            
+            setTimeout(() => { window.renderDashboard(); }, 2000);
+        }
 
         window.renderSettings = function() {
             document.getElementById('header-stats').classList.add('hidden');
@@ -710,11 +726,12 @@
                         if(found) exName = found.name;
                     });
 
+                    // Filtrar visualmente los skipped si lo prefieres, o marcarlos
                     html += `
                         <tr class="border-b border-gray-50">
                             <td class="py-3 text-sm font-semibold text-gray-700">${exName}</td>
                             <td class="py-3 text-sm text-right font-mono">
-                                ${sets.map((s, i) => `<span class="ml-2 bg-gray-100 px-1 rounded text-black font-bold border border-gray-300">S${i+1}: ${s.weight}kg x ${s.reps}</span>`).join('')}
+                                ${sets.map((s, i) => `<span class="ml-2 bg-gray-100 px-1 rounded text-black font-bold border border-gray-300 ${s.skipped ? 'line-through opacity-50' : ''}">S${i+1}: ${s.weight}kg x ${s.reps}</span>`).join('')}
                             </td>
                         </tr>
                     `;
