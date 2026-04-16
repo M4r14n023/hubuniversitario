@@ -2822,6 +2822,7 @@
         // NUEVO: CONTROL DE MODO OFFLINE
         // ==========================================
         const [isOffline, setIsOffline] = useState(!navigator.onLine);
+        const [hideOfflineBanner, setHideOfflineBanner] = useState(false); // <-- AGREGAR ESTA LÍNEA
 
         useEffect(() => {
           const handleOnline = () => setIsOffline(false);
@@ -2952,10 +2953,17 @@
         return (
           <div className="app-container">
             
-            {/* ACÁ VA EL CARTEL OFFLINE */}
-            {isOffline && (
-              <div style={{ background: '#ff4757', color: 'white', textAlign: 'center', padding: '8px', fontSize: '0.9rem', fontWeight: 'bold', zIndex: 9999, position: 'relative' }}>
-                ⚠️ Estás en modo offline. Los cambios se guardarán localmente y se sincronizarán al volver a tener conexión.
+{/* ACÁ VA EL CARTEL OFFLINE */}
+            {isOffline && !hideOfflineBanner && (
+              <div style={{ background: '#ff4757', color: 'white', textAlign: 'center', padding: '8px', fontSize: '0.9rem', fontWeight: 'bold', zIndex: 9999, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <span>⚠️ Estás en modo offline. Los cambios se guardarán localmente y se sincronizarán al volver.</span>
+                <button 
+                  onClick={() => setHideOfflineBanner(true)} 
+                  style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.4)', color: 'white', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s' }}
+                  title="Cerrar aviso"
+                >
+                  ✕
+                </button>
               </div>
             )}
 
