@@ -74,9 +74,9 @@
                 exercises: [
                     { id: 'pu1', name: 'Dominadas pronas', sets: 4, minReps: 6, maxReps: 8, focus: 'Fuerza' },
                     { id: 'pu2', name: 'Remo Hammer', sets: 4, minReps: 8, maxReps: 10, focus: 'Hipertrofia' },
-                    { id: 'pu3', name: 'Remo banco inclinado mancuernas', sets: 3, minReps: 6, maxReps: 8, focus: 'Fuerza' },
+                    { id: 'pu3', name: 'Remo con barra', sets: 3, minReps: 6, maxReps: 8, focus: 'Fuerza' },
                     { id: 'pu4', name: 'Jalón al pecho', sets: 3, minReps: 10, maxReps: 12, focus: 'Hipertrofia' },
-                    { id: 'pu5', name: 'Face Pulls en polea', sets: 3, minReps: 12, maxReps: 15, focus: 'Hipertrofia' },
+                    { id: 'pu5', name: 'Remo posterior con barra', sets: 3, minReps: 12, maxReps: 15, focus: 'Hipertrofia' },
                     { id: 'pu6', name: 'Curl de bíceps con barra', sets: 3, minReps: 6, maxReps: 8, focus: 'Fuerza' },
                     { id: 'pu7', name: 'Curl martillo', sets: 3, minReps: 10, maxReps: 12, focus: 'Hipertrofia' }
                 ]
@@ -87,7 +87,7 @@
                     { id: 'p1', name: 'Press de banca con barra', sets: 4, minReps: 4, maxReps: 6, focus: 'Fuerza' },
                     { id: 'p2', name: 'Press inclinado mancuernas', sets: 3, minReps: 8, maxReps: 10, focus: 'Hipertrofia' },
                     { id: 'p3', name: 'Cruce de poleas', sets: 3, minReps: 12, maxReps: 15, focus: 'Hipertrofia' },
-                    { id: 'p4', name: 'Press hombros sentado mancuernas', sets: 3, minReps: 5, maxReps: 7, focus: 'Fuerza' },
+                    { id: 'p4', name: 'Press militar con barra', sets: 3, minReps: 5, maxReps: 7, focus: 'Fuerza' },
                     { id: 'p5', name: 'Elevaciones laterales', sets: 3, minReps: 12, maxReps: 15, focus: 'Hipertrofia' },
                     { id: 'p6', name: 'Flexiones manos juntas', sets: 3, minReps: 8, maxReps: 15, focus: 'Pecho/Tríceps' },
                     { id: 'p7', name: 'Extensión de tríceps polea', sets: 3, minReps: 10, maxReps: 12, focus: 'Hipertrofia' }
@@ -96,7 +96,7 @@
             legs: {
                 id: 'legs', name: 'PIERNAS', color: 'text-amber-400', border: 'border-amber-500',
                 exercises: [
-                    { id: 'l1', name: 'Sentadilla Búlgara', sets: 4, minReps: 4, maxReps: 6, focus: 'Fuerza' },
+                    { id: 'l1', name: 'Sentadilla trasera', sets: 4, minReps: 4, maxReps: 6, focus: 'Fuerza' },
                     { id: 'l2', name: 'Hip Thrust con barra', sets: 4, minReps: 6, maxReps: 8, focus: 'Fuerza' },
                     { id: 'l3', name: 'Prensa de piernas', sets: 3, minReps: 8, maxReps: 10, focus: 'Hipertrofia' },
                     { id: 'l4', name: 'Estocadas fijas', sets: 3, minReps: 10, maxReps: 12, focus: 'Hipertrofia' },
@@ -146,9 +146,6 @@
             routine: defaultRoutine,
             lastUpdated: 0
         };
-        // AGREGAR ESTA LÍNEA AQUÍ ABAJO:
-        // Fuerza a que la app actualice los nombres con lo que pusiste en el código
-        window.appState.routine = defaultRoutine;
 
         window.timerInterval = null;
         window.wakeLock = null;
