@@ -146,6 +146,9 @@
             routine: defaultRoutine,
             lastUpdated: 0
         };
+        // AGREGAR ESTA LÍNEA AQUÍ ABAJO:
+        // Fuerza a que la app actualice los nombres con lo que pusiste en el código
+        window.appState.routine = defaultRoutine;
 
         window.timerInterval = null;
         window.wakeLock = null;
