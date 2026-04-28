@@ -4282,157 +4282,7 @@
         );
       }
 
-      // ============ VISTA ESTADÍSTICAS ============
-
-      function StatsView({ sessions, events, courses, term, attendanceStats, attendanceData }) {
-        const stats = useMemo(() => {
-          const totalCourses = courses.length;
-
-          let totalClasses = 0;
-          sessions.forEach((session) => {
-            const course = courses.find(c => c.id === session.courseId);
-            const occurrences = generateSessionOccurrencesForCourse(session, term, course);
-            totalClasses += occurrences.length;
-          });
-
-          const courseStats = courses.map((course) => {
-            const courseSessions = sessions.filter((s) => s.courseId === course.id);
-            const courseEvents = events.filter((e) => e.courseId === course.id);
-
-            let totalSessionOccurrences = 0;
-            courseSessions.forEach((session) => {
-              const occurrences = generateSessionOccurrencesForCourse(session, term, course);
-              totalSessionOccurrences += occurrences.length;
-            });
-
-            // NUEVO: Calcular asistencia específica de esta materia
-            const courseAttendance = { presentes: 0, ausentes: 0, feriados: 0, paros: 0 };
-            const courseSessionIds = courseSessions.map(s => s.id);
-
-            Object.values(attendanceData || {}).forEach(dayRecord => {
-              Object.entries(dayRecord).forEach(([sessionId, status]) => {
-                if (courseSessionIds.includes(sessionId)) {
-                  if (status === 'presente') courseAttendance.presentes++;
-                  if (status === 'ausente') courseAttendance.ausentes++;
-                  if (status === 'feriado') courseAttendance.feriados++;
-                  if (status === 'paro') courseAttendance.paros++;
-                }
-              });
-            });
-
-            const totalAttended = courseAttendance.presentes + courseAttendance.ausentes;
-            courseAttendance.porcentaje = totalAttended > 0 ? Math.round((courseAttendance.presentes / totalAttended) * 100) : 0;
-
-            return {
-              course,
-              totalSessions: totalSessionOccurrences,
-              sessionTypes: courseSessions.map((s) => ({
-                modalidad: s.modalidad,
-                count: generateSessionOccurrencesForCourse(s, term, course).length,
-              })),
-              events: courseEvents.length,
-              attendance: courseAttendance // Pasamos los datos calculados
-            };
-          });
-
-          return { totalCourses, totalClasses, courseStats };
-        }, [sessions, events, courses, term, attendanceData]);
-
-        return (
-          <div className="stats-view">
-            <div className="stat-card">
-              <div className="stat-title">Total Materias</div>
-              <div className="stat-value">{stats.totalCourses}</div>
-              <div className="stat-subtitle">En el {term.nombre}</div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-title">Total Clases</div>
-              <div className="stat-value">{stats.totalClasses}</div>
-              <div className="stat-subtitle">
-                Del {new Date(term.startDate).toLocaleDateString("es-AR")} al{" "}
-                {new Date(term.endDate).toLocaleDateString("es-AR")}
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-title">Presentismo Global</div>
-              <div className="stat-value" style={{ color: attendanceStats.porcentaje >= 75 ? 'var(--success)' : attendanceStats.porcentaje >= 50 ? 'var(--warning)' : 'var(--error)' }}>
-                {attendanceStats.porcentaje}%
-              </div>
-              <div className="stat-subtitle" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                <span>✅ {attendanceStats.presentes}</span>
-                <span>❌ {attendanceStats.ausentes}</span>
-                <span>🛑 {attendanceStats.paros}</span>
-                <span>🌴 {attendanceStats.feriados}</span>
-              </div>
-            </div>
-
-            <div className="stat-card" style={{ gridColumn: "1 / -1" }}>
-              <div className="stat-title">Detalle por Materia</div>
-              <div className="stat-list">
-                {stats.courseStats.map(
-                  ({ course, totalSessions, sessionTypes, events, attendance }) => (
-                    <div key={course.id} className="stat-list-item" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'stretch' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                            <strong>{course.nombre}</strong>
-                            {course.isAnual && (
-                              <span style={{ 
-                                fontSize: '0.7rem', 
-                                padding: '0.15rem 0.5rem', 
-                                background: 'var(--primary)', 
-                                color: 'white', 
-                                borderRadius: '12px',
-                                fontWeight: 600
-                              }}>
-                                📅 ANUAL
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
-                            {sessionTypes.map((st, i) => (
-                              <span key={i}>
-                                {st.modalidad}: {st.count} clases
-                                {i < sessionTypes.length - 1 ? " • " : ""}
-                              </span>
-                            ))}
-                            {events > 0 && ` • ${events} exámenes`}
-                            {course.isAnual && course.endDate && (
-                              <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', fontStyle: 'italic' }}>
-                                Finaliza: {new Date(course.endDate).toLocaleDateString('es-AR')}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div style={{ fontWeight: 600, color: "var(--primary)" }}>
-                          {totalSessions} proj.
-                        </div>
-                      </div>
-
-                      {/* NUEVO: BARRA DE ASISTENCIA INDIVIDUAL */}
-                      <div style={{ background: 'var(--background)', padding: '0.5rem 0.75rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
-                           <span title="Presentes">✅ {attendance.presentes}</span>
-                           <span title="Ausentes">❌ {attendance.ausentes}</span>
-                           <span title="Paros">🛑 {attendance.paros}</span>
-                           <span title="Feriados">🌴 {attendance.feriados}</span>
-                        </div>
-                        <div style={{ fontWeight: 'bold', color: attendance.porcentaje >= 75 ? 'var(--success)' : attendance.porcentaje >= 50 ? 'var(--warning)' : 'var(--error)' }}>
-                          {attendance.porcentaje}%
-                        </div>
-                      </div>
-                    </div>
-                  ),
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      // ============ VISTA DE ASISTENCIA ============
+// ============ VISTA DE ASISTENCIA ============
       
       function AttendanceView({ data, setData, weeklySessions, courses }) {
         const [selectedDate, setSelectedDate] = useState(() => {
@@ -4440,32 +4290,43 @@
           return today.toISOString().split('T')[0];
         });
         
-        // NUEVO: Estado para abrir/cerrar el acordeón de materias
         const [expandedCourse, setExpandedCourse] = useState(null);
+        
+        // ESTADOS PARA EL SISTEMA DE PARCIALES
+        const [showMidtermModal, setShowMidtermModal] = useState(false);
+        const [tempSuspendedCourses, setTempSuspendedCourses] = useState([]);
         
         const dayOfWeek = useMemo(() => {
           const date = new Date(selectedDate + 'T12:00:00');
           const day = date.getDay();
           return day === 0 ? 7 : day;
         }, [selectedDate]);
+
+        // Función para obtener el Lunes de la semana actual
+        const getMonday = (dateStr) => {
+          const d = new Date(dateStr + 'T12:00:00'); 
+          const day = d.getDay();
+          const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+          return new Date(d.setDate(diff)).toISOString().split('T')[0];
+        };
+
+        const selectedMonday = getMonday(selectedDate);
+        const currentWeather = data.suspensions?.[selectedDate] || 'normal';
+        const isMidtermWeek = !!data.midtermWeeks?.[selectedMonday];
         
-        // 1. Lógica para proyectar tooooodas las clases de cada materia
+        // 1. Lógica hiper-precisa para proyectar las clases de cada materia
         const courseProjections = useMemo(() => {
           const todayObj = new Date();
-          todayObj.setHours(0, 0, 0, 0); // Normalizamos a la medianoche de hoy
+          todayObj.setHours(0, 0, 0, 0);
 
           return courses.map(course => {
             const courseSessions = weeklySessions.filter(s => s.courseId === course.id);
             let allOccurrences = [];
 
-            // Generador interno de fechas para no depender de funciones externas
             courseSessions.forEach(session => {
               const baseDateStr = session.modalidad === 'teoria' ? course.inicioTeoricos : course.inicioPracticos;
               const startDateStr = baseDateStr || course.startDate || data.term?.startDate || "2026-03-16";
               
-              // ==========================================
-              // CORRECCIÓN: ACÁ APLICAMOS LA LÓGICA ANUAL
-              // ==========================================
               const endDateStr = (course.isAnual && course.endDate) 
                 ? course.endDate 
                 : (data.term?.endDate || "2026-07-03");
@@ -4474,28 +4335,57 @@
               const end = new Date(endDateStr + 'T23:59:59');
               let current = new Date(start);
 
-              // Ajustar al primer día de la semana que coincida con la sesión
               const targetDay = session.dayOfWeek === 7 ? 0 : session.dayOfWeek;
               while (current.getDay() !== targetDay) {
                 current.setDate(current.getDate() + 1);
               }
 
-              // Generar todas las fechas sumando de a 7 días
               while (current <= end) {
+                const dateStr = current.toISOString().split('T')[0];
+                const mondayStr = getMonday(dateStr);
+                
+                // A) Verificar suspensiones por CLIMA
+                const weatherType = data.suspensions?.[dateStr];
+                let isSuspendedWeather = false;
+                if (weatherType) {
+                  const startMins = parseTime(session.startTime);
+                  const limitMins = parseTime("13:00");
+                  if (weatherType === 'full') isSuspendedWeather = true;
+                  else if (weatherType === 'morning' && startMins < limitMins) isSuspendedWeather = true;
+                  else if (weatherType === 'afternoon' && startMins >= limitMins) isSuspendedWeather = true;
+                }
+
+                // B) Verificar suspensiones por PARCIALES
+                const isSuspendedMidterm = data.midtermWeeks?.[mondayStr]?.includes(course.id) || false;
+
+                // C) Verificar Feriados o Paros ya marcados
+                const status = data.attendance?.[dateStr]?.[session.id];
+                const isFeriadoOrParo = status === 'feriado' || status === 'paro';
+                const isAttended = status === 'presente' || status === 'ausente';
+
                 allOccurrences.push({
-                  dateStr: current.toISOString().split('T')[0],
-                  sessionName: session.modalidad === 'teoria' ? 'Teoría' : 'Práctica'
+                  dateStr,
+                  sessionName: session.modalidad === 'teoria' ? 'Teoría' : 'Práctica',
+                  sessionId: session.id,
+                  isSuspendedWeather,
+                  isSuspendedMidterm,
+                  isFeriadoOrParo,
+                  isAttended
                 });
+                
                 current.setDate(current.getDate() + 7);
               }
             });
 
-            // Ordenar cronológicamente todas las clases de la materia
             allOccurrences.sort((a, b) => new Date(a.dateStr) - new Date(b.dateStr));
 
-            // Contar cuántas quedan a partir de HOY
+            // RESTA DE CLASES: Solo quedan las futuras que NO estén suspendidas ni tomadas
             const remainingCount = allOccurrences.filter(occ => {
-              return new Date(occ.dateStr + 'T00:00:00') >= todayObj;
+              const isFuture = new Date(occ.dateStr + 'T00:00:00') >= todayObj;
+              if (!isFuture) return false; 
+              if (occ.isAttended) return false; 
+              if (occ.isSuspendedWeather || occ.isSuspendedMidterm || occ.isFeriadoOrParo) return false; 
+              return true;
             }).length;
 
             return {
@@ -4504,9 +4394,8 @@
               remainingCount
             };
           });
-        }, [courses, weeklySessions, data.term]);
+        }, [courses, weeklySessions, data.term, data.suspensions, data.midtermWeeks, data.attendance]);
 
-        // 2. Filtrar las clases específicas del día seleccionado (Para tomar lista)
         const sessionsForDay = useMemo(() => {
           const selectedDateObj = new Date(selectedDate + 'T00:00:00');
           return weeklySessions
@@ -4527,6 +4416,7 @@
             .sort((a, b) => a.startTime.localeCompare(b.startTime));
         }, [weeklySessions, dayOfWeek, selectedDate, courses, data.term]);
         
+        // HANDLERS
         const handleAttendanceToggle = (sessionId, newStatus) => {
           setData(prevData => {
             const attendance = { ...(prevData.attendance || {}) };
@@ -4540,10 +4430,57 @@
             return { ...prevData, attendance };
           });
         };
+
+        const handleWeatherChange = (val) => {
+          setData(prev => {
+             const newS = {...(prev.suspensions || {})};
+             if (val === 'normal') delete newS[selectedDate];
+             else newS[selectedDate] = val;
+             return {...prev, suspensions: newS};
+          });
+        };
+
+        const handleMidtermToggle = () => {
+           if (isMidtermWeek) {
+             setData(prev => {
+                const newM = {...(prev.midtermWeeks || {})};
+                delete newM[selectedMonday];
+                return {...prev, midtermWeeks: newM};
+             });
+           } else {
+             // Autoseleccionar todas MENOS las que contengan GRAP
+             const initialSuspended = courses
+               .filter(c => !c.nombre.toLowerCase().includes('grap'))
+               .map(c => c.id);
+             setTempSuspendedCourses(initialSuspended);
+             setShowMidtermModal(true);
+           }
+        };
+
+        const saveMidtermWeek = () => {
+           setData(prev => {
+              const newM = {...(prev.midtermWeeks || {})};
+              newM[selectedMonday] = tempSuspendedCourses;
+              return {...prev, midtermWeeks: newM};
+           });
+           setShowMidtermModal(false);
+        };
         
         const getSessionStatus = (sessionId) => {
           return data.attendance?.[selectedDate]?.[sessionId] || null;
         };
+
+        const btnStyle = (isActive, activeColor) => ({
+          padding: '0.5rem 1rem',
+          borderRadius: '8px',
+          border: `2px solid ${isActive ? activeColor : 'var(--border)'}`,
+          background: isActive ? activeColor : 'var(--surface)',
+          color: isActive ? 'white' : 'var(--text)',
+          fontWeight: 600,
+          fontSize: '0.85rem',
+          cursor: 'pointer',
+          transition: 'all 0.2s'
+        });
         
         return (
           <div className="attendance-container" style={{ paddingBottom: '2rem' }}>
@@ -4551,11 +4488,48 @@
               📋 Control de Asistencia
             </h2>
 
-            {/* CONTENEDOR GRID A 2 COLUMNAS (Se adapta a celular automático) */}
+            {/* MODAL SEMANA DE PARCIALES */}
+            {showMidtermModal && (
+              <div className="modal-overlay" onClick={() => setShowMidtermModal(false)} style={{ zIndex: 9999 }}>
+                <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                  <div className="modal-header">
+                    <h2 className="modal-title">📝 Semana de Parciales</h2>
+                    <button className="modal-close" onClick={() => setShowMidtermModal(false)}>×</button>
+                  </div>
+                  <div className="modal-body">
+                    <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
+                      Tildá las materias que <strong>NO</strong> van a dictar clases la semana del {new Date(selectedMonday + 'T12:00:00').toLocaleDateString('es-AR')}.
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {courses.map(c => (
+                        <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--background)', borderRadius: '6px', cursor: 'pointer', border: tempSuspendedCourses.includes(c.id) ? '1px solid #dc2626' : '1px solid var(--border)' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={tempSuspendedCourses.includes(c.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) setTempSuspendedCourses([...tempSuspendedCourses, c.id]);
+                              else setTempSuspendedCourses(tempSuspendedCourses.filter(id => id !== c.id));
+                            }}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontWeight: 500 }}>{c.nombre}</span>
+                          {tempSuspendedCourses.includes(c.id) && <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'white', background: '#dc2626', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>Suspendida</span>}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button className="btn btn-secondary" onClick={() => setShowMidtermModal(false)}>Cancelar</button>
+                    <button className="btn btn-primary" onClick={saveMidtermWeek}>Guardar Configuración</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start' }}>
               
-              {/* === COLUMNA IZQUIERDA: FECHA Y TOMAR LISTA === */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              {/* === COLUMNA IZQUIERDA === */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 
                 {/* 1. Selector de fecha */}
                 <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
@@ -4572,6 +4546,34 @@
                     <span style={{ color: 'var(--text-muted)', fontSize: '1.05rem', textTransform: 'capitalize' }}>
                       {new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </span>
+                  </div>
+
+                  {/* NUEVO: CONTROLES DE SUSPENSIÓN */}
+                  <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.95rem' }}>
+                      🌩️ Clima y Alertas del día
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                      <button onClick={() => handleWeatherChange('normal')} style={btnStyle(currentWeather === 'normal', 'var(--primary)')}>☀️ Normal</button>
+                      <button onClick={() => handleWeatherChange('morning')} style={btnStyle(currentWeather === 'morning', '#f59e0b')}>🌧️ Mañana</button>
+                      <button onClick={() => handleWeatherChange('afternoon')} style={btnStyle(currentWeather === 'afternoon', '#f59e0b')}>🌧️ Tarde</button>
+                      <button onClick={() => handleWeatherChange('full')} style={btnStyle(currentWeather === 'full', '#dc2626')}>⛈️ Total</button>
+                    </div>
+
+                    <div style={{ background: isMidtermWeek ? 'rgba(217, 119, 6, 0.1)' : 'var(--background)', padding: '1rem', borderRadius: '8px', border: isMidtermWeek ? '1px solid #d97706' : '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <strong style={{ fontSize: '0.95rem', color: isMidtermWeek ? '#b45309' : 'var(--text)' }}>📝 Semana de Parciales</strong>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Aplica a toda la semana actual</div>
+                      </div>
+                      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={isMidtermWeek}
+                          onChange={handleMidtermToggle}
+                          style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: '#d97706' }}
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
 
@@ -4651,20 +4653,29 @@
                         <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '0.75rem', maxHeight: '350px', overflowY: 'auto', background: 'var(--surface)' }}>
                           {course.allOccurrences.map((occ, idx) => {
                             const isPast = new Date(occ.dateStr + 'T00:00:00') < new Date(new Date().setHours(0,0,0,0));
+                            const isBlocked = occ.isSuspendedWeather || occ.isSuspendedMidterm || occ.isFeriadoOrParo;
+                            
+                            let badge = null;
+                            if (occ.isSuspendedWeather) badge = <span title="Suspendida por alerta" style={{fontSize: '1.2rem'}}>🌩️</span>;
+                            else if (occ.isSuspendedMidterm) badge = <span title="Semana de parciales" style={{fontSize: '1.2rem'}}>📝</span>;
+                            else if (occ.isFeriadoOrParo) badge = <span title="Feriado o Paro" style={{fontSize: '1.2rem'}}>🛑</span>;
                             
                             return (
                               <div key={idx} style={{
                                 padding: '0.5rem',
                                 borderRadius: '6px',
                                 background: isPast ? 'transparent' : 'var(--background)',
-                                border: '1px solid var(--border)',
+                                border: isBlocked ? '1px dashed #dc2626' : '1px solid var(--border)',
                                 textAlign: 'center',
-                                opacity: isPast ? 0.4 : 1,
-                                filter: isPast ? 'blur(0.5px)' : 'none',
-                                transform: isPast ? 'scale(0.95)' : 'none',
-                                transition: 'all 0.3s'
+                                opacity: (isPast || isBlocked) ? 0.5 : 1,
+                                filter: (isPast && !isBlocked) ? 'blur(0.5px)' : 'none',
+                                transform: (isPast || isBlocked) ? 'scale(0.95)' : 'none',
+                                transition: 'all 0.3s',
+                                position: 'relative'
                               }}>
-                                <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text)' }}>
+                                {badge && <div style={{position: 'absolute', top: '-10px', right: '-10px', zIndex: 2}}>{badge}</div>}
+                                
+                                <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: (isPast || isBlocked) ? 'var(--text-muted)' : 'var(--text)', textDecoration: isBlocked ? 'line-through' : 'none' }}>
                                   {new Date(occ.dateStr + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
                                 </div>
                                 <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
