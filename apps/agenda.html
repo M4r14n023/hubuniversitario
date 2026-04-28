@@ -4314,6 +4314,9 @@
         const currentWeather = data.suspensions?.[selectedDate] || 'normal';
         const isMidtermWeek = !!data.midtermWeeks?.[selectedMonday];
         
+        // NUEVO: ESTADO PARA RECESO INVERNAL
+        const isWinterBreakWeek = !!data.winterBreakWeeks?.[selectedMonday];
+        
         // 1. Lógica hiper-precisa para proyectar las clases de cada materia
         const courseProjections = useMemo(() => {
           const todayObj = new Date();
@@ -4358,7 +4361,10 @@
                 // B) Verificar suspensiones por PARCIALES
                 const isSuspendedMidterm = data.midtermWeeks?.[mondayStr]?.includes(course.id) || false;
 
-                // C) Verificar Feriados o Paros ya marcados
+                // NUEVO: C) Verificar suspensiones por RECESO INVERNAL (Afecta a todas)
+                const isWinterBreak = !!data.winterBreakWeeks?.[mondayStr];
+
+                // D) Verificar Feriados o Paros ya marcados
                 const status = data.attendance?.[dateStr]?.[session.id];
                 const isFeriadoOrParo = status === 'feriado' || status === 'paro';
                 const isAttended = status === 'presente' || status === 'ausente';
@@ -4369,6 +4375,7 @@
                   sessionId: session.id,
                   isSuspendedWeather,
                   isSuspendedMidterm,
+                  isWinterBreak, // Agregado
                   isFeriadoOrParo,
                   isAttended
                 });
@@ -4384,7 +4391,8 @@
               const isFuture = new Date(occ.dateStr + 'T00:00:00') >= todayObj;
               if (!isFuture) return false; 
               if (occ.isAttended) return false; 
-              if (occ.isSuspendedWeather || occ.isSuspendedMidterm || occ.isFeriadoOrParo) return false; 
+              // NUEVO: Agregamos occ.isWinterBreak a los filtros para que reste
+              if (occ.isSuspendedWeather || occ.isSuspendedMidterm || occ.isWinterBreak || occ.isFeriadoOrParo) return false; 
               return true;
             }).length;
 
@@ -4394,7 +4402,7 @@
               remainingCount
             };
           });
-        }, [courses, weeklySessions, data.term, data.suspensions, data.midtermWeeks, data.attendance]);
+        }, [courses, weeklySessions, data.term, data.suspensions, data.midtermWeeks, data.winterBreakWeeks, data.attendance]);
 
         const sessionsForDay = useMemo(() => {
           const selectedDateObj = new Date(selectedDate + 'T00:00:00');
@@ -4455,6 +4463,19 @@
              setTempSuspendedCourses(initialSuspended);
              setShowMidtermModal(true);
            }
+        };
+
+        // NUEVO: HANDLER PARA RECESO INVERNAL
+        const handleWinterBreakToggle = () => {
+          setData(prev => {
+            const newW = {...(prev.winterBreakWeeks || {})};
+            if (isWinterBreakWeek) {
+              delete newW[selectedMonday];
+            } else {
+              newW[selectedMonday] = true;
+            }
+            return {...prev, winterBreakWeeks: newW};
+          });
         };
 
         const saveMidtermWeek = () => {
@@ -4548,7 +4569,7 @@
                     </span>
                   </div>
 
-                  {/* NUEVO: CONTROLES DE SUSPENSIÓN */}
+                  {/* CONTROLES DE SUSPENSIÓN */}
                   <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
                     <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.95rem' }}>
                       🌩️ Clima y Alertas del día
@@ -4560,19 +4581,38 @@
                       <button onClick={() => handleWeatherChange('full')} style={btnStyle(currentWeather === 'full', '#dc2626')}>⛈️ Total</button>
                     </div>
 
-                    <div style={{ background: isMidtermWeek ? 'rgba(217, 119, 6, 0.1)' : 'var(--background)', padding: '1rem', borderRadius: '8px', border: isMidtermWeek ? '1px solid #d97706' : '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div>
-                        <strong style={{ fontSize: '0.95rem', color: isMidtermWeek ? '#b45309' : 'var(--text)' }}>📝 Semana de Parciales</strong>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Aplica a toda la semana actual</div>
+                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                      {/* TARJETA PARCIALES */}
+                      <div style={{ flex: 1, minWidth: '200px', background: isMidtermWeek ? 'rgba(217, 119, 6, 0.1)' : 'var(--background)', padding: '1rem', borderRadius: '8px', border: isMidtermWeek ? '1px solid #d97706' : '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <strong style={{ fontSize: '0.95rem', color: isMidtermWeek ? '#b45309' : 'var(--text)' }}>📝 Semana de Parciales</strong>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Aplica a toda la semana actual</div>
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isMidtermWeek}
+                            onChange={handleMidtermToggle}
+                            style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: '#d97706' }}
+                          />
+                        </label>
                       </div>
-                      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={isMidtermWeek}
-                          onChange={handleMidtermToggle}
-                          style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: '#d97706' }}
-                        />
-                      </label>
+
+                      {/* NUEVA TARJETA RECESO INVERNAL */}
+                      <div style={{ flex: 1, minWidth: '200px', background: isWinterBreakWeek ? 'rgba(37, 99, 235, 0.1)' : 'var(--background)', padding: '1rem', borderRadius: '8px', border: isWinterBreakWeek ? '1px solid #2563eb' : '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <strong style={{ fontSize: '0.95rem', color: isWinterBreakWeek ? '#1d4ed8' : 'var(--text)' }}>❄️ Receso Invernal</strong>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Suspende TODAS las materias</div>
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isWinterBreakWeek}
+                            onChange={handleWinterBreakToggle}
+                            style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: '#2563eb' }}
+                          />
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -4653,10 +4693,11 @@
                         <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '0.75rem', maxHeight: '350px', overflowY: 'auto', background: 'var(--surface)' }}>
                           {course.allOccurrences.map((occ, idx) => {
                             const isPast = new Date(occ.dateStr + 'T00:00:00') < new Date(new Date().setHours(0,0,0,0));
-                            const isBlocked = occ.isSuspendedWeather || occ.isSuspendedMidterm || occ.isFeriadoOrParo;
+                            const isBlocked = occ.isSuspendedWeather || occ.isSuspendedMidterm || occ.isWinterBreak || occ.isFeriadoOrParo;
                             
                             let badge = null;
-                            if (occ.isSuspendedWeather) badge = <span title="Suspendida por alerta" style={{fontSize: '1.2rem'}}>🌩️</span>;
+                            if (occ.isWinterBreak) badge = <span title="Receso Invernal" style={{fontSize: '1.2rem'}}>❄️</span>;
+                            else if (occ.isSuspendedWeather) badge = <span title="Suspendida por alerta" style={{fontSize: '1.2rem'}}>🌩️</span>;
                             else if (occ.isSuspendedMidterm) badge = <span title="Semana de parciales" style={{fontSize: '1.2rem'}}>📝</span>;
                             else if (occ.isFeriadoOrParo) badge = <span title="Feriado o Paro" style={{fontSize: '1.2rem'}}>🛑</span>;
                             
