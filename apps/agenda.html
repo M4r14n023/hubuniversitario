@@ -4283,59 +4283,70 @@
       }
 
 // ============ VISTA DE ASISTENCIA ============
-      
+
       function AttendanceView({ data, setData, weeklySessions, courses }) {
         const [selectedDate, setSelectedDate] = useState(() => {
           const today = new Date();
-          return today.toISOString().split('T')[0];
+          return today.toISOString().split("T")[0];
         });
-        
+
         const [expandedCourse, setExpandedCourse] = useState(null);
-        
+
         // ESTADOS PARA EL SISTEMA DE PARCIALES
         const [showMidtermModal, setShowMidtermModal] = useState(false);
         const [tempSuspendedCourses, setTempSuspendedCourses] = useState([]);
-        
+
+        // ESTADOS PARA EL RECESO INVERNAL (RANGO DE FECHAS)
+        const [showWinterBreakModal, setShowWinterBreakModal] = useState(false);
+        const [tempWinterBreak, setTempWinterBreak] = useState({
+          startDate: "",
+          endDate: "",
+        });
+
         const dayOfWeek = useMemo(() => {
-          const date = new Date(selectedDate + 'T12:00:00');
+          const date = new Date(selectedDate + "T12:00:00");
           const day = date.getDay();
           return day === 0 ? 7 : day;
         }, [selectedDate]);
 
         // Función para obtener el Lunes de la semana actual
         const getMonday = (dateStr) => {
-          const d = new Date(dateStr + 'T12:00:00'); 
+          const d = new Date(dateStr + "T12:00:00");
           const day = d.getDay();
           const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-          return new Date(d.setDate(diff)).toISOString().split('T')[0];
+          return new Date(d.setDate(diff)).toISOString().split("T")[0];
         };
 
         const selectedMonday = getMonday(selectedDate);
-        const currentWeather = data.suspensions?.[selectedDate] || 'normal';
+        const currentWeather = data.suspensions?.[selectedDate] || "normal";
         const isMidtermWeek = !!data.midtermWeeks?.[selectedMonday];
-        
-        // NUEVO: ESTADO PARA RECESO INVERNAL
-        const isWinterBreakWeek = !!data.winterBreakWeeks?.[selectedMonday];
-        
+
         // 1. Lógica hiper-precisa para proyectar las clases de cada materia
         const courseProjections = useMemo(() => {
           const todayObj = new Date();
           todayObj.setHours(0, 0, 0, 0);
 
-          return courses.map(course => {
-            const courseSessions = weeklySessions.filter(s => s.courseId === course.id);
+          return courses.map((course) => {
+            const courseSessions = weeklySessions.filter(
+              (s) => s.courseId === course.id
+            );
             let allOccurrences = [];
 
-            courseSessions.forEach(session => {
-              const baseDateStr = session.modalidad === 'teoria' ? course.inicioTeoricos : course.inicioPracticos;
-              const startDateStr = baseDateStr || course.startDate || data.term?.startDate || "2026-03-16";
-              
-              const endDateStr = (course.isAnual && course.endDate) 
-                ? course.endDate 
-                : (data.term?.endDate || "2026-07-03");
-              
-              const start = new Date(startDateStr + 'T00:00:00');
-              const end = new Date(endDateStr + 'T23:59:59');
+            courseSessions.forEach((session) => {
+              const baseDateStr =
+                session.modalidad === "teoria"
+                  ? course.inicioTeoricos
+                  : course.inicioPracticos;
+              const startDateStr =
+                baseDateStr || course.startDate || data.term?.startDate || "2026-03-16";
+
+              const endDateStr =
+                course.isAnual && course.endDate
+                  ? course.endDate
+                  : data.term?.endDate || "2026-07-03";
+
+              const start = new Date(startDateStr + "T00:00:00");
+              const end = new Date(endDateStr + "T23:59:59");
               let current = new Date(start);
 
               const targetDay = session.dayOfWeek === 7 ? 0 : session.dayOfWeek;
@@ -4344,92 +4355,124 @@
               }
 
               while (current <= end) {
-                const dateStr = current.toISOString().split('T')[0];
+                const dateStr = current.toISOString().split("T")[0];
                 const mondayStr = getMonday(dateStr);
-                
+
                 // A) Verificar suspensiones por CLIMA
                 const weatherType = data.suspensions?.[dateStr];
                 let isSuspendedWeather = false;
                 if (weatherType) {
                   const startMins = parseTime(session.startTime);
                   const limitMins = parseTime("13:00");
-                  if (weatherType === 'full') isSuspendedWeather = true;
-                  else if (weatherType === 'morning' && startMins < limitMins) isSuspendedWeather = true;
-                  else if (weatherType === 'afternoon' && startMins >= limitMins) isSuspendedWeather = true;
+                  if (weatherType === "full") isSuspendedWeather = true;
+                  else if (weatherType === "morning" && startMins < limitMins)
+                    isSuspendedWeather = true;
+                  else if (weatherType === "afternoon" && startMins >= limitMins)
+                    isSuspendedWeather = true;
                 }
 
                 // B) Verificar suspensiones por PARCIALES
-                const isSuspendedMidterm = data.midtermWeeks?.[mondayStr]?.includes(course.id) || false;
+                const isSuspendedMidterm =
+                  data.midtermWeeks?.[mondayStr]?.includes(course.id) || false;
 
-                // NUEVO: C) Verificar suspensiones por RECESO INVERNAL (Afecta a todas)
-                const isWinterBreak = !!data.winterBreakWeeks?.[mondayStr];
+                // C) Verificar suspensiones por RECESO INVERNAL (RANGO FIJO)
+                let isWinterBreak = false;
+                if (data.winterBreak?.startDate && data.winterBreak?.endDate) {
+                  const wbStart = new Date(data.winterBreak.startDate + "T00:00:00");
+                  const wbEnd = new Date(data.winterBreak.endDate + "T23:59:59");
+                  const classDate = new Date(dateStr + "T12:00:00");
+                  
+                  if (classDate >= wbStart && classDate <= wbEnd) {
+                    isWinterBreak = true;
+                  }
+                }
 
                 // D) Verificar Feriados o Paros ya marcados
                 const status = data.attendance?.[dateStr]?.[session.id];
-                const isFeriadoOrParo = status === 'feriado' || status === 'paro';
-                const isAttended = status === 'presente' || status === 'ausente';
+                const isFeriadoOrParo = status === "feriado" || status === "paro";
+                const isAttended = status === "presente" || status === "ausente";
 
                 allOccurrences.push({
                   dateStr,
-                  sessionName: session.modalidad === 'teoria' ? 'Teoría' : 'Práctica',
+                  sessionName: session.modalidad === "teoria" ? "Teoría" : "Práctica",
                   sessionId: session.id,
                   isSuspendedWeather,
                   isSuspendedMidterm,
-                  isWinterBreak, // Agregado
+                  isWinterBreak,
                   isFeriadoOrParo,
-                  isAttended
+                  isAttended,
                 });
-                
+
                 current.setDate(current.getDate() + 7);
               }
             });
 
-            allOccurrences.sort((a, b) => new Date(a.dateStr) - new Date(b.dateStr));
+            allOccurrences.sort(
+              (a, b) => new Date(a.dateStr) - new Date(b.dateStr)
+            );
 
             // RESTA DE CLASES: Solo quedan las futuras que NO estén suspendidas ni tomadas
-            const remainingCount = allOccurrences.filter(occ => {
-              const isFuture = new Date(occ.dateStr + 'T00:00:00') >= todayObj;
-              if (!isFuture) return false; 
-              if (occ.isAttended) return false; 
-              // NUEVO: Agregamos occ.isWinterBreak a los filtros para que reste
-              if (occ.isSuspendedWeather || occ.isSuspendedMidterm || occ.isWinterBreak || occ.isFeriadoOrParo) return false; 
+            const remainingCount = allOccurrences.filter((occ) => {
+              const isFuture = new Date(occ.dateStr + "T00:00:00") >= todayObj;
+              if (!isFuture) return false;
+              if (occ.isAttended) return false;
+              if (
+                occ.isSuspendedWeather ||
+                occ.isSuspendedMidterm ||
+                occ.isWinterBreak ||
+                occ.isFeriadoOrParo
+              ) {
+                return false;
+              }
               return true;
             }).length;
 
             return {
               ...course,
               allOccurrences,
-              remainingCount
+              remainingCount,
             };
           });
-        }, [courses, weeklySessions, data.term, data.suspensions, data.midtermWeeks, data.winterBreakWeeks, data.attendance]);
+        }, [
+          courses,
+          weeklySessions,
+          data.term,
+          data.suspensions,
+          data.midtermWeeks,
+          data.winterBreak,
+          data.attendance,
+        ]);
 
         const sessionsForDay = useMemo(() => {
-          const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+          const selectedDateObj = new Date(selectedDate + "T00:00:00");
           return weeklySessions
-            .filter(s => {
+            .filter((s) => {
               if (s.dayOfWeek !== dayOfWeek) return false;
-              const course = courses.find(c => c.id === s.courseId);
+              const course = courses.find((c) => c.id === s.courseId);
               if (!course) return false;
 
-              const baseDateStr = s.modalidad === 'teoria' ? course.inicioTeoricos : course.inicioPracticos;
-              const startDateStr = baseDateStr || course.startDate || data.term?.startDate;
+              const baseDateStr =
+                s.modalidad === "teoria"
+                  ? course.inicioTeoricos
+                  : course.inicioPracticos;
+              const startDateStr =
+                baseDateStr || course.startDate || data.term?.startDate;
 
               if (startDateStr) {
-                const startDateObj = new Date(startDateStr + 'T00:00:00');
-                if (selectedDateObj < startDateObj) return false; 
+                const startDateObj = new Date(startDateStr + "T00:00:00");
+                if (selectedDateObj < startDateObj) return false;
               }
               return true;
             })
             .sort((a, b) => a.startTime.localeCompare(b.startTime));
         }, [weeklySessions, dayOfWeek, selectedDate, courses, data.term]);
-        
+
         // HANDLERS
         const handleAttendanceToggle = (sessionId, newStatus) => {
-          setData(prevData => {
+          setData((prevData) => {
             const attendance = { ...(prevData.attendance || {}) };
             if (!attendance[selectedDate]) attendance[selectedDate] = {};
-            
+
             if (attendance[selectedDate][sessionId] === newStatus) {
               attendance[selectedDate][sessionId] = null;
             } else {
@@ -4440,178 +4483,611 @@
         };
 
         const handleWeatherChange = (val) => {
-          setData(prev => {
-             const newS = {...(prev.suspensions || {})};
-             if (val === 'normal') delete newS[selectedDate];
-             else newS[selectedDate] = val;
-             return {...prev, suspensions: newS};
+          setData((prev) => {
+            const newS = { ...(prev.suspensions || {}) };
+            if (val === "normal") {
+              delete newS[selectedDate];
+            } else {
+              newS[selectedDate] = val;
+            }
+            return { ...prev, suspensions: newS };
           });
         };
 
         const handleMidtermToggle = () => {
-           if (isMidtermWeek) {
-             setData(prev => {
-                const newM = {...(prev.midtermWeeks || {})};
-                delete newM[selectedMonday];
-                return {...prev, midtermWeeks: newM};
-             });
-           } else {
-             // Autoseleccionar todas MENOS las que contengan GRAP
-             const initialSuspended = courses
-               .filter(c => !c.nombre.toLowerCase().includes('grap'))
-               .map(c => c.id);
-             setTempSuspendedCourses(initialSuspended);
-             setShowMidtermModal(true);
-           }
-        };
-
-        // NUEVO: HANDLER PARA RECESO INVERNAL
-        const handleWinterBreakToggle = () => {
-          setData(prev => {
-            const newW = {...(prev.winterBreakWeeks || {})};
-            if (isWinterBreakWeek) {
-              delete newW[selectedMonday];
-            } else {
-              newW[selectedMonday] = true;
-            }
-            return {...prev, winterBreakWeeks: newW};
-          });
+          if (isMidtermWeek) {
+            setData((prev) => {
+              const newM = { ...(prev.midtermWeeks || {}) };
+              delete newM[selectedMonday];
+              return { ...prev, midtermWeeks: newM };
+            });
+          } else {
+            // Autoseleccionar todas MENOS las que contengan GRAP
+            const initialSuspended = courses
+              .filter((c) => !c.nombre.toLowerCase().includes("grap"))
+              .map((c) => c.id);
+            setTempSuspendedCourses(initialSuspended);
+            setShowMidtermModal(true);
+          }
         };
 
         const saveMidtermWeek = () => {
-           setData(prev => {
-              const newM = {...(prev.midtermWeeks || {})};
-              newM[selectedMonday] = tempSuspendedCourses;
-              return {...prev, midtermWeeks: newM};
-           });
-           setShowMidtermModal(false);
+          setData((prev) => {
+            const newM = { ...(prev.midtermWeeks || {}) };
+            newM[selectedMonday] = tempSuspendedCourses;
+            return { ...prev, midtermWeeks: newM };
+          });
+          setShowMidtermModal(false);
         };
-        
+
+        // HANDLERS RECESO INVERNAL
+        const saveWinterBreak = () => {
+          if (tempWinterBreak.startDate && tempWinterBreak.endDate) {
+            setData((prev) => ({ ...prev, winterBreak: tempWinterBreak }));
+            setShowWinterBreakModal(false);
+          } else {
+            alert("Debes completar la fecha de inicio y de fin.");
+          }
+        };
+
+        const deleteWinterBreak = () => {
+          setData((prev) => {
+            const newData = { ...prev };
+            delete newData.winterBreak;
+            return newData;
+          });
+          setShowWinterBreakModal(false);
+        };
+
         const getSessionStatus = (sessionId) => {
           return data.attendance?.[selectedDate]?.[sessionId] || null;
         };
 
         const btnStyle = (isActive, activeColor) => ({
-          padding: '0.5rem 1rem',
-          borderRadius: '8px',
-          border: `2px solid ${isActive ? activeColor : 'var(--border)'}`,
-          background: isActive ? activeColor : 'var(--surface)',
-          color: isActive ? 'white' : 'var(--text)',
+          padding: "0.5rem 1rem",
+          borderRadius: "8px",
+          border: `2px solid ${isActive ? activeColor : "var(--border)"}`,
+          background: isActive ? activeColor : "var(--surface)",
+          color: isActive ? "white" : "var(--text)",
           fontWeight: 600,
-          fontSize: '0.85rem',
-          cursor: 'pointer',
-          transition: 'all 0.2s'
+          fontSize: "0.85rem",
+          cursor: "pointer",
+          transition: "all 0.2s",
         });
-        
+
         return (
-          <div className="attendance-container" style={{ paddingBottom: '2rem' }}>
-            <h2 style={{ fontFamily: 'var(--serif)', fontSize: '1.8rem', marginBottom: '1.5rem', color: 'var(--primary)' }}>
+          <div className="attendance-container" style={{ paddingBottom: "2rem" }}>
+            <h2
+              style={{
+                fontFamily: "var(--serif)",
+                fontSize: "1.8rem",
+                marginBottom: "1.5rem",
+                color: "var(--primary)",
+              }}
+            >
               📋 Control de Asistencia
             </h2>
 
             {/* MODAL SEMANA DE PARCIALES */}
             {showMidtermModal && (
-              <div className="modal-overlay" onClick={() => setShowMidtermModal(false)} style={{ zIndex: 9999 }}>
-                <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+              <div
+                className="modal-overlay"
+                onClick={() => setShowMidtermModal(false)}
+                style={{ zIndex: 9999 }}
+              >
+                <div
+                  className="modal"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ maxWidth: "500px" }}
+                >
                   <div className="modal-header">
                     <h2 className="modal-title">📝 Semana de Parciales</h2>
-                    <button className="modal-close" onClick={() => setShowMidtermModal(false)}>×</button>
+                    <button
+                      className="modal-close"
+                      onClick={() => setShowMidtermModal(false)}
+                    >
+                      ×
+                    </button>
                   </div>
                   <div className="modal-body">
-                    <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
-                      Tildá las materias que <strong>NO</strong> van a dictar clases la semana del {new Date(selectedMonday + 'T12:00:00').toLocaleDateString('es-AR')}.
+                    <p
+                      style={{
+                        marginBottom: "1rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      Tildá las materias que <strong>NO</strong> van a dictar
+                      clases la semana del{" "}
+                      {new Date(selectedMonday + "T12:00:00").toLocaleDateString(
+                        "es-AR"
+                      )}
+                      .
                     </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {courses.map(c => (
-                        <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--background)', borderRadius: '6px', cursor: 'pointer', border: tempSuspendedCourses.includes(c.id) ? '1px solid #dc2626' : '1px solid var(--border)' }}>
-                          <input 
-                            type="checkbox" 
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      {courses.map((c) => (
+                        <label
+                          key={c.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.75rem",
+                            padding: "0.75rem",
+                            background: "var(--background)",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            border: tempSuspendedCourses.includes(c.id)
+                              ? "1px solid #dc2626"
+                              : "1px solid var(--border)",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
                             checked={tempSuspendedCourses.includes(c.id)}
                             onChange={(e) => {
-                              if (e.target.checked) setTempSuspendedCourses([...tempSuspendedCourses, c.id]);
-                              else setTempSuspendedCourses(tempSuspendedCourses.filter(id => id !== c.id));
+                              if (e.target.checked) {
+                                setTempSuspendedCourses([
+                                  ...tempSuspendedCourses,
+                                  c.id,
+                                ]);
+                              } else {
+                                setTempSuspendedCourses(
+                                  tempSuspendedCourses.filter(
+                                    (id) => id !== c.id
+                                  )
+                                );
+                              }
                             }}
-                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                            style={{
+                              width: "18px",
+                              height: "18px",
+                              cursor: "pointer",
+                            }}
                           />
                           <span style={{ fontWeight: 500 }}>{c.nombre}</span>
-                          {tempSuspendedCourses.includes(c.id) && <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'white', background: '#dc2626', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>Suspendida</span>}
+                          {tempSuspendedCourses.includes(c.id) && (
+                            <span
+                              style={{
+                                marginLeft: "auto",
+                                fontSize: "0.75rem",
+                                color: "white",
+                                background: "#dc2626",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                fontWeight: "bold",
+                              }}
+                            >
+                              Suspendida
+                            </span>
+                          )}
                         </label>
                       ))}
                     </div>
                   </div>
                   <div className="modal-footer">
-                    <button className="btn btn-secondary" onClick={() => setShowMidtermModal(false)}>Cancelar</button>
-                    <button className="btn btn-primary" onClick={saveMidtermWeek}>Guardar Configuración</button>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => setShowMidtermModal(false)}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      className="btn btn-primary"
+                      onClick={saveMidtermWeek}
+                    >
+                      Guardar Configuración
+                    </button>
                   </div>
                 </div>
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start' }}>
-              
+            {/* NUEVO MODAL: RECESO INVERNAL */}
+            {showWinterBreakModal && (
+              <div
+                className="modal-overlay"
+                onClick={() => setShowWinterBreakModal(false)}
+                style={{ zIndex: 9999 }}
+              >
+                <div
+                  className="modal"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ maxWidth: "400px" }}
+                >
+                  <div className="modal-header">
+                    <h2 className="modal-title">❄️ Receso Invernal</h2>
+                    <button
+                      className="modal-close"
+                      onClick={() => setShowWinterBreakModal(false)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div
+                    className="modal-body"
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "1rem",
+                    }}
+                  >
+                    <p
+                      style={{
+                        color: "var(--text-muted)",
+                        fontSize: "0.95rem",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Definí desde qué día hasta qué día la facultad suspende
+                      todas las clases por vacaciones.
+                    </p>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          fontWeight: 600,
+                          marginBottom: "0.5rem",
+                          fontSize: "0.95rem",
+                        }}
+                      >
+                        Fecha de Inicio:
+                      </label>
+                      <input
+                        type="date"
+                        value={tempWinterBreak.startDate}
+                        onChange={(e) =>
+                          setTempWinterBreak({
+                            ...tempWinterBreak,
+                            startDate: e.target.value,
+                          })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid var(--border)",
+                          borderRadius: "6px",
+                          background: "var(--surface)",
+                          color: "var(--text)",
+                          fontSize: "1rem",
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          fontWeight: 600,
+                          marginBottom: "0.5rem",
+                          fontSize: "0.95rem",
+                        }}
+                      >
+                        Fecha de Fin:
+                      </label>
+                      <input
+                        type="date"
+                        value={tempWinterBreak.endDate}
+                        onChange={(e) =>
+                          setTempWinterBreak({
+                            ...tempWinterBreak,
+                            endDate: e.target.value,
+                          })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid var(--border)",
+                          borderRadius: "6px",
+                          background: "var(--surface)",
+                          color: "var(--text)",
+                          fontSize: "1rem",
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div
+                    className="modal-footer"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <button
+                      className="btn btn-secondary"
+                      onClick={deleteWinterBreak}
+                      style={{ color: "#dc2626", borderColor: "#dc2626" }}
+                    >
+                      🗑️ Eliminar
+                    </button>
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => setShowWinterBreakModal(false)}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        className="btn btn-primary"
+                        onClick={saveWinterBreak}
+                      >
+                        Guardar Rango
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: "2rem",
+                alignItems: "start",
+              }}
+            >
               {/* === COLUMNA IZQUIERDA === */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
+              >
                 {/* 1. Selector de fecha */}
-                <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: '1rem', fontSize: '1.1rem', color: 'var(--text)' }}>
+                <div
+                  style={{
+                    background: "var(--surface)",
+                    padding: "1.5rem",
+                    borderRadius: "12px",
+                    border: "1px solid var(--border)",
+                    boxShadow: "var(--shadow-sm)",
+                  }}
+                >
+                  <label
+                    style={{
+                      display: "block",
+                      fontWeight: 600,
+                      marginBottom: "1rem",
+                      fontSize: "1.1rem",
+                      color: "var(--text)",
+                    }}
+                  >
                     Tomar lista para el día:
                   </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "1rem",
+                      flexWrap: "wrap",
+                    }}
+                  >
                     <input
                       type="date"
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
-                      style={{ padding: '0.75rem', border: '2px solid var(--primary)', borderRadius: '8px', fontSize: '1.1rem', background: 'var(--background)', color: 'var(--text)', outline: 'none', cursor: 'pointer' }}
+                      style={{
+                        padding: "0.75rem",
+                        border: "2px solid var(--primary)",
+                        borderRadius: "8px",
+                        fontSize: "1.1rem",
+                        background: "var(--background)",
+                        color: "var(--text)",
+                        outline: "none",
+                        cursor: "pointer",
+                      }}
                     />
-                    <span style={{ color: 'var(--text-muted)', fontSize: '1.05rem', textTransform: 'capitalize' }}>
-                      {new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    <span
+                      style={{
+                        color: "var(--text-muted)",
+                        fontSize: "1.05rem",
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {new Date(selectedDate + "T12:00:00").toLocaleDateString(
+                        "es-AR",
+                        { weekday: "long", day: "numeric", month: "long" }
+                      )}
                     </span>
                   </div>
 
                   {/* CONTROLES DE SUSPENSIÓN */}
-                  <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.95rem' }}>
+                  <div
+                    style={{
+                      marginTop: "1.5rem",
+                      paddingTop: "1.5rem",
+                      borderTop: "1px solid var(--border)",
+                    }}
+                  >
+                    <label
+                      style={{
+                        display: "block",
+                        fontWeight: 600,
+                        marginBottom: "0.75rem",
+                        fontSize: "0.95rem",
+                      }}
+                    >
                       🌩️ Clima y Alertas del día
                     </label>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-                      <button onClick={() => handleWeatherChange('normal')} style={btnStyle(currentWeather === 'normal', 'var(--primary)')}>☀️ Normal</button>
-                      <button onClick={() => handleWeatherChange('morning')} style={btnStyle(currentWeather === 'morning', '#f59e0b')}>🌧️ Mañana</button>
-                      <button onClick={() => handleWeatherChange('afternoon')} style={btnStyle(currentWeather === 'afternoon', '#f59e0b')}>🌧️ Tarde</button>
-                      <button onClick={() => handleWeatherChange('full')} style={btnStyle(currentWeather === 'full', '#dc2626')}>⛈️ Total</button>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "0.5rem",
+                        flexWrap: "wrap",
+                        marginBottom: "1.5rem",
+                      }}
+                    >
+                      <button
+                        onClick={() => handleWeatherChange("normal")}
+                        style={btnStyle(
+                          currentWeather === "normal",
+                          "var(--primary)"
+                        )}
+                      >
+                        ☀️ Normal
+                      </button>
+                      <button
+                        onClick={() => handleWeatherChange("morning")}
+                        style={btnStyle(currentWeather === "morning", "#f59e0b")}
+                      >
+                        🌧️ Mañana
+                      </button>
+                      <button
+                        onClick={() => handleWeatherChange("afternoon")}
+                        style={btnStyle(
+                          currentWeather === "afternoon",
+                          "#f59e0b"
+                        )}
+                      >
+                        🌧️ Tarde
+                      </button>
+                      <button
+                        onClick={() => handleWeatherChange("full")}
+                        style={btnStyle(currentWeather === "full", "#dc2626")}
+                      >
+                        ⛈️ Total
+                      </button>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "1rem",
+                        flexWrap: "wrap",
+                      }}
+                    >
                       {/* TARJETA PARCIALES */}
-                      <div style={{ flex: 1, minWidth: '200px', background: isMidtermWeek ? 'rgba(217, 119, 6, 0.1)' : 'var(--background)', padding: '1rem', borderRadius: '8px', border: isMidtermWeek ? '1px solid #d97706' : '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div
+                        style={{
+                          flex: 1,
+                          minWidth: "200px",
+                          background: isMidtermWeek
+                            ? "rgba(217, 119, 6, 0.1)"
+                            : "var(--background)",
+                          padding: "1rem",
+                          borderRadius: "8px",
+                          border: isMidtermWeek
+                            ? "1px solid #d97706"
+                            : "1px solid var(--border)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
                         <div>
-                          <strong style={{ fontSize: '0.95rem', color: isMidtermWeek ? '#b45309' : 'var(--text)' }}>📝 Semana de Parciales</strong>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Aplica a toda la semana actual</div>
+                          <strong
+                            style={{
+                              fontSize: "0.95rem",
+                              color: isMidtermWeek ? "#b45309" : "var(--text)",
+                            }}
+                          >
+                            📝 Semana Parciales
+                          </strong>
+                          <div
+                            style={{
+                              fontSize: "0.8rem",
+                              color: "var(--text-muted)",
+                            }}
+                          >
+                            Aplica a semana actual
+                          </div>
                         </div>
-                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                          <input 
-                            type="checkbox" 
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
                             checked={isMidtermWeek}
                             onChange={handleMidtermToggle}
-                            style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: '#d97706' }}
+                            style={{
+                              width: "22px",
+                              height: "22px",
+                              cursor: "pointer",
+                              accentColor: "#d97706",
+                            }}
                           />
                         </label>
                       </div>
 
-                      {/* NUEVA TARJETA RECESO INVERNAL */}
-                      <div style={{ flex: 1, minWidth: '200px', background: isWinterBreakWeek ? 'rgba(37, 99, 235, 0.1)' : 'var(--background)', padding: '1rem', borderRadius: '8px', border: isWinterBreakWeek ? '1px solid #2563eb' : '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      {/* TARJETA RECESO INVERNAL */}
+                      <div
+                        style={{
+                          flex: 1,
+                          minWidth: "200px",
+                          background: data.winterBreak?.startDate
+                            ? "rgba(37, 99, 235, 0.1)"
+                            : "var(--background)",
+                          padding: "1rem",
+                          borderRadius: "8px",
+                          border: data.winterBreak?.startDate
+                            ? "1px solid #2563eb"
+                            : "1px solid var(--border)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
                         <div>
-                          <strong style={{ fontSize: '0.95rem', color: isWinterBreakWeek ? '#1d4ed8' : 'var(--text)' }}>❄️ Receso Invernal</strong>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Suspende TODAS las materias</div>
+                          <strong
+                            style={{
+                              fontSize: "0.95rem",
+                              color: data.winterBreak?.startDate
+                                ? "#1d4ed8"
+                                : "var(--text)",
+                            }}
+                          >
+                            ❄️ Receso Invernal
+                          </strong>
+                          <div
+                            style={{
+                              fontSize: "0.8rem",
+                              color: "var(--text-muted)",
+                              marginTop: "2px",
+                            }}
+                          >
+                            {data.winterBreak?.startDate
+                              ? `Del ${data.winterBreak.startDate
+                                  .split("-")
+                                  .reverse()
+                                  .join("/")} al ${data.winterBreak.endDate
+                                  .split("-")
+                                  .reverse()
+                                  .join("/")}`
+                              : "No configurado"}
+                          </div>
                         </div>
-                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={isWinterBreakWeek}
-                            onChange={handleWinterBreakToggle}
-                            style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: '#2563eb' }}
-                          />
-                        </label>
+                        <button
+                          onClick={() => {
+                            setTempWinterBreak(
+                              data.winterBreak || { startDate: "", endDate: "" }
+                            );
+                            setShowWinterBreakModal(true);
+                          }}
+                          style={{
+                            padding: "0.4rem 0.8rem",
+                            borderRadius: "6px",
+                            background: data.winterBreak?.startDate
+                              ? "#1d4ed8"
+                              : "var(--primary)",
+                            color: "white",
+                            border: "none",
+                            cursor: "pointer",
+                            fontWeight: "bold",
+                            fontSize: "0.8rem",
+                            transition: "all 0.2s",
+                          }}
+                        >
+                          {data.winterBreak?.startDate
+                            ? "Editar"
+                            : "Configurar"}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -4619,46 +5095,227 @@
 
                 {/* 2. Tarjetas de Asistencia */}
                 <div>
-                  <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  <h3
+                    style={{
+                      fontSize: "1.1rem",
+                      marginBottom: "1rem",
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "1px",
+                    }}
+                  >
                     Clases del día
                   </h3>
-                  
+
                   {sessionsForDay.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '3rem', background: 'var(--surface)', borderRadius: '12px', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌴</div>
-                      <p style={{ fontSize: '1.1rem' }}>No hay clases programadas para este día, o aún no han comenzado.</p>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "3rem",
+                        background: "var(--surface)",
+                        borderRadius: "12px",
+                        color: "var(--text-muted)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>
+                        🌴
+                      </div>
+                      <p style={{ fontSize: "1.1rem" }}>
+                        No hay clases programadas para este día, o aún no han
+                        comenzado.
+                      </p>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      {sessionsForDay.map(session => {
-                        const course = courses.find(c => c.id === session.courseId);
-                        const sessionName = course ? `${course.nombre} (${session.modalidad === 'teoria' ? 'T' : 'P'})` : "Actividad";
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "1rem",
+                      }}
+                    >
+                      {sessionsForDay.map((session) => {
+                        const course = courses.find(
+                          (c) => c.id === session.courseId
+                        );
+                        const sessionName = course
+                          ? `${course.nombre} (${
+                              session.modalidad === "teoria" ? "T" : "P"
+                            })`
+                          : "Actividad";
                         const status = getSessionStatus(session.id);
-                        
-                        let borderColor = 'var(--border)';
-                        let bgColor = 'var(--surface)';
-                        if (status === 'presente') { borderColor = '#4ade80'; bgColor = 'rgba(74, 222, 128, 0.08)'; } 
-                        else if (status === 'ausente') { borderColor = '#f87171'; bgColor = 'rgba(248, 113, 113, 0.08)'; } 
-                        else if (status === 'paro') { borderColor = '#f59e0b'; bgColor = 'rgba(245, 158, 11, 0.08)'; } 
-                        else if (status === 'feriado') { borderColor = '#60a5fa'; bgColor = 'rgba(96, 165, 250, 0.08)'; }
-                        
+
+                        let borderColor = "var(--border)";
+                        let bgColor = "var(--surface)";
+                        if (status === "presente") {
+                          borderColor = "#4ade80";
+                          bgColor = "rgba(74, 222, 128, 0.08)";
+                        } else if (status === "ausente") {
+                          borderColor = "#f87171";
+                          bgColor = "rgba(248, 113, 113, 0.08)";
+                        } else if (status === "paro") {
+                          borderColor = "#f59e0b";
+                          bgColor = "rgba(245, 158, 11, 0.08)";
+                        } else if (status === "feriado") {
+                          borderColor = "#60a5fa";
+                          bgColor = "rgba(96, 165, 250, 0.08)";
+                        }
+
                         return (
-                          <div key={session.id} style={{ padding: '1.25rem', background: bgColor, border: `2px solid ${borderColor}`, borderRadius: '12px', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}>
-                            <div style={{ marginBottom: '1rem' }}>
-                              <h3 style={{ fontSize: '1.15rem', fontWeight: 600, marginBottom: '0.4rem', color: 'var(--text)' }}>
+                          <div
+                            key={session.id}
+                            style={{
+                              padding: "1.25rem",
+                              background: bgColor,
+                              border: `2px solid ${borderColor}`,
+                              borderRadius: "12px",
+                              transition: "all 0.2s",
+                              boxShadow: "var(--shadow-sm)",
+                            }}
+                          >
+                            <div style={{ marginBottom: "1rem" }}>
+                              <h3
+                                style={{
+                                  fontSize: "1.15rem",
+                                  fontWeight: 600,
+                                  marginBottom: "0.4rem",
+                                  color: "var(--text)",
+                                }}
+                              >
                                 {sessionName}
                               </h3>
-                              <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.9rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-                                <span>🕐 {session.startTime} - {session.endTime}</span>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  gap: "1.5rem",
+                                  fontSize: "0.9rem",
+                                  color: "var(--text-muted)",
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                <span>
+                                  🕐 {session.startTime} - {session.endTime}
+                                </span>
                                 {session.aula && <span>📍 {session.aula}</span>}
                               </div>
                             </div>
-                            
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.5rem' }}>
-                              <button onClick={() => handleAttendanceToggle(session.id, 'presente')} style={{ padding: '0.6rem 0.5rem', border: status === 'presente' ? '2px solid #4ade80' : '1px solid var(--border)', borderRadius: '8px', background: status === 'presente' ? '#4ade80' : 'var(--surface)', color: status === 'presente' ? '#000' : 'var(--text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.9rem' }}>✅ Presente</button>
-                              <button onClick={() => handleAttendanceToggle(session.id, 'ausente')} style={{ padding: '0.6rem 0.5rem', border: status === 'ausente' ? '2px solid #f87171' : '1px solid var(--border)', borderRadius: '8px', background: status === 'ausente' ? '#f87171' : 'var(--surface)', color: status === 'ausente' ? '#fff' : 'var(--text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.9rem' }}>❌ Ausente</button>
-                              <button onClick={() => handleAttendanceToggle(session.id, 'paro')} style={{ padding: '0.6rem 0.5rem', border: status === 'paro' ? '2px solid #f59e0b' : '1px solid var(--border)', borderRadius: '8px', background: status === 'paro' ? '#f59e0b' : 'var(--surface)', color: status === 'paro' ? '#000' : 'var(--text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.9rem' }}>🛑 Paro</button>
-                              <button onClick={() => handleAttendanceToggle(session.id, 'feriado')} style={{ padding: '0.6rem 0.5rem', border: status === 'feriado' ? '2px solid #60a5fa' : '1px solid var(--border)', borderRadius: '8px', background: status === 'feriado' ? '#60a5fa' : 'var(--surface)', color: status === 'feriado' ? '#000' : 'var(--text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.9rem' }}>🌴 Feriado</button>
+
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "repeat(auto-fit, minmax(110px, 1fr))",
+                                gap: "0.5rem",
+                              }}
+                            >
+                              <button
+                                onClick={() =>
+                                  handleAttendanceToggle(session.id, "presente")
+                                }
+                                style={{
+                                  padding: "0.6rem 0.5rem",
+                                  border:
+                                    status === "presente"
+                                      ? "2px solid #4ade80"
+                                      : "1px solid var(--border)",
+                                  borderRadius: "8px",
+                                  background:
+                                    status === "presente"
+                                      ? "#4ade80"
+                                      : "var(--surface)",
+                                  color:
+                                    status === "presente"
+                                      ? "#000"
+                                      : "var(--text)",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  transition: "all 0.2s",
+                                  fontSize: "0.9rem",
+                                }}
+                              >
+                                ✅ Presente
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleAttendanceToggle(session.id, "ausente")
+                                }
+                                style={{
+                                  padding: "0.6rem 0.5rem",
+                                  border:
+                                    status === "ausente"
+                                      ? "2px solid #f87171"
+                                      : "1px solid var(--border)",
+                                  borderRadius: "8px",
+                                  background:
+                                    status === "ausente"
+                                      ? "#f87171"
+                                      : "var(--surface)",
+                                  color:
+                                    status === "ausente"
+                                      ? "#fff"
+                                      : "var(--text)",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  transition: "all 0.2s",
+                                  fontSize: "0.9rem",
+                                }}
+                              >
+                                ❌ Ausente
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleAttendanceToggle(session.id, "paro")
+                                }
+                                style={{
+                                  padding: "0.6rem 0.5rem",
+                                  border:
+                                    status === "paro"
+                                      ? "2px solid #f59e0b"
+                                      : "1px solid var(--border)",
+                                  borderRadius: "8px",
+                                  background:
+                                    status === "paro"
+                                      ? "#f59e0b"
+                                      : "var(--surface)",
+                                  color:
+                                    status === "paro"
+                                      ? "#000"
+                                      : "var(--text)",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  transition: "all 0.2s",
+                                  fontSize: "0.9rem",
+                                }}
+                              >
+                                🛑 Paro
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleAttendanceToggle(session.id, "feriado")
+                                }
+                                style={{
+                                  padding: "0.6rem 0.5rem",
+                                  border:
+                                    status === "feriado"
+                                      ? "2px solid #60a5fa"
+                                      : "1px solid var(--border)",
+                                  borderRadius: "8px",
+                                  background:
+                                    status === "feriado"
+                                      ? "#60a5fa"
+                                      : "var(--surface)",
+                                  color:
+                                    status === "feriado"
+                                      ? "#000"
+                                      : "var(--text)",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  transition: "all 0.2s",
+                                  fontSize: "0.9rem",
+                                }}
+                              >
+                                🌴 Feriado
+                              </button>
                             </div>
                           </div>
                         );
@@ -4669,57 +5326,220 @@
               </div>
 
               {/* === COLUMNA DERECHA: MAPA DE CURSADA === */}
-              <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '1.25rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              <div
+                style={{
+                  background: "var(--surface)",
+                  padding: "1.5rem",
+                  borderRadius: "12px",
+                  border: "1px solid var(--border)",
+                  boxShadow: "var(--shadow-sm)",
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: "1.1rem",
+                    marginBottom: "1.25rem",
+                    color: "var(--text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "1px",
+                  }}
+                >
                   🗺️ Mapa de Cursada
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {courseProjections.map(course => (
-                    <div key={course.id} style={{ background: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-                      
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                  }}
+                >
+                  {courseProjections.map((course) => (
+                    <div
+                      key={course.id}
+                      style={{
+                        background: "var(--background)",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border)",
+                        overflow: "hidden",
+                      }}
+                    >
                       {/* Cabecera del Acordeón */}
                       <button
-                        onClick={() => setExpandedCourse(expandedCourse === course.id ? null : course.id)}
-                        style={{ width: '100%', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: expandedCourse === course.id ? 'rgba(0,0,0,0.05)' : 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text)', transition: 'background 0.2s' }}
+                        onClick={() =>
+                          setExpandedCourse(
+                            expandedCourse === course.id ? null : course.id
+                          )
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "1rem",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          background:
+                            expandedCourse === course.id
+                              ? "rgba(0,0,0,0.05)"
+                              : "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "var(--text)",
+                          transition: "background 0.2s",
+                        }}
                       >
-                        <span style={{ fontWeight: 'bold', fontSize: '1.05rem', textAlign: 'left', flex: 1, paddingRight: '1rem' }}>{course.nombre}</span>
-                        <span style={{ fontSize: '0.85rem', color: 'white', background: 'var(--primary)', padding: '4px 10px', borderRadius: '20px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                        <span
+                          style={{
+                            fontWeight: "bold",
+                            fontSize: "1.05rem",
+                            textAlign: "left",
+                            flex: 1,
+                            paddingRight: "1rem",
+                          }}
+                        >
+                          {course.nombre}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "0.85rem",
+                            color: "white",
+                            background: "var(--primary)",
+                            padding: "4px 10px",
+                            borderRadius: "20px",
+                            fontWeight: "bold",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           Quedan: {course.remainingCount}
                         </span>
                       </button>
 
                       {/* Contenido Desplegable */}
                       {expandedCourse === course.id && (
-                        <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '0.75rem', maxHeight: '350px', overflowY: 'auto', background: 'var(--surface)' }}>
+                        <div
+                          style={{
+                            padding: "1rem",
+                            borderTop: "1px solid var(--border)",
+                            display: "grid",
+                            gridTemplateColumns:
+                              "repeat(auto-fill, minmax(110px, 1fr))",
+                            gap: "0.75rem",
+                            maxHeight: "350px",
+                            overflowY: "auto",
+                            background: "var(--surface)",
+                          }}
+                        >
                           {course.allOccurrences.map((occ, idx) => {
-                            const isPast = new Date(occ.dateStr + 'T00:00:00') < new Date(new Date().setHours(0,0,0,0));
-                            const isBlocked = occ.isSuspendedWeather || occ.isSuspendedMidterm || occ.isWinterBreak || occ.isFeriadoOrParo;
-                            
+                            const isPast =
+                              new Date(occ.dateStr + "T00:00:00") <
+                              new Date(new Date().setHours(0, 0, 0, 0));
+                            const isBlocked =
+                              occ.isSuspendedWeather ||
+                              occ.isSuspendedMidterm ||
+                              occ.isWinterBreak ||
+                              occ.isFeriadoOrParo;
+
                             let badge = null;
-                            if (occ.isWinterBreak) badge = <span title="Receso Invernal" style={{fontSize: '1.2rem'}}>❄️</span>;
-                            else if (occ.isSuspendedWeather) badge = <span title="Suspendida por alerta" style={{fontSize: '1.2rem'}}>🌩️</span>;
-                            else if (occ.isSuspendedMidterm) badge = <span title="Semana de parciales" style={{fontSize: '1.2rem'}}>📝</span>;
-                            else if (occ.isFeriadoOrParo) badge = <span title="Feriado o Paro" style={{fontSize: '1.2rem'}}>🛑</span>;
-                            
+                            if (occ.isWinterBreak) {
+                              badge = (
+                                <span
+                                  title="Receso Invernal"
+                                  style={{ fontSize: "1.2rem" }}
+                                >
+                                  ❄️
+                                </span>
+                              );
+                            } else if (occ.isSuspendedWeather) {
+                              badge = (
+                                <span
+                                  title="Suspendida por alerta"
+                                  style={{ fontSize: "1.2rem" }}
+                                >
+                                  🌩️
+                                </span>
+                              );
+                            } else if (occ.isSuspendedMidterm) {
+                              badge = (
+                                <span
+                                  title="Semana de parciales"
+                                  style={{ fontSize: "1.2rem" }}
+                                >
+                                  📝
+                                </span>
+                              );
+                            } else if (occ.isFeriadoOrParo) {
+                              badge = (
+                                <span
+                                  title="Feriado o Paro"
+                                  style={{ fontSize: "1.2rem" }}
+                                >
+                                  🛑
+                                </span>
+                              );
+                            }
+
                             return (
-                              <div key={idx} style={{
-                                padding: '0.5rem',
-                                borderRadius: '6px',
-                                background: isPast ? 'transparent' : 'var(--background)',
-                                border: isBlocked ? '1px dashed #dc2626' : '1px solid var(--border)',
-                                textAlign: 'center',
-                                opacity: (isPast || isBlocked) ? 0.5 : 1,
-                                filter: (isPast && !isBlocked) ? 'blur(0.5px)' : 'none',
-                                transform: (isPast || isBlocked) ? 'scale(0.95)' : 'none',
-                                transition: 'all 0.3s',
-                                position: 'relative'
-                              }}>
-                                {badge && <div style={{position: 'absolute', top: '-10px', right: '-10px', zIndex: 2}}>{badge}</div>}
-                                
-                                <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: (isPast || isBlocked) ? 'var(--text-muted)' : 'var(--text)', textDecoration: isBlocked ? 'line-through' : 'none' }}>
-                                  {new Date(occ.dateStr + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                              <div
+                                key={idx}
+                                style={{
+                                  padding: "0.5rem",
+                                  borderRadius: "6px",
+                                  background: isPast
+                                    ? "transparent"
+                                    : "var(--background)",
+                                  border: isBlocked
+                                    ? "1px dashed #dc2626"
+                                    : "1px solid var(--border)",
+                                  textAlign: "center",
+                                  opacity: isPast || isBlocked ? 0.5 : 1,
+                                  filter:
+                                    isPast && !isBlocked
+                                      ? "blur(0.5px)"
+                                      : "none",
+                                  transform:
+                                    isPast || isBlocked ? "scale(0.95)" : "none",
+                                  transition: "all 0.3s",
+                                  position: "relative",
+                                }}
+                              >
+                                {badge && (
+                                  <div
+                                    style={{
+                                      position: "absolute",
+                                      top: "-10px",
+                                      right: "-10px",
+                                      zIndex: 2,
+                                    }}
+                                  >
+                                    {badge}
+                                  </div>
+                                )}
+
+                                <div
+                                  style={{
+                                    fontWeight: "bold",
+                                    fontSize: "0.9rem",
+                                    color:
+                                      isPast || isBlocked
+                                        ? "var(--text-muted)"
+                                        : "var(--text)",
+                                    textDecoration: isBlocked
+                                      ? "line-through"
+                                      : "none",
+                                  }}
+                                >
+                                  {new Date(
+                                    occ.dateStr + "T12:00:00"
+                                  ).toLocaleDateString("es-AR", {
+                                    day: "2-digit",
+                                    month: "short",
+                                  })}
                                 </div>
-                                <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
+                                <div
+                                  style={{
+                                    color: "var(--text-muted)",
+                                    fontSize: "0.75rem",
+                                    marginTop: "2px",
+                                  }}
+                                >
                                   {occ.sessionName}
                                 </div>
                               </div>
@@ -4731,7 +5551,6 @@
                   ))}
                 </div>
               </div>
-
             </div>
           </div>
         );
