@@ -4282,6 +4282,156 @@
         );
       }
 
+      // ============ VISTA ESTADÍSTICAS ============
+
+      function StatsView({ sessions, events, courses, term, attendanceStats, attendanceData }) {
+        const stats = useMemo(() => {
+          const totalCourses = courses.length;
+
+          let totalClasses = 0;
+          sessions.forEach((session) => {
+            const course = courses.find(c => c.id === session.courseId);
+            const occurrences = generateSessionOccurrencesForCourse(session, term, course);
+            totalClasses += occurrences.length;
+          });
+
+          const courseStats = courses.map((course) => {
+            const courseSessions = sessions.filter((s) => s.courseId === course.id);
+            const courseEvents = events.filter((e) => e.courseId === course.id);
+
+            let totalSessionOccurrences = 0;
+            courseSessions.forEach((session) => {
+              const occurrences = generateSessionOccurrencesForCourse(session, term, course);
+              totalSessionOccurrences += occurrences.length;
+            });
+
+            // Calcular asistencia específica de esta materia
+            const courseAttendance = { presentes: 0, ausentes: 0, feriados: 0, paros: 0 };
+            const courseSessionIds = courseSessions.map(s => s.id);
+
+            Object.values(attendanceData || {}).forEach(dayRecord => {
+              Object.entries(dayRecord).forEach(([sessionId, status]) => {
+                if (courseSessionIds.includes(sessionId)) {
+                  if (status === 'presente') courseAttendance.presentes++;
+                  if (status === 'ausente') courseAttendance.ausentes++;
+                  if (status === 'feriado') courseAttendance.feriados++;
+                  if (status === 'paro') courseAttendance.paros++;
+                }
+              });
+            });
+
+            const totalAttended = courseAttendance.presentes + courseAttendance.ausentes;
+            courseAttendance.porcentaje = totalAttended > 0 ? Math.round((courseAttendance.presentes / totalAttended) * 100) : 0;
+
+            return {
+              course,
+              totalSessions: totalSessionOccurrences,
+              sessionTypes: courseSessions.map((s) => ({
+                modalidad: s.modalidad,
+                count: generateSessionOccurrencesForCourse(s, term, course).length,
+              })),
+              events: courseEvents.length,
+              attendance: courseAttendance
+            };
+          });
+
+          return { totalCourses, totalClasses, courseStats };
+        }, [sessions, events, courses, term, attendanceData]);
+
+        return (
+          <div className="stats-view">
+            <div className="stat-card">
+              <div className="stat-title">Total Materias</div>
+              <div className="stat-value">{stats.totalCourses}</div>
+              <div className="stat-subtitle">En el {term.nombre}</div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-title">Total Clases</div>
+              <div className="stat-value">{stats.totalClasses}</div>
+              <div className="stat-subtitle">
+                Del {new Date(term.startDate).toLocaleDateString("es-AR")} al{" "}
+                {new Date(term.endDate).toLocaleDateString("es-AR")}
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-title">Presentismo Global</div>
+              <div className="stat-value" style={{ color: attendanceStats.porcentaje >= 75 ? 'var(--success)' : attendanceStats.porcentaje >= 50 ? 'var(--warning)' : 'var(--error)' }}>
+                {attendanceStats.porcentaje}%
+              </div>
+              <div className="stat-subtitle" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                <span>✅ {attendanceStats.presentes}</span>
+                <span>❌ {attendanceStats.ausentes}</span>
+                <span>🛑 {attendanceStats.paros}</span>
+                <span>🌴 {attendanceStats.feriados}</span>
+              </div>
+            </div>
+
+            <div className="stat-card" style={{ gridColumn: "1 / -1" }}>
+              <div className="stat-title">Detalle por Materia</div>
+              <div className="stat-list">
+                {stats.courseStats.map(
+                  ({ course, totalSessions, sessionTypes, events, attendance }) => (
+                    <div key={course.id} className="stat-list-item" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'stretch' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                            <strong>{course.nombre}</strong>
+                            {course.isAnual && (
+                              <span style={{ 
+                                fontSize: '0.7rem', 
+                                padding: '0.15rem 0.5rem', 
+                                background: 'var(--primary)', 
+                                color: 'white', 
+                                borderRadius: '12px',
+                                fontWeight: 600
+                              }}>
+                                📅 ANUAL
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+                            {sessionTypes.map((st, i) => (
+                              <span key={i}>
+                                {st.modalidad}: {st.count} clases
+                                {i < sessionTypes.length - 1 ? " • " : ""}
+                              </span>
+                            ))}
+                            {events > 0 && ` • ${events} exámenes`}
+                            {course.isAnual && course.endDate && (
+                              <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', fontStyle: 'italic' }}>
+                                Finaliza: {new Date(course.endDate).toLocaleDateString('es-AR')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ fontWeight: 600, color: "var(--primary)" }}>
+                          {totalSessions} proj.
+                        </div>
+                      </div>
+
+                      {/* BARRA DE ASISTENCIA INDIVIDUAL */}
+                      <div style={{ background: 'var(--background)', padding: '0.5rem 0.75rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                           <span title="Presentes">✅ {attendance.presentes}</span>
+                           <span title="Ausentes">❌ {attendance.ausentes}</span>
+                           <span title="Paros">🛑 {attendance.paros}</span>
+                           <span title="Feriados">🌴 {attendance.feriados}</span>
+                        </div>
+                        <div style={{ fontWeight: 'bold', color: attendance.porcentaje >= 75 ? 'var(--success)' : attendance.porcentaje >= 50 ? 'var(--warning)' : 'var(--error)' }}>
+                          {attendance.porcentaje}%
+                        </div>
+                      </div>
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
 // ============ VISTA DE ASISTENCIA ============
 
       function AttendanceView({ data, setData, weeklySessions, courses }) {
